@@ -1,5 +1,10 @@
 package main
 
+import (
+	"github.com/andrewneudegg/calc/pkg/display"
+)
+
 func main() {
-	// This is a placeholder for the calc command.
+	repl := display.NewREPL()
+	repl.Run()
 }

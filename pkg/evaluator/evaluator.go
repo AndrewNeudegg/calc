@@ -1,0 +1,512 @@
+package evaluator
+
+import (
+	"fmt"
+	"math"
+	"strings"
+	"time"
+
+	"github.com/andrewneudegg/calc/pkg/currency"
+	"github.com/andrewneudegg/calc/pkg/parser"
+	"github.com/andrewneudegg/calc/pkg/units"
+)
+
+// Environment stores variables and state.
+type Environment struct {
+	variables map[string]Value
+	units     *units.System
+	currency  *currency.System
+}
+
+// NewEnvironment creates a new evaluation environment.
+func NewEnvironment() *Environment {
+	return &Environment{
+		variables: make(map[string]Value),
+		units:     units.NewSystem(),
+		currency:  currency.NewSystem(),
+	}
+}
+
+// Evaluator evaluates expressions.
+type Evaluator struct {
+	env *Environment
+}
+
+// New creates a new evaluator.
+func New(env *Environment) *Evaluator {
+	return &Evaluator{env: env}
+}
+
+// Eval evaluates an expression and returns a value.
+func (e *Evaluator) Eval(expr parser.Expr) Value {
+	if expr == nil {
+		return NewError("nil expression")
+	}
+	
+	switch node := expr.(type) {
+	case *parser.NumberExpr:
+		return NewNumber(node.Value)
+		
+	case *parser.BinaryExpr:
+		return e.evalBinary(node)
+		
+	case *parser.UnaryExpr:
+		return e.evalUnary(node)
+		
+	case *parser.IdentExpr:
+		return e.evalIdent(node)
+		
+	case *parser.AssignExpr:
+		return e.evalAssign(node)
+		
+	case *parser.UnitExpr:
+		return e.evalUnit(node)
+		
+	case *parser.ConversionExpr:
+		return e.evalConversion(node)
+		
+	case *parser.CurrencyExpr:
+		return e.evalCurrency(node)
+		
+	case *parser.PercentExpr:
+		return e.evalPercent(node)
+		
+	case *parser.PercentOfExpr:
+		return e.evalPercentOf(node)
+		
+	case *parser.PercentChangeExpr:
+		return e.evalPercentChange(node)
+		
+	case *parser.WhatPercentExpr:
+		return e.evalWhatPercent(node)
+		
+	case *parser.FunctionCallExpr:
+		return e.evalFunctionCall(node)
+		
+	case *parser.DateExpr:
+		return NewDate(node.Date)
+		
+	case *parser.TimeExpr:
+		return NewDate(node.Time)
+		
+	case *parser.DateArithmeticExpr:
+		return e.evalDateArithmetic(node)
+		
+	case *parser.FuzzyExpr:
+		return e.evalFuzzy(node)
+		
+	default:
+		return NewError(fmt.Sprintf("unknown expression type: %T", expr))
+	}
+}
+
+func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
+	left := e.Eval(node.Left)
+	if left.IsError() {
+		return left
+	}
+	
+	right := e.Eval(node.Right)
+	if right.IsError() {
+		return right
+	}
+	
+	// Handle currency operations
+	if left.Type == ValueCurrency || right.Type == ValueCurrency {
+		return e.evalCurrencyBinary(left, node.Operator, right)
+	}
+	
+	// Handle unit operations
+	if left.Type == ValueUnit || right.Type == ValueUnit {
+		return e.evalUnitBinary(left, node.Operator, right)
+	}
+	
+	// Handle percentage operations
+	if right.Type == ValuePercent && node.Operator == "+" {
+		// e.g., "30 + 20%" = 30 + (30 * 0.20)
+		return NewNumber(left.Number + (left.Number * right.Number / 100))
+	}
+	
+	if right.Type == ValuePercent && node.Operator == "-" {
+		// e.g., "30 - 20%" = 30 - (30 * 0.20)
+		return NewNumber(left.Number - (left.Number * right.Number / 100))
+	}
+	
+	// Standard numeric operations
+	switch node.Operator {
+	case "+":
+		return NewNumber(left.Number + right.Number)
+	case "-":
+		return NewNumber(left.Number - right.Number)
+	case "*":
+		return NewNumber(left.Number * right.Number)
+	case "/":
+		if right.Number == 0 {
+			return NewError("division by zero")
+		}
+		return NewNumber(left.Number / right.Number)
+	default:
+		return NewError(fmt.Sprintf("unknown operator: %s", node.Operator))
+	}
+}
+
+func (e *Evaluator) evalUnary(node *parser.UnaryExpr) Value {
+	operand := e.Eval(node.Operand)
+	if operand.IsError() {
+		return operand
+	}
+	
+	switch node.Operator {
+	case "-":
+		operand.Number = -operand.Number
+		return operand
+	default:
+		return NewError(fmt.Sprintf("unknown unary operator: %s", node.Operator))
+	}
+}
+
+func (e *Evaluator) evalIdent(node *parser.IdentExpr) Value {
+	val, ok := e.env.variables[node.Name]
+	if !ok {
+		return NewError(fmt.Sprintf("undefined variable: %s", node.Name))
+	}
+	return val
+}
+
+func (e *Evaluator) evalAssign(node *parser.AssignExpr) Value {
+	val := e.Eval(node.Value)
+	if val.IsError() {
+		return val
+	}
+	
+	e.env.variables[node.Name] = val
+	return val
+}
+
+func (e *Evaluator) evalUnit(node *parser.UnitExpr) Value {
+	val := e.Eval(node.Value)
+	if val.IsError() {
+		return val
+	}
+	
+	return NewUnit(val.Number, node.Unit)
+}
+
+func (e *Evaluator) evalConversion(node *parser.ConversionExpr) Value {
+	val := e.Eval(node.Value)
+	if val.IsError() {
+		return val
+	}
+	
+	// Handle currency conversion
+	if val.Type == ValueCurrency {
+		result, err := e.env.currency.Convert(val.Number, val.Currency, node.ToUnit)
+		if err != nil {
+			return NewError(err.Error())
+		}
+		return NewCurrency(result, e.env.currency.GetSymbol(node.ToUnit))
+	}
+	
+	// Handle unit conversion
+	if val.Type == ValueUnit {
+		result, err := e.env.units.Convert(val.Number, val.Unit, node.ToUnit)
+		if err != nil {
+			return NewError(err.Error())
+		}
+		return NewUnit(result, node.ToUnit)
+	}
+	
+	// Try converting a plain number with a unit
+	result, err := e.env.units.Convert(val.Number, "unknown", node.ToUnit)
+	if err != nil {
+		return NewError(err.Error())
+	}
+	return NewUnit(result, node.ToUnit)
+}
+
+func (e *Evaluator) evalCurrency(node *parser.CurrencyExpr) Value {
+	val := e.Eval(node.Value)
+	if val.IsError() {
+		return val
+	}
+	
+	return NewCurrency(val.Number, node.Currency)
+}
+
+func (e *Evaluator) evalPercent(node *parser.PercentExpr) Value {
+	val := e.Eval(node.Value)
+	if val.IsError() {
+		return val
+	}
+	
+	return NewPercent(val.Number)
+}
+
+func (e *Evaluator) evalPercentOf(node *parser.PercentOfExpr) Value {
+	percent := e.Eval(node.Percent)
+	if percent.IsError() {
+		return percent
+	}
+	
+	of := e.Eval(node.Of)
+	if of.IsError() {
+		return of
+	}
+	
+	result := of.Number * (percent.Number / 100)
+	
+	// Preserve the type of the "of" value
+	switch of.Type {
+	case ValueCurrency:
+		return NewCurrency(result, of.Currency)
+	case ValueUnit:
+		return NewUnit(result, of.Unit)
+	default:
+		return NewNumber(result)
+	}
+}
+
+func (e *Evaluator) evalPercentChange(node *parser.PercentChangeExpr) Value {
+	base := e.Eval(node.Base)
+	if base.IsError() {
+		return base
+	}
+	
+	percent := e.Eval(node.Percent)
+	if percent.IsError() {
+		return percent
+	}
+	
+	var result float64
+	if node.Increase {
+		result = base.Number * (1 + percent.Number/100)
+	} else {
+		result = base.Number * (1 - percent.Number/100)
+	}
+	
+	// Preserve the type
+	switch base.Type {
+	case ValueCurrency:
+		return NewCurrency(result, base.Currency)
+	case ValueUnit:
+		return NewUnit(result, base.Unit)
+	default:
+		return NewNumber(result)
+	}
+}
+
+func (e *Evaluator) evalWhatPercent(node *parser.WhatPercentExpr) Value {
+	part := e.Eval(node.Part)
+	if part.IsError() {
+		return part
+	}
+	
+	whole := e.Eval(node.Whole)
+	if whole.IsError() {
+		return whole
+	}
+	
+	if whole.Number == 0 {
+		return NewError("division by zero")
+	}
+	
+	result := (part.Number / whole.Number) * 100
+	return NewPercent(result)
+}
+
+func (e *Evaluator) evalFunctionCall(node *parser.FunctionCallExpr) Value {
+	switch strings.ToLower(node.Name) {
+	case "sum", "total":
+		return e.evalSum(node.Args)
+	case "average", "mean":
+		return e.evalAverage(node.Args)
+	default:
+		return NewError(fmt.Sprintf("unknown function: %s", node.Name))
+	}
+}
+
+func (e *Evaluator) evalSum(args []parser.Expr) Value {
+	var sum float64
+	for _, arg := range args {
+		val := e.Eval(arg)
+		if val.IsError() {
+			return val
+		}
+		sum += val.Number
+	}
+	return NewNumber(sum)
+}
+
+func (e *Evaluator) evalAverage(args []parser.Expr) Value {
+	if len(args) == 0 {
+		return NewError("average requires at least one argument")
+	}
+	
+	sumVal := e.evalSum(args)
+	if sumVal.IsError() {
+		return sumVal
+	}
+	
+	return NewNumber(sumVal.Number / float64(len(args)))
+}
+
+func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {
+	base := e.Eval(node.Base)
+	if base.IsError() {
+		return base
+	}
+	
+	offset := e.Eval(node.Offset)
+	if offset.IsError() {
+		return offset
+	}
+	
+	offsetVal := int(offset.Number)
+	if node.Operator == "-" {
+		offsetVal = -offsetVal
+	}
+	
+	var result time.Time
+	unit := strings.ToLower(node.Unit)
+	
+	switch unit {
+	case "day", "days":
+		result = base.Date.AddDate(0, 0, offsetVal)
+	case "week", "weeks":
+		result = base.Date.AddDate(0, 0, offsetVal*7)
+	case "month", "months":
+		result = base.Date.AddDate(0, offsetVal, 0)
+	case "year", "years":
+		result = base.Date.AddDate(offsetVal, 0, 0)
+	default:
+		return NewError(fmt.Sprintf("unknown time unit: %s", node.Unit))
+	}
+	
+	return NewDate(result)
+}
+
+func (e *Evaluator) evalFuzzy(node *parser.FuzzyExpr) Value {
+	val := e.Eval(node.Value)
+	if val.IsError() {
+		return val
+	}
+	
+	pattern := strings.ToLower(node.Pattern)
+	var result float64
+	
+	switch pattern {
+	case "half":
+		result = val.Number * 0.5
+	case "double", "twice":
+		result = val.Number * 2
+	case "three quarters":
+		result = val.Number * 0.75
+	default:
+		return NewError(fmt.Sprintf("unknown fuzzy pattern: %s", node.Pattern))
+	}
+	
+	// Preserve type
+	switch val.Type {
+	case ValueCurrency:
+		return NewCurrency(result, val.Currency)
+	case ValueUnit:
+		return NewUnit(result, val.Unit)
+	default:
+		return NewNumber(result)
+	}
+}
+
+func (e *Evaluator) evalCurrencyBinary(left Value, op string, right Value) Value {
+	// Convert both to the same currency if needed
+	if left.Type == ValueCurrency && right.Type == ValueCurrency {
+		if left.Currency != right.Currency {
+			// Convert right to left's currency
+			converted, err := e.env.currency.Convert(right.Number, right.Currency, left.Currency)
+			if err != nil {
+				return NewError(err.Error())
+			}
+			right.Number = converted
+			right.Currency = left.Currency
+		}
+	}
+	
+	switch op {
+	case "+":
+		return NewCurrency(left.Number+right.Number, left.Currency)
+	case "-":
+		return NewCurrency(left.Number-right.Number, left.Currency)
+	case "*":
+		if right.Type == ValueCurrency {
+			return NewError("cannot multiply two currencies")
+		}
+		return NewCurrency(left.Number*right.Number, left.Currency)
+	case "/":
+		if right.Number == 0 {
+			return NewError("division by zero")
+		}
+		if right.Type == ValueCurrency {
+			return NewNumber(left.Number / right.Number)
+		}
+		return NewCurrency(left.Number/right.Number, left.Currency)
+	default:
+		return NewError(fmt.Sprintf("unknown operator: %s", op))
+	}
+}
+
+func (e *Evaluator) evalUnitBinary(left Value, op string, right Value) Value {
+	// Check if units are compatible
+	if left.Type == ValueUnit && right.Type == ValueUnit {
+		if left.Unit != right.Unit {
+			// Try to convert right to left's unit
+			converted, err := e.env.units.Convert(right.Number, right.Unit, left.Unit)
+			if err != nil {
+				return NewError(err.Error())
+			}
+			right.Number = converted
+			right.Unit = left.Unit
+		}
+	}
+	
+	switch op {
+	case "+":
+		return NewUnit(left.Number+right.Number, left.Unit)
+	case "-":
+		return NewUnit(left.Number-right.Number, left.Unit)
+	case "*":
+		if right.Type == ValueUnit {
+			// Creating compound unit
+			return NewUnit(left.Number*right.Number, left.Unit+"·"+right.Unit)
+		}
+		return NewUnit(left.Number*right.Number, left.Unit)
+	case "/":
+		if right.Number == 0 {
+			return NewError("division by zero")
+		}
+		if right.Type == ValueUnit {
+			// Creating rate unit
+			result := left.Number / right.Number
+			rateUnit := left.Unit + "/" + right.Unit
+			return NewUnit(result, rateUnit)
+		}
+		return NewUnit(left.Number/right.Number, left.Unit)
+	default:
+		return NewError(fmt.Sprintf("unknown operator: %s", op))
+	}
+}
+
+// GetVariable retrieves a variable from the environment.
+func (e *Evaluator) GetVariable(name string) (Value, bool) {
+	val, ok := e.env.variables[name]
+	return val, ok
+}
+
+// SetVariable sets a variable in the environment.
+func (e *Evaluator) SetVariable(name string, val Value) {
+	e.env.variables[name] = val
+}
+
+// Round rounds a value to the specified number of decimal places.
+func Round(val float64, decimals int) float64 {
+	pow := math.Pow(10, float64(decimals))
+	return math.Round(val*pow) / pow
+}
