@@ -63,37 +63,37 @@ func (p *Parser) parseExpression() (Expr, error) {
 	if p.current().Type == lexer.TokenColon {
 		return p.parseCommand()
 	}
-	
+
 	// Check for assignment
 	if p.current().Type == lexer.TokenIdent && p.peek(1).Type == lexer.TokenEquals {
 		return p.parseAssignment()
 	}
-	
+
 	// Try parsing fuzzy phrases first
 	if expr, ok := p.tryParseFuzzyPhrase(); ok {
 		return expr, nil
 	}
-	
+
 	// Parse standard expression
 	return p.parseConversion()
 }
 
 func (p *Parser) parseCommand() (Expr, error) {
 	p.advance() // skip ':'
-	
+
 	if p.current().Type != lexer.TokenIdent {
 		return nil, fmt.Errorf("expected command name")
 	}
-	
+
 	command := p.current().Literal
 	p.advance()
-	
+
 	var args []string
 	for p.current().Type != lexer.TokenEOF {
 		args = append(args, p.current().Literal)
 		p.advance()
 	}
-	
+
 	return &CommandExpr{
 		Command: command,
 		Args:    args,
@@ -104,12 +104,12 @@ func (p *Parser) parseAssignment() (Expr, error) {
 	name := p.current().Literal
 	p.advance() // skip identifier
 	p.advance() // skip '='
-	
+
 	value, err := p.parseConversion()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &AssignExpr{
 		Name:  name,
 		Value: value,
@@ -118,7 +118,7 @@ func (p *Parser) parseAssignment() (Expr, error) {
 
 func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 	tok := p.current()
-	
+
 	// "half of X"
 	if tok.Type == lexer.TokenHalf {
 		p.advance()
@@ -131,7 +131,7 @@ func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 		}
 		return &FuzzyExpr{Pattern: "half", Value: value}, true
 	}
-	
+
 	// "double X" or "twice X"
 	if tok.Type == lexer.TokenDouble || tok.Type == lexer.TokenTwice {
 		pattern := tok.Literal
@@ -142,7 +142,7 @@ func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 		}
 		return &FuzzyExpr{Pattern: pattern, Value: value}, true
 	}
-	
+
 	// "three quarters of X"
 	if tok.Type == lexer.TokenThree && p.peek(1).Type == lexer.TokenQuarters {
 		p.advance() // skip 'three'
@@ -156,7 +156,7 @@ func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 		}
 		return &FuzzyExpr{Pattern: "three quarters", Value: value}, true
 	}
-	
+
 	// "increase X by Y%"
 	if tok.Type == lexer.TokenIncrease {
 		p.advance()
@@ -173,7 +173,7 @@ func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 			return &PercentChangeExpr{Base: base, Percent: percent, Increase: true}, true
 		}
 	}
-	
+
 	// "decrease X by Y%"
 	if tok.Type == lexer.TokenDecrease {
 		p.advance()
@@ -190,7 +190,7 @@ func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 			return &PercentChangeExpr{Base: base, Percent: percent, Increase: false}, true
 		}
 	}
-	
+
 	// "X is what % of Y"
 	if p.pos+3 < len(p.tokens) {
 		if p.peek(1).Type == lexer.TokenIs && p.peek(2).Type == lexer.TokenWhat && p.peek(3).Type == lexer.TokenPercent {
@@ -211,7 +211,7 @@ func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 			return &WhatPercentExpr{Part: part, Whole: whole}, true
 		}
 	}
-	
+
 	return nil, false
 }
 
@@ -220,7 +220,7 @@ func (p *Parser) parseConversion() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check for "in" conversion
 	if p.current().Type == lexer.TokenIn {
 		p.advance()
@@ -228,7 +228,7 @@ func (p *Parser) parseConversion() (Expr, error) {
 		p.advance()
 		return &ConversionExpr{Value: expr, ToUnit: toUnit}, nil
 	}
-	
+
 	return expr, nil
 }
 
@@ -237,28 +237,28 @@ func (p *Parser) parseAdditive() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for {
 		tok := p.current()
 		if tok.Type != lexer.TokenPlus && tok.Type != lexer.TokenMinus {
 			break
 		}
-		
+
 		op := tok.Literal
 		p.advance()
-		
+
 		right, err := p.parseMultiplicative()
 		if err != nil {
 			return nil, err
 		}
-		
+
 		left = &BinaryExpr{
 			Left:     left,
 			Operator: op,
 			Right:    right,
 		}
 	}
-	
+
 	return left, nil
 }
 
@@ -267,34 +267,34 @@ func (p *Parser) parseMultiplicative() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for {
 		tok := p.current()
 		if tok.Type != lexer.TokenMultiply && tok.Type != lexer.TokenDivide {
 			break
 		}
-		
+
 		op := tok.Literal
 		p.advance()
-		
+
 		right, err := p.parseUnary()
 		if err != nil {
 			return nil, err
 		}
-		
+
 		left = &BinaryExpr{
 			Left:     left,
 			Operator: op,
 			Right:    right,
 		}
 	}
-	
+
 	return left, nil
 }
 
 func (p *Parser) parseUnary() (Expr, error) {
 	tok := p.current()
-	
+
 	if tok.Type == lexer.TokenMinus {
 		p.advance()
 		operand, err := p.parseUnary()
@@ -306,7 +306,7 @@ func (p *Parser) parseUnary() (Expr, error) {
 			Operand:  operand,
 		}, nil
 	}
-	
+
 	return p.parsePostfix()
 }
 
@@ -315,13 +315,13 @@ func (p *Parser) parsePostfix() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check for unit
 	if p.current().Type == lexer.TokenUnit {
 		unit := p.current().Literal
 		p.advance()
 		expr = &UnitExpr{Value: expr, Unit: unit}
-		
+
 		// Check for "per" (rate)
 		if p.current().Type == lexer.TokenPer || p.current().Type == lexer.TokenDivide {
 			p.advance()
@@ -332,11 +332,11 @@ func (p *Parser) parsePostfix() (Expr, error) {
 			}
 		}
 	}
-	
+
 	// Check for percentage
 	if p.current().Type == lexer.TokenPercent {
 		p.advance()
-		
+
 		// Check for "of"
 		if p.current().Type == lexer.TokenOf {
 			p.advance()
@@ -346,16 +346,16 @@ func (p *Parser) parsePostfix() (Expr, error) {
 			}
 			return &PercentOfExpr{Percent: expr, Of: of}, nil
 		}
-		
+
 		expr = &PercentExpr{Value: expr}
 	}
-	
+
 	return expr, nil
 }
 
 func (p *Parser) parsePrimary() (Expr, error) {
 	tok := p.current()
-	
+
 	switch tok.Type {
 	case lexer.TokenNumber:
 		val, err := strconv.ParseFloat(tok.Literal, 64)
@@ -364,37 +364,37 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		}
 		p.advance()
 		return &NumberExpr{Value: val}, nil
-		
+
 	case lexer.TokenCurrency:
 		currency := tok.Literal
 		p.advance()
-		
+
 		if p.current().Type != lexer.TokenNumber {
 			return nil, fmt.Errorf("expected number after currency symbol")
 		}
-		
+
 		val, err := strconv.ParseFloat(p.current().Literal, 64)
 		if err != nil {
 			return nil, fmt.Errorf("invalid number: %s", p.current().Literal)
 		}
 		p.advance()
-		
+
 		return &CurrencyExpr{
 			Value:    &NumberExpr{Value: val},
 			Currency: currency,
 		}, nil
-		
+
 	case lexer.TokenIdent:
 		name := tok.Literal
 		p.advance()
-		
+
 		// Check for function call
 		if p.current().Type == lexer.TokenLParen {
 			return p.parseFunctionCall(name)
 		}
-		
+
 		return &IdentExpr{Name: name}, nil
-		
+
 	case lexer.TokenLParen:
 		p.advance()
 		expr, err := p.parseAdditive()
@@ -405,17 +405,24 @@ func (p *Parser) parsePrimary() (Expr, error) {
 			return nil, err
 		}
 		return expr, nil
-		
+
 	case lexer.TokenSum, lexer.TokenAverage, lexer.TokenMean, lexer.TokenTotal:
 		return p.parseFunctionCall(tok.Literal)
-		
+
 	case lexer.TokenToday, lexer.TokenTomorrow, lexer.TokenYesterday:
 		return p.parseDateKeyword()
-		
+
+	case lexer.TokenNext, lexer.TokenLast:
+		return p.parseWeekday()
+
+	case lexer.TokenMonday, lexer.TokenTuesday, lexer.TokenWednesday,
+		lexer.TokenThursday, lexer.TokenFriday, lexer.TokenSaturday, lexer.TokenSunday:
+		return p.parseWeekday()
+
 	case lexer.TokenNow:
 		p.advance()
 		return &TimeExpr{Time: time.Now()}, nil
-		
+
 	default:
 		return nil, fmt.Errorf("unexpected token: %s", tok.Type)
 	}
@@ -423,33 +430,33 @@ func (p *Parser) parsePrimary() (Expr, error) {
 
 func (p *Parser) parseFunctionCall(name string) (Expr, error) {
 	p.advance() // skip function name if not already done
-	
+
 	if p.current().Type == lexer.TokenLParen {
 		p.advance() // skip '('
 	} else if p.current().Type == lexer.TokenOf {
 		p.advance() // skip 'of' for natural language
 	}
-	
+
 	var args []Expr
-	
+
 	for p.current().Type != lexer.TokenRParen && p.current().Type != lexer.TokenEOF {
 		arg, err := p.parseAdditive()
 		if err != nil {
 			return nil, err
 		}
 		args = append(args, arg)
-		
+
 		if p.current().Type == lexer.TokenComma {
 			p.advance()
 		} else {
 			break
 		}
 	}
-	
+
 	if p.current().Type == lexer.TokenRParen {
 		p.advance()
 	}
-	
+
 	return &FunctionCallExpr{
 		Name: strings.ToLower(name),
 		Args: args,
@@ -459,7 +466,7 @@ func (p *Parser) parseFunctionCall(name string) (Expr, error) {
 func (p *Parser) parseDateKeyword() (Expr, error) {
 	tok := p.current()
 	p.advance()
-	
+
 	var base time.Time
 	switch tok.Type {
 	case lexer.TokenToday:
@@ -469,28 +476,28 @@ func (p *Parser) parseDateKeyword() (Expr, error) {
 	case lexer.TokenYesterday:
 		base = time.Now().AddDate(0, 0, -1)
 	}
-	
+
 	// Normalise to start of day
 	base = time.Date(base.Year(), base.Month(), base.Day(), 0, 0, 0, 0, base.Location())
-	
+
 	expr := &DateExpr{Date: base}
-	
+
 	// Check for date arithmetic
 	if p.current().Type == lexer.TokenPlus || p.current().Type == lexer.TokenMinus {
 		op := p.current().Literal
 		p.advance()
-		
+
 		offset, err := p.parsePrimary()
 		if err != nil {
 			return nil, err
 		}
-		
+
 		unit := ""
 		if p.current().Type == lexer.TokenUnit || p.current().Type == lexer.TokenIdent {
 			unit = p.current().Literal
 			p.advance()
 		}
-		
+
 		return &DateArithmeticExpr{
 			Base:     expr,
 			Operator: op,
@@ -498,6 +505,46 @@ func (p *Parser) parseDateKeyword() (Expr, error) {
 			Unit:     unit,
 		}, nil
 	}
-	
+
 	return expr, nil
+}
+
+func (p *Parser) parseWeekday() (Expr, error) {
+	modifier := ""
+	
+	// Check for "next" or "last"
+	if p.current().Type == lexer.TokenNext || p.current().Type == lexer.TokenLast {
+		modifier = strings.ToLower(p.current().Literal)
+		p.advance()
+	}
+	
+	// Get the weekday
+	tok := p.current()
+	var weekday time.Weekday
+	
+	switch tok.Type {
+	case lexer.TokenMonday:
+		weekday = time.Monday
+	case lexer.TokenTuesday:
+		weekday = time.Tuesday
+	case lexer.TokenWednesday:
+		weekday = time.Wednesday
+	case lexer.TokenThursday:
+		weekday = time.Thursday
+	case lexer.TokenFriday:
+		weekday = time.Friday
+	case lexer.TokenSaturday:
+		weekday = time.Saturday
+	case lexer.TokenSunday:
+		weekday = time.Sunday
+	default:
+		return nil, fmt.Errorf("expected weekday, got %s", tok.Type)
+	}
+	
+	p.advance()
+	
+	return &WeekdayExpr{
+		Weekday:  weekday,
+		Modifier: modifier,
+	}, nil
 }

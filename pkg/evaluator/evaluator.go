@@ -8,6 +8,7 @@ import (
 
 	"github.com/andrewneudegg/calc/pkg/currency"
 	"github.com/andrewneudegg/calc/pkg/parser"
+	"github.com/andrewneudegg/calc/pkg/timezone"
 	"github.com/andrewneudegg/calc/pkg/units"
 )
 
@@ -16,6 +17,7 @@ type Environment struct {
 	variables map[string]Value
 	units     *units.System
 	currency  *currency.System
+	timezone  *timezone.System
 }
 
 // NewEnvironment creates a new evaluation environment.
@@ -24,6 +26,7 @@ func NewEnvironment() *Environment {
 		variables: make(map[string]Value),
 		units:     units.NewSystem(),
 		currency:  currency.NewSystem(),
+		timezone:  timezone.NewSystem(),
 	}
 }
 
@@ -42,59 +45,62 @@ func (e *Evaluator) Eval(expr parser.Expr) Value {
 	if expr == nil {
 		return NewError("nil expression")
 	}
-	
+
 	switch node := expr.(type) {
 	case *parser.NumberExpr:
 		return NewNumber(node.Value)
-		
+
 	case *parser.BinaryExpr:
 		return e.evalBinary(node)
-		
+
 	case *parser.UnaryExpr:
 		return e.evalUnary(node)
-		
+
 	case *parser.IdentExpr:
 		return e.evalIdent(node)
-		
+
 	case *parser.AssignExpr:
 		return e.evalAssign(node)
-		
+
 	case *parser.UnitExpr:
 		return e.evalUnit(node)
-		
+
 	case *parser.ConversionExpr:
 		return e.evalConversion(node)
-		
+
 	case *parser.CurrencyExpr:
 		return e.evalCurrency(node)
-		
+
 	case *parser.PercentExpr:
 		return e.evalPercent(node)
-		
+
 	case *parser.PercentOfExpr:
 		return e.evalPercentOf(node)
-		
+
 	case *parser.PercentChangeExpr:
 		return e.evalPercentChange(node)
-		
+
 	case *parser.WhatPercentExpr:
 		return e.evalWhatPercent(node)
-		
+
 	case *parser.FunctionCallExpr:
 		return e.evalFunctionCall(node)
-		
+
 	case *parser.DateExpr:
 		return NewDate(node.Date)
-		
+
 	case *parser.TimeExpr:
 		return NewDate(node.Time)
-		
+
 	case *parser.DateArithmeticExpr:
 		return e.evalDateArithmetic(node)
-		
+
 	case *parser.FuzzyExpr:
 		return e.evalFuzzy(node)
-		
+
+	case *parser.WeekdayExpr:
+		return e.evalWeekday(node)
+
 	default:
 		return NewError(fmt.Sprintf("unknown expression type: %T", expr))
 	}
@@ -105,33 +111,33 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 	if left.IsError() {
 		return left
 	}
-	
+
 	right := e.Eval(node.Right)
 	if right.IsError() {
 		return right
 	}
-	
+
 	// Handle currency operations
 	if left.Type == ValueCurrency || right.Type == ValueCurrency {
 		return e.evalCurrencyBinary(left, node.Operator, right)
 	}
-	
+
 	// Handle unit operations
 	if left.Type == ValueUnit || right.Type == ValueUnit {
 		return e.evalUnitBinary(left, node.Operator, right)
 	}
-	
+
 	// Handle percentage operations
 	if right.Type == ValuePercent && node.Operator == "+" {
 		// e.g., "30 + 20%" = 30 + (30 * 0.20)
 		return NewNumber(left.Number + (left.Number * right.Number / 100))
 	}
-	
+
 	if right.Type == ValuePercent && node.Operator == "-" {
 		// e.g., "30 - 20%" = 30 - (30 * 0.20)
 		return NewNumber(left.Number - (left.Number * right.Number / 100))
 	}
-	
+
 	// Standard numeric operations
 	switch node.Operator {
 	case "+":
@@ -155,7 +161,7 @@ func (e *Evaluator) evalUnary(node *parser.UnaryExpr) Value {
 	if operand.IsError() {
 		return operand
 	}
-	
+
 	switch node.Operator {
 	case "-":
 		operand.Number = -operand.Number
@@ -178,7 +184,7 @@ func (e *Evaluator) evalAssign(node *parser.AssignExpr) Value {
 	if val.IsError() {
 		return val
 	}
-	
+
 	e.env.variables[node.Name] = val
 	return val
 }
@@ -188,7 +194,7 @@ func (e *Evaluator) evalUnit(node *parser.UnitExpr) Value {
 	if val.IsError() {
 		return val
 	}
-	
+
 	return NewUnit(val.Number, node.Unit)
 }
 
@@ -197,7 +203,7 @@ func (e *Evaluator) evalConversion(node *parser.ConversionExpr) Value {
 	if val.IsError() {
 		return val
 	}
-	
+
 	// Handle currency conversion
 	if val.Type == ValueCurrency {
 		result, err := e.env.currency.Convert(val.Number, val.Currency, node.ToUnit)
@@ -206,7 +212,7 @@ func (e *Evaluator) evalConversion(node *parser.ConversionExpr) Value {
 		}
 		return NewCurrency(result, e.env.currency.GetSymbol(node.ToUnit))
 	}
-	
+
 	// Handle unit conversion
 	if val.Type == ValueUnit {
 		result, err := e.env.units.Convert(val.Number, val.Unit, node.ToUnit)
@@ -215,7 +221,7 @@ func (e *Evaluator) evalConversion(node *parser.ConversionExpr) Value {
 		}
 		return NewUnit(result, node.ToUnit)
 	}
-	
+
 	// Try converting a plain number with a unit
 	result, err := e.env.units.Convert(val.Number, "unknown", node.ToUnit)
 	if err != nil {
@@ -229,7 +235,7 @@ func (e *Evaluator) evalCurrency(node *parser.CurrencyExpr) Value {
 	if val.IsError() {
 		return val
 	}
-	
+
 	return NewCurrency(val.Number, node.Currency)
 }
 
@@ -238,7 +244,7 @@ func (e *Evaluator) evalPercent(node *parser.PercentExpr) Value {
 	if val.IsError() {
 		return val
 	}
-	
+
 	return NewPercent(val.Number)
 }
 
@@ -247,14 +253,14 @@ func (e *Evaluator) evalPercentOf(node *parser.PercentOfExpr) Value {
 	if percent.IsError() {
 		return percent
 	}
-	
+
 	of := e.Eval(node.Of)
 	if of.IsError() {
 		return of
 	}
-	
+
 	result := of.Number * (percent.Number / 100)
-	
+
 	// Preserve the type of the "of" value
 	switch of.Type {
 	case ValueCurrency:
@@ -271,19 +277,19 @@ func (e *Evaluator) evalPercentChange(node *parser.PercentChangeExpr) Value {
 	if base.IsError() {
 		return base
 	}
-	
+
 	percent := e.Eval(node.Percent)
 	if percent.IsError() {
 		return percent
 	}
-	
+
 	var result float64
 	if node.Increase {
 		result = base.Number * (1 + percent.Number/100)
 	} else {
 		result = base.Number * (1 - percent.Number/100)
 	}
-	
+
 	// Preserve the type
 	switch base.Type {
 	case ValueCurrency:
@@ -300,16 +306,16 @@ func (e *Evaluator) evalWhatPercent(node *parser.WhatPercentExpr) Value {
 	if part.IsError() {
 		return part
 	}
-	
+
 	whole := e.Eval(node.Whole)
 	if whole.IsError() {
 		return whole
 	}
-	
+
 	if whole.Number == 0 {
 		return NewError("division by zero")
 	}
-	
+
 	result := (part.Number / whole.Number) * 100
 	return NewPercent(result)
 }
@@ -341,12 +347,12 @@ func (e *Evaluator) evalAverage(args []parser.Expr) Value {
 	if len(args) == 0 {
 		return NewError("average requires at least one argument")
 	}
-	
+
 	sumVal := e.evalSum(args)
 	if sumVal.IsError() {
 		return sumVal
 	}
-	
+
 	return NewNumber(sumVal.Number / float64(len(args)))
 }
 
@@ -355,20 +361,20 @@ func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {
 	if base.IsError() {
 		return base
 	}
-	
+
 	offset := e.Eval(node.Offset)
 	if offset.IsError() {
 		return offset
 	}
-	
+
 	offsetVal := int(offset.Number)
 	if node.Operator == "-" {
 		offsetVal = -offsetVal
 	}
-	
+
 	var result time.Time
 	unit := strings.ToLower(node.Unit)
-	
+
 	switch unit {
 	case "day", "days":
 		result = base.Date.AddDate(0, 0, offsetVal)
@@ -381,7 +387,7 @@ func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {
 	default:
 		return NewError(fmt.Sprintf("unknown time unit: %s", node.Unit))
 	}
-	
+
 	return NewDate(result)
 }
 
@@ -390,10 +396,10 @@ func (e *Evaluator) evalFuzzy(node *parser.FuzzyExpr) Value {
 	if val.IsError() {
 		return val
 	}
-	
+
 	pattern := strings.ToLower(node.Pattern)
 	var result float64
-	
+
 	switch pattern {
 	case "half":
 		result = val.Number * 0.5
@@ -404,7 +410,7 @@ func (e *Evaluator) evalFuzzy(node *parser.FuzzyExpr) Value {
 	default:
 		return NewError(fmt.Sprintf("unknown fuzzy pattern: %s", node.Pattern))
 	}
-	
+
 	// Preserve type
 	switch val.Type {
 	case ValueCurrency:
@@ -429,7 +435,7 @@ func (e *Evaluator) evalCurrencyBinary(left Value, op string, right Value) Value
 			right.Currency = left.Currency
 		}
 	}
-	
+
 	switch op {
 	case "+":
 		return NewCurrency(left.Number+right.Number, left.Currency)
@@ -466,7 +472,7 @@ func (e *Evaluator) evalUnitBinary(left Value, op string, right Value) Value {
 			right.Unit = left.Unit
 		}
 	}
-	
+
 	switch op {
 	case "+":
 		return NewUnit(left.Number+right.Number, left.Unit)
@@ -509,4 +515,42 @@ func (e *Evaluator) SetVariable(name string, val Value) {
 func Round(val float64, decimals int) float64 {
 	pow := math.Pow(10, float64(decimals))
 	return math.Round(val*pow) / pow
+}
+
+func (e *Evaluator) evalWeekday(node *parser.WeekdayExpr) Value {
+	now := time.Now()
+	currentWeekday := now.Weekday()
+	targetWeekday := node.Weekday
+
+	// Calculate days until target weekday
+	daysUntil := int(targetWeekday - currentWeekday)
+	if daysUntil < 0 {
+		daysUntil += 7
+	}
+
+	var result time.Time
+
+	switch node.Modifier {
+	case "next":
+		// Next occurrence (at least 1 day away)
+		if daysUntil == 0 {
+			daysUntil = 7
+		}
+		result = now.AddDate(0, 0, daysUntil)
+	case "last":
+		// Last occurrence
+		daysAgo := int(currentWeekday - targetWeekday)
+		if daysAgo <= 0 {
+			daysAgo += 7
+		}
+		result = now.AddDate(0, 0, -daysAgo)
+	default:
+		// This week (could be today or in the future this week)
+		result = now.AddDate(0, 0, daysUntil)
+	}
+
+	// Normalise to start of day
+	result = time.Date(result.Year(), result.Month(), result.Day(), 0, 0, 0, 0, result.Location())
+
+	return NewDate(result)
 }
