@@ -20,11 +20,11 @@ const (
 
 // Unit represents a unit of measurement.
 type Unit struct {
-	Name       string
-	Dimension  Dimension
-	ToBase     float64 // conversion factor to base unit
-	BaseUnit   string
-	IsCustom   bool
+	Name      string
+	Dimension Dimension
+	ToBase    float64 // conversion factor to base unit
+	BaseUnit  string
+	IsCustom  bool
 }
 
 // System manages all units and conversions.
@@ -65,7 +65,7 @@ func (s *System) initStandardUnits() {
 	s.addUnit("mi", DimensionLength, 1609.344, "m")
 	s.addUnit("mile", DimensionLength, 1609.344, "m")
 	s.addUnit("miles", DimensionLength, 1609.344, "m")
-	
+
 	// Mass units (base: kilogram)
 	s.addUnit("kg", DimensionMass, 1.0, "kg")
 	s.addUnit("kilogram", DimensionMass, 1.0, "kg")
@@ -80,7 +80,7 @@ func (s *System) initStandardUnits() {
 	s.addUnit("oz", DimensionMass, 0.0283495, "kg")
 	s.addUnit("ounce", DimensionMass, 0.0283495, "kg")
 	s.addUnit("ounces", DimensionMass, 0.0283495, "kg")
-	
+
 	// Time units (base: second)
 	s.addUnit("s", DimensionTime, 1.0, "s")
 	s.addUnit("sec", DimensionTime, 1.0, "s")
@@ -97,7 +97,9 @@ func (s *System) initStandardUnits() {
 	s.addUnit("days", DimensionTime, 86400.0, "s")
 	s.addUnit("week", DimensionTime, 604800.0, "s")
 	s.addUnit("weeks", DimensionTime, 604800.0, "s")
-	
+	s.addUnit("year", DimensionTime, 31557600.0, "s") // 365.25 days
+	s.addUnit("years", DimensionTime, 31557600.0, "s")
+
 	// Volume units (base: litre)
 	s.addUnit("l", DimensionVolume, 1.0, "l")
 	s.addUnit("litre", DimensionVolume, 1.0, "l")
@@ -108,7 +110,7 @@ func (s *System) initStandardUnits() {
 	s.addUnit("gal", DimensionVolume, 3.78541, "l")
 	s.addUnit("gallon", DimensionVolume, 3.78541, "l")
 	s.addUnit("gallons", DimensionVolume, 3.78541, "l")
-	
+
 	// Temperature units (special handling needed)
 	s.addUnit("c", DimensionTemperature, 1.0, "c")
 	s.addUnit("celsius", DimensionTemperature, 1.0, "c")
@@ -129,18 +131,18 @@ func (s *System) addUnit(name string, dim Dimension, toBase float64, baseUnit st
 // AddCustomUnit adds a custom unit definition.
 func (s *System) AddCustomUnit(name string, value float64, baseUnit string) error {
 	name = strings.ToLower(name)
-	
+
 	// Check if base unit exists
 	base, exists := s.units[strings.ToLower(baseUnit)]
 	if !exists {
 		return fmt.Errorf("unknown base unit: %s", baseUnit)
 	}
-	
+
 	// Check for circular definition
 	if name == strings.ToLower(baseUnit) {
 		return fmt.Errorf("circular unit definition")
 	}
-	
+
 	s.custom[name] = &Unit{
 		Name:      name,
 		Dimension: base.Dimension,
@@ -148,9 +150,9 @@ func (s *System) AddCustomUnit(name string, value float64, baseUnit string) erro
 		BaseUnit:  base.BaseUnit,
 		IsCustom:  true,
 	}
-	
+
 	s.units[name] = s.custom[name]
-	
+
 	return nil
 }
 
@@ -158,38 +160,38 @@ func (s *System) AddCustomUnit(name string, value float64, baseUnit string) erro
 func (s *System) Convert(value float64, fromUnit, toUnit string) (float64, error) {
 	fromUnit = strings.ToLower(fromUnit)
 	toUnit = strings.ToLower(toUnit)
-	
+
 	from, ok := s.units[fromUnit]
 	if !ok {
 		return 0, fmt.Errorf("unknown unit '%s'", fromUnit)
 	}
-	
+
 	to, ok := s.units[toUnit]
 	if !ok {
 		return 0, fmt.Errorf("unknown unit '%s'", toUnit)
 	}
-	
+
 	// Check dimension compatibility
 	if from.Dimension != to.Dimension {
 		return 0, fmt.Errorf("cannot convert %s to %s", fromUnit, toUnit)
 	}
-	
+
 	// Handle temperature specially
 	if from.Dimension == DimensionTemperature {
 		return s.convertTemperature(value, fromUnit, toUnit)
 	}
-	
+
 	// Convert to base unit, then to target unit
 	baseValue := value * from.ToBase
 	result := baseValue / to.ToBase
-	
+
 	return result, nil
 }
 
 func (s *System) convertTemperature(value float64, from, to string) (float64, error) {
 	from = strings.ToLower(from)
 	to = strings.ToLower(to)
-	
+
 	// Normalise to celsius first
 	var celsius float64
 	switch from {
@@ -200,7 +202,7 @@ func (s *System) convertTemperature(value float64, from, to string) (float64, er
 	default:
 		return 0, fmt.Errorf("unknown temperature unit: %s", from)
 	}
-	
+
 	// Convert from celsius to target
 	switch to {
 	case "c", "celsius":

@@ -21,7 +21,8 @@ func evalExpr(input string) Value {
 
 	env := NewEnvironment()
 	eval := New(env)
-	return eval.Eval(expr)
+	result := eval.Eval(expr)
+	return result
 }
 
 // TestArithmeticOperations tests all basic arithmetic
@@ -612,6 +613,91 @@ func TestCompoundUnits(t *testing.T) {
 		}
 		if result.Type != ValueUnit {
 			t.Errorf("%q: expected unit, got %v", tt.input, result.Type)
+		}
+	}
+}
+
+// TestNumberWordsEvaluation tests end-to-end number words evaluation
+func TestNumberWordsEvaluation(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected float64
+	}{
+		{"five + ten", 15},
+		{"twenty * three", 60},
+		{"one hundred / ten", 10},
+		{"fifty - twenty", 30},
+		{"three hundred and forty two", 342},
+		{"one thousand + five hundred", 1500},
+	}
+
+	for _, tt := range tests {
+		result := evalExpr(tt.input)
+		if result.IsError() {
+			t.Errorf("%q: got error %s", tt.input, result.Error)
+			continue
+		}
+		if math.Abs(result.Number-tt.expected) > 0.01 {
+			t.Errorf("%q: got %f, want %f", tt.input, result.Number, tt.expected)
+		}
+	}
+}
+
+// TestNumberWordsWithUnitsRegressions tests specific failing cases from user report
+func TestNumberWordsWithUnitsRegressions(t *testing.T) {
+	tests := []struct {
+		input       string
+		description string
+	}{
+		{"twelve cm", "number word with unit"},
+		{"three meters", "number word with unit"},
+		{"forty two kg", "compound number word with unit"},
+	}
+
+	for _, tt := range tests {
+		result := evalExpr(tt.input)
+		if result.IsError() {
+			t.Errorf("%s (%q): got error %s", tt.description, tt.input, result.Error)
+			continue
+		}
+		t.Logf("%s (%q): value=%f, type=%v, unit=%s",
+			tt.description, tt.input, result.Number, result.Type, result.Unit)
+	}
+}
+
+// TestDivisionWithUnits tests division with units
+func TestDivisionWithUnits(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectedValue float64
+		expectedType  ValueType
+		expectedUnit  string
+		description   string
+		tolerance     float64
+	}{
+		{"7 meters / 12 cm", 58.333333, ValueNumber, "", "division with unit conversion should return dimensionless number", 0.001},
+		{"10 m / 2 m", 5.0, ValueNumber, "", "same unit division should return dimensionless number", 0.001},
+		{"100 km / 2 hours", 50.0, ValueUnit, "km/hours", "incompatible units should create rate unit", 0.001},
+		{"7 meters divided by twelve cm", 58.333333, ValueNumber, "", "division with number words should work", 0.001},
+	}
+
+	for _, tt := range tests {
+		result := evalExpr(tt.input)
+		if result.IsError() {
+			t.Errorf("%s (%q): got error %s", tt.description, tt.input, result.Error)
+			continue
+		}
+
+		if result.Type != tt.expectedType {
+			t.Errorf("%s (%q): expected type %v, got %v", tt.description, tt.input, tt.expectedType, result.Type)
+		}
+
+		if math.Abs(result.Number-tt.expectedValue) > tt.tolerance {
+			t.Errorf("%s (%q): expected value %f, got %f", tt.description, tt.input, tt.expectedValue, result.Number)
+		}
+
+		if result.Unit != tt.expectedUnit {
+			t.Errorf("%s (%q): expected unit %q, got %q", tt.description, tt.input, tt.expectedUnit, result.Unit)
 		}
 	}
 }

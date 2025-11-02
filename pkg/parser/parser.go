@@ -240,11 +240,29 @@ func (p *Parser) parseAdditive() (Expr, error) {
 
 	for {
 		tok := p.current()
-		if tok.Type != lexer.TokenPlus && tok.Type != lexer.TokenMinus {
+		var op string
+
+		// Check for symbolic operators
+		if tok.Type == lexer.TokenPlus {
+			op = "+"
+		} else if tok.Type == lexer.TokenMinus {
+			op = "-"
+		} else if tok.Type == lexer.TokenIdent {
+			// Check for word operators
+			if tok.Literal == "plus" {
+				op = "+"
+			} else if tok.Literal == "minus" {
+				op = "-"
+			} else if tok.Literal == "and" {
+				// "and" acts as addition when connecting units or numbers
+				op = "+"
+			} else {
+				break
+			}
+		} else {
 			break
 		}
 
-		op := tok.Literal
 		p.advance()
 
 		right, err := p.parseMultiplicative()
@@ -270,11 +288,43 @@ func (p *Parser) parseMultiplicative() (Expr, error) {
 
 	for {
 		tok := p.current()
-		if tok.Type != lexer.TokenMultiply && tok.Type != lexer.TokenDivide {
+		var op string
+
+		// Check for symbolic operators
+		if tok.Type == lexer.TokenMultiply {
+			op = "*"
+		} else if tok.Type == lexer.TokenDivide {
+			op = "/"
+		} else if tok.Type == lexer.TokenIdent {
+			// Check for word operators
+			if tok.Literal == "times" || tok.Literal == "multiplied" {
+				op = "*"
+			} else if tok.Literal == "divided" {
+				// Check if followed by "by"
+				if p.peek(1).Type == lexer.TokenBy {
+					op = "/"
+					p.advance() // consume "divided"
+					p.advance() // consume "by"
+					right, err := p.parseUnary()
+					if err != nil {
+						return nil, err
+					}
+					left = &BinaryExpr{
+						Left:     left,
+						Operator: op,
+						Right:    right,
+					}
+					continue
+				} else {
+					break
+				}
+			} else {
+				break
+			}
+		} else {
 			break
 		}
 
-		op := tok.Literal
 		p.advance()
 
 		right, err := p.parseUnary()
@@ -322,14 +372,24 @@ func (p *Parser) parsePostfix() (Expr, error) {
 		p.advance()
 		expr = &UnitExpr{Value: expr, Unit: unit}
 
-		// Check for "per" (rate)
-		if p.current().Type == lexer.TokenPer || p.current().Type == lexer.TokenDivide {
+		// Check for "per" (rate) - only consume / if immediately followed by a unit
+		// If followed by a number, leave the / for the binary operator parser
+		if p.current().Type == lexer.TokenPer {
 			p.advance()
 			if p.current().Type == lexer.TokenUnit {
 				unit2 := p.current().Literal
 				p.advance()
 				expr = &UnitExpr{Value: expr, Unit: unit + "/" + unit2}
 			}
+		} else if p.current().Type == lexer.TokenDivide {
+			// Look ahead to see if this is a rate (/ followed by unit) or division (/ followed by number)
+			if p.peek(1).Type == lexer.TokenUnit {
+				p.advance() // consume the /
+				unit2 := p.current().Literal
+				p.advance()
+				expr = &UnitExpr{Value: expr, Unit: unit + "/" + unit2}
+			}
+			// Otherwise, leave the / for the binary operator parser to handle
 		}
 	}
 
@@ -385,6 +445,10 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		}, nil
 
 	case lexer.TokenIdent:
+		// Try to parse as number words first
+		if val, ok := p.tryParseNumberWords(); ok {
+			return &NumberExpr{Value: val}, nil
+		}
 		name := tok.Literal
 		p.advance()
 
@@ -394,6 +458,18 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		}
 
 		return &IdentExpr{Name: name}, nil
+
+	case lexer.TokenThree:
+		// Could be "three quarters" or just "three" as a number
+		if p.peek(1).Type == lexer.TokenQuarters {
+			// It's "three quarters" - handle in tryParseFuzzyPhrase
+			return nil, fmt.Errorf("unexpected token: %s", tok.Type)
+		}
+		// It's just "three" as a number word
+		if val, ok := p.tryParseNumberWords(); ok {
+			return &NumberExpr{Value: val}, nil
+		}
+		return nil, fmt.Errorf("unexpected token: %s", tok.Type)
 
 	case lexer.TokenLParen:
 		p.advance()
@@ -511,17 +587,17 @@ func (p *Parser) parseDateKeyword() (Expr, error) {
 
 func (p *Parser) parseWeekday() (Expr, error) {
 	modifier := ""
-	
+
 	// Check for "next" or "last"
 	if p.current().Type == lexer.TokenNext || p.current().Type == lexer.TokenLast {
 		modifier = strings.ToLower(p.current().Literal)
 		p.advance()
 	}
-	
+
 	// Get the weekday
 	tok := p.current()
 	var weekday time.Weekday
-	
+
 	switch tok.Type {
 	case lexer.TokenMonday:
 		weekday = time.Monday
@@ -540,11 +616,63 @@ func (p *Parser) parseWeekday() (Expr, error) {
 	default:
 		return nil, fmt.Errorf("expected weekday, got %s", tok.Type)
 	}
-	
+
 	p.advance()
-	
+
 	return &WeekdayExpr{
 		Weekday:  weekday,
 		Modifier: modifier,
 	}, nil
+}
+
+// tryParseNumberWords attempts to parse a sequence of words as a number
+// Returns the number value and true if successful
+func (p *Parser) tryParseNumberWords() (float64, bool) {
+	startPos := p.pos
+	var words []string
+
+	// Collect consecutive tokens that might be number words
+	// This includes TokenIdent and certain keywords like TokenThree
+	for {
+		tok := p.current()
+		var word string
+
+		switch tok.Type {
+		case lexer.TokenIdent:
+			word = tok.Literal
+		case lexer.TokenThree:
+			// Special case: "three" is a keyword but also a number word
+			// Check if next token is "quarters" - if so, don't treat as number
+			if p.peek(1).Type == lexer.TokenQuarters {
+				goto done
+			}
+			word = tok.Literal
+		case lexer.TokenEOF:
+			goto done
+		default:
+			goto done
+		}
+
+		// Check if this could be a number word (using en_GB as default)
+		if !lexer.IsNumberWord(word, "en_GB") {
+			break
+		}
+		words = append(words, word)
+		p.advance()
+	}
+
+done:
+	if len(words) == 0 {
+		return 0, false
+	}
+
+	// Try to parse the collected words as a number
+	val, ok := lexer.ParseNumberWords(words, "en_GB")
+	if !ok {
+		// Restore position if parsing failed
+		p.pos = startPos
+		return 0, false
+	}
+
+	return val, true
 }

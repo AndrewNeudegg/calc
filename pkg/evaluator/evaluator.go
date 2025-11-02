@@ -460,41 +460,60 @@ func (e *Evaluator) evalCurrencyBinary(left Value, op string, right Value) Value
 }
 
 func (e *Evaluator) evalUnitBinary(left Value, op string, right Value) Value {
-	// Check if units are compatible
-	if left.Type == ValueUnit && right.Type == ValueUnit {
-		if left.Unit != right.Unit {
-			// Try to convert right to left's unit
-			converted, err := e.env.units.Convert(right.Number, right.Unit, left.Unit)
-			if err != nil {
-				return NewError(err.Error())
-			}
-			right.Number = converted
-			right.Unit = left.Unit
-		}
-	}
-
 	switch op {
-	case "+":
-		return NewUnit(left.Number+right.Number, left.Unit)
-	case "-":
+	case "+", "-":
+		// For addition/subtraction, units must be compatible
+		if left.Type == ValueUnit && right.Type == ValueUnit {
+			if left.Unit != right.Unit {
+				// Try to convert right to left's unit
+				converted, err := e.env.units.Convert(right.Number, right.Unit, left.Unit)
+				if err != nil {
+					return NewError(err.Error())
+				}
+				right.Number = converted
+				right.Unit = left.Unit
+			}
+		}
+
+		if op == "+" {
+			return NewUnit(left.Number+right.Number, left.Unit)
+		}
 		return NewUnit(left.Number-right.Number, left.Unit)
+
 	case "*":
 		if right.Type == ValueUnit {
 			// Creating compound unit
 			return NewUnit(left.Number*right.Number, left.Unit+"·"+right.Unit)
 		}
 		return NewUnit(left.Number*right.Number, left.Unit)
+
 	case "/":
 		if right.Number == 0 {
 			return NewError("division by zero")
 		}
 		if right.Type == ValueUnit {
-			// Creating rate unit
+			// For division, try to convert if possible
+			if left.Unit != right.Unit {
+				converted, err := e.env.units.Convert(right.Number, right.Unit, left.Unit)
+				if err == nil {
+					// Units are compatible, convert and divide
+					right.Number = converted
+					right.Unit = left.Unit
+				}
+				// If conversion fails, units are incompatible - we'll create a rate unit below
+			}
+
 			result := left.Number / right.Number
+			// If units are the same (after conversion), return dimensionless number
+			if left.Unit == right.Unit {
+				return NewNumber(result)
+			}
+			// Otherwise, create rate unit for incompatible units
 			rateUnit := left.Unit + "/" + right.Unit
 			return NewUnit(result, rateUnit)
 		}
 		return NewUnit(left.Number/right.Number, left.Unit)
+
 	default:
 		return NewError(fmt.Sprintf("unknown operator: %s", op))
 	}

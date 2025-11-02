@@ -360,3 +360,86 @@ func TestParserNestedFunctions(t *testing.T) {
 		}
 	}
 }
+
+// TestParserNumberWords tests parsing English number words
+func TestParserNumberWords(t *testing.T) {
+	tests := []struct {
+		input       string
+		expectedNum float64
+	}{
+		{"one", 1},
+		{"five", 5},
+		{"ten", 10},
+		{"twenty", 20},
+		{"thirty five", 35},
+		{"forty two", 42},
+		{"ninety nine", 99},
+		{"one hundred", 100},
+		{"two hundred", 200},
+		{"three hundred and forty two", 342},
+		{"one thousand", 1000},
+		{"five thousand", 5000},
+		{"three thousand five hundred", 3500},
+		{"one million", 1000000},
+	}
+	
+	for _, tt := range tests {
+		expr, err := parseInput(tt.input)
+		if err != nil {
+			t.Errorf("%q: parse error %v", tt.input, err)
+			continue
+		}
+		numExpr, ok := expr.(*NumberExpr)
+		if !ok {
+			t.Errorf("%q: expected NumberExpr, got %T", tt.input, expr)
+			continue
+		}
+		if numExpr.Value != tt.expectedNum {
+			t.Errorf("%q: got %f, want %f", tt.input, numExpr.Value, tt.expectedNum)
+		}
+	}
+}
+
+// TestParserNumberWordsInExpressions tests number words in complex expressions
+func TestParserNumberWordsInExpressions(t *testing.T) {
+	tests := []string{
+		"five plus ten",
+		"twenty minus seven",
+		"three times four",
+		"one hundred divided by ten",
+		"three hundred and forty two divided by seventeen",
+		"one thousand plus five hundred",
+	}
+	
+	for _, input := range tests {
+		expr, err := parseInput(input)
+		if err != nil {
+			t.Errorf("%q: parse error %v", input, err)
+		}
+		if expr == nil {
+			t.Errorf("%q: got nil expression", input)
+		}
+	}
+}
+
+// TestParserNumberWordsWithUnits tests number words with units
+func TestParserNumberWordsWithUnits(t *testing.T) {
+	tests := []string{
+		"three years in hours",
+		"five meters in cm",
+		"ten kg in grams",
+		"twenty minutes in seconds",
+	}
+	
+	for _, input := range tests {
+		expr, err := parseInput(input)
+		if err != nil {
+			t.Errorf("%q: parse error %v", input, err)
+			continue
+		}
+		_, ok := expr.(*ConversionExpr)
+		if !ok {
+			t.Errorf("%q: expected ConversionExpr, got %T", input, expr)
+		}
+	}
+}
