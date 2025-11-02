@@ -116,6 +116,8 @@ func (s *System) initStandardUnits() {
 	s.addUnit("celsius", DimensionTemperature, 1.0, "c")
 	s.addUnit("f", DimensionTemperature, 1.0, "f")
 	s.addUnit("fahrenheit", DimensionTemperature, 1.0, "f")
+	s.addUnit("k", DimensionTemperature, 1.0, "k")
+	s.addUnit("kelvin", DimensionTemperature, 1.0, "k")
 }
 
 func (s *System) addUnit(name string, dim Dimension, toBase float64, baseUnit string) {
@@ -199,6 +201,8 @@ func (s *System) convertTemperature(value float64, from, to string) (float64, er
 		celsius = value
 	case "f", "fahrenheit":
 		celsius = (value - 32) * 5 / 9
+	case "k", "kelvin":
+		celsius = value - 273.15
 	default:
 		return 0, fmt.Errorf("unknown temperature unit: %s", from)
 	}
@@ -209,6 +213,8 @@ func (s *System) convertTemperature(value float64, from, to string) (float64, er
 		return celsius, nil
 	case "f", "fahrenheit":
 		return celsius*9/5 + 32, nil
+	case "k", "kelvin":
+		return celsius + 273.15, nil
 	default:
 		return 0, fmt.Errorf("unknown temperature unit: %s", to)
 	}

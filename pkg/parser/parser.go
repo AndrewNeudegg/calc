@@ -69,6 +69,11 @@ func (p *Parser) parseExpression() (Expr, error) {
 		return p.parseAssignment()
 	}
 
+	// Try parsing timezone queries
+	if expr, ok := p.tryParseTimezoneQuery(); ok {
+		return expr, nil
+	}
+
 	// Try parsing fuzzy phrases first
 	if expr, ok := p.tryParseFuzzyPhrase(); ok {
 		return expr, nil
@@ -213,6 +218,116 @@ func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 	}
 
 	return nil, false
+}
+
+// tryParseTimezoneQuery attempts to parse timezone-related queries
+func (p *Parser) tryParseTimezoneQuery() (Expr, bool) {
+	tok := p.current()
+
+	// "time in <location>"
+	if tok.Type == lexer.TokenTime && p.peek(1).Type == lexer.TokenIn {
+		p.advance() // skip 'time'
+		p.advance() // skip 'in'
+
+		// Get location name (could be multi-word like "New York")
+		location := p.parseLocationName()
+
+		// Check for offset: "time in Sydney plus 3 hours in London"
+		if p.current().Type == lexer.TokenPlus || p.current().Type == lexer.TokenMinus ||
+			(p.current().Type == lexer.TokenIdent && (p.current().Literal == "plus" || p.current().Literal == "minus")) {
+			operator := "+"
+			if p.current().Type == lexer.TokenMinus || p.current().Literal == "minus" {
+				operator = "-"
+			}
+			p.advance()
+
+			// Parse offset value and unit (e.g., "3 hours")
+			offsetValue, err := p.parseAdditive()
+			if err != nil {
+				return nil, false
+			}
+
+			// Check for "in <target_location>"
+			if p.current().Type == lexer.TokenIn {
+				p.advance()
+				targetLocation := p.parseLocationName()
+				return &TimeConversionExpr{
+					Time:     nil, // current time
+					From:     location,
+					To:       targetLocation,
+					Offset:   offsetValue,
+					Operator: operator,
+				}, true
+			}
+		}
+
+		return &TimeInLocationExpr{Location: location}, true
+	}
+
+	// "time difference between <loc1> and <loc2>"
+	// or "time difference <loc1> <loc2>"
+	if tok.Type == lexer.TokenTime && p.peek(1).Type == lexer.TokenIdent && p.peek(1).Literal == "difference" {
+		p.advance() // skip 'time'
+		p.advance() // skip 'difference'
+
+		// Optional "between"
+		if p.current().Type == lexer.TokenIdent && p.current().Literal == "between" {
+			p.advance()
+		}
+
+		from := p.parseLocationName()
+
+		// Optional "and"
+		if p.current().Type == lexer.TokenIdent && p.current().Literal == "and" {
+			p.advance()
+		}
+
+		to := p.parseLocationName()
+
+		return &TimeDifferenceExpr{From: from, To: to}, true
+	}
+
+	return nil, false
+}
+
+// parseLocationName parses a location name (can be multi-word like "New York")
+func (p *Parser) parseLocationName() string {
+	var parts []string
+
+	// Known multi-word cities
+	multiWordCities := []string{"New York", "Los Angeles", "Hong Kong"}
+
+	// Try to match multi-word cities first
+	for _, city := range multiWordCities {
+		cityParts := strings.Split(city, " ")
+		matches := true
+
+		for i, part := range cityParts {
+			if p.peek(i).Type != lexer.TokenIdent ||
+				strings.ToLower(p.peek(i).Literal) != strings.ToLower(part) {
+				matches = false
+				break
+			}
+		}
+
+		if matches {
+			// Consume all parts of the city name
+			for range cityParts {
+				parts = append(parts, p.current().Literal)
+				p.advance()
+			}
+			return strings.Join(parts, " ")
+		}
+	}
+
+	// Single-word city - just take one identifier
+	if p.current().Type == lexer.TokenIdent {
+		city := p.current().Literal
+		p.advance()
+		return city
+	}
+
+	return ""
 }
 
 func (p *Parser) parseConversion() (Expr, error) {

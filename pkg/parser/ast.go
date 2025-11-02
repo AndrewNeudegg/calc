@@ -132,6 +132,26 @@ type WeekdayExpr struct {
 	Modifier string // "next", "last", or empty for "this week"
 }
 
+// TimeInLocationExpr represents "time in Sydney".
+type TimeInLocationExpr struct {
+	Location string
+}
+
+// TimeDifferenceExpr represents "time difference between London and Sydney".
+type TimeDifferenceExpr struct {
+	From string
+	To   string
+}
+
+// TimeConversionExpr represents "10am London in Sydney time" or "time in Sydney plus 3 hours in London".
+type TimeConversionExpr struct {
+	Time     Expr   // time expression or nil for current time
+	From     string // source location
+	To       string // target location
+	Offset   Expr   // optional offset (e.g., "plus 3 hours")
+	Operator string // "+" or "-" for offset
+}
+
 // Implement node() for all types
 func (*NumberExpr) node()         {}
 func (*BinaryExpr) node()         {}
@@ -153,6 +173,9 @@ func (*FuzzyExpr) node()          {}
 func (*CommandExpr) node()        {}
 func (*RateExpr) node()           {}
 func (*WeekdayExpr) node()        {}
+func (*TimeInLocationExpr) node() {}
+func (*TimeDifferenceExpr) node() {}
+func (*TimeConversionExpr) node() {}
 
 // Implement expr() for expression types
 func (*NumberExpr) expr()         {}
@@ -175,3 +198,6 @@ func (*FuzzyExpr) expr()          {}
 func (*CommandExpr) expr()        {}
 func (*RateExpr) expr()           {}
 func (*WeekdayExpr) expr()        {}
+func (*TimeInLocationExpr) expr() {}
+func (*TimeDifferenceExpr) expr() {}
+func (*TimeConversionExpr) expr() {}

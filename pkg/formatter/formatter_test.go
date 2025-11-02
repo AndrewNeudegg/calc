@@ -123,3 +123,29 @@ func TestFormatError(t *testing.T) {
 		t.Errorf("Format(error) = %q, want %q", result, "Error: test error")
 	}
 }
+
+func TestFormatDateWithTime(t *testing.T) {
+	s := settings.Default()
+	s.DateFormat = "2 Jan 2006"
+	f := New(s)
+
+	// Date with time component should show time
+	dateWithTime := time.Date(2025, 11, 15, 14, 30, 45, 0, time.UTC)
+	val := evaluator.Value{Type: evaluator.ValueDate, Date: dateWithTime}
+	result := f.Format(val)
+	expected := "15 Nov 2025 14:30:45 UTC"
+
+	if result != expected {
+		t.Errorf("Format(date with time) = %q, want %q", result, expected)
+	}
+
+	// Date without time component should just show date
+	dateWithoutTime := time.Date(2025, 11, 15, 0, 0, 0, 0, time.UTC)
+	val2 := evaluator.Value{Type: evaluator.ValueDate, Date: dateWithoutTime}
+	result2 := f.Format(val2)
+	expected2 := "15 Nov 2025"
+
+	if result2 != expected2 {
+		t.Errorf("Format(date without time) = %q, want %q", result2, expected2)
+	}
+}

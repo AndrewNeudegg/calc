@@ -49,6 +49,7 @@ func New(input string) *Lexer {
 			"yesterday": TokenYesterday,
 			"next":      TokenNext,
 			"last":      TokenLast,
+			"time":      TokenTime,
 			"monday":    TokenMonday,
 			"tuesday":   TokenTuesday,
 			"wednesday": TokenWednesday,

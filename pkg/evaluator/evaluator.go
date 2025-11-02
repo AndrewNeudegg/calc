@@ -101,6 +101,15 @@ func (e *Evaluator) Eval(expr parser.Expr) Value {
 	case *parser.WeekdayExpr:
 		return e.evalWeekday(node)
 
+	case *parser.TimeInLocationExpr:
+		return e.evalTimeInLocation(node)
+
+	case *parser.TimeDifferenceExpr:
+		return e.evalTimeDifference(node)
+
+	case *parser.TimeConversionExpr:
+		return e.evalTimeConversion(node)
+
 	default:
 		return NewError(fmt.Sprintf("unknown expression type: %T", expr))
 	}
@@ -572,4 +581,98 @@ func (e *Evaluator) evalWeekday(node *parser.WeekdayExpr) Value {
 	result = time.Date(result.Year(), result.Month(), result.Day(), 0, 0, 0, 0, result.Location())
 
 	return NewDate(result)
+}
+
+func (e *Evaluator) evalTimeInLocation(node *parser.TimeInLocationExpr) Value {
+	// Get current time in the specified location
+	loc, err := e.env.timezone.GetLocation(node.Location)
+	if err != nil {
+		return NewError(err.Error())
+	}
+
+	// Get current UTC time and convert to target location
+	now := time.Now().UTC()
+	targetTime := now.Add(time.Duration(loc.Offset) * time.Hour)
+
+	return NewDate(targetTime)
+}
+
+func (e *Evaluator) evalTimeDifference(node *parser.TimeDifferenceExpr) Value {
+	offset, err := e.env.timezone.GetOffset(node.From, node.To)
+	if err != nil {
+		return NewError(err.Error())
+	}
+
+	// Return as a unit value in hours
+	return NewUnit(float64(offset), "hours")
+}
+
+func (e *Evaluator) evalTimeConversion(node *parser.TimeConversionExpr) Value {
+	// Start with current UTC time
+	var baseTime time.Time
+	if node.Time != nil {
+		timeVal := e.Eval(node.Time)
+		if timeVal.IsError() {
+			return timeVal
+		}
+		baseTime = timeVal.Date
+	} else {
+		// Get current time in source location (as UTC + offset)
+		fromLoc, err := e.env.timezone.GetLocation(node.From)
+		if err != nil {
+			return NewError(err.Error())
+		}
+		// Current time in the source location
+		baseTime = time.Now().UTC().Add(time.Duration(fromLoc.Offset) * time.Hour)
+	}
+
+	// Apply offset if provided
+	if node.Offset != nil {
+		offsetVal := e.Eval(node.Offset)
+		if offsetVal.IsError() {
+			return offsetVal
+		}
+
+		// Convert offset to duration
+		var offsetDuration time.Duration
+		if offsetVal.Type == ValueUnit {
+			// Handle unit-based offset (e.g., "3 hours")
+			switch strings.ToLower(offsetVal.Unit) {
+			case "hour", "hours", "h", "hr":
+				offsetDuration = time.Duration(offsetVal.Number) * time.Hour
+			case "minute", "minutes", "min":
+				offsetDuration = time.Duration(offsetVal.Number) * time.Minute
+			case "second", "seconds", "sec", "s":
+				offsetDuration = time.Duration(offsetVal.Number) * time.Second
+			default:
+				return NewError(fmt.Sprintf("unsupported time unit: %s", offsetVal.Unit))
+			}
+		} else {
+			// Assume hours if no unit specified
+			offsetDuration = time.Duration(offsetVal.Number) * time.Hour
+		}
+
+		if node.Operator == "-" {
+			offsetDuration = -offsetDuration
+		}
+		baseTime = baseTime.Add(offsetDuration)
+	}
+
+	// Convert to target location
+	// baseTime is now in the source timezone (UTC + source offset + any offset applied)
+	// To convert to target timezone, we need to: remove source offset, add target offset
+	toLoc, err := e.env.timezone.GetLocation(node.To)
+	if err != nil {
+		return NewError(err.Error())
+	}
+
+	fromLoc, err := e.env.timezone.GetLocation(node.From)
+	if err != nil {
+		return NewError(err.Error())
+	}
+
+	// Remove source timezone offset to get back to UTC, then add target offset
+	targetTime := baseTime.Add(time.Duration(toLoc.Offset-fromLoc.Offset) * time.Hour)
+
+	return NewDate(targetTime)
 }
