@@ -30,6 +30,10 @@ func (f *Formatter) Format(val evaluator.Value) string {
 	case evaluator.ValueNumber:
 		return f.formatNumber(val.Number)
 	case evaluator.ValueUnit:
+		// Special formatting for "time" unit - display as HH:MM
+		if val.Unit == "time" {
+			return f.formatTime(val.Number)
+		}
 		return fmt.Sprintf("%s %s", f.formatNumber(val.Number), val.Unit)
 	case evaluator.ValueCurrency:
 		return fmt.Sprintf("%s%s", val.Currency, f.formatNumber(val.Number))
@@ -51,6 +55,21 @@ func (f *Formatter) formatDate(d time.Time) string {
 	}
 	// Otherwise just show the date
 	return d.Format(f.settings.DateFormat)
+}
+
+func (f *Formatter) formatTime(decimalHours float64) string {
+	// Convert decimal hours back to HH:MM format
+	hours := int(decimalHours)
+	minutes := int((decimalHours - float64(hours)) * 60)
+
+	// Handle negative times
+	if decimalHours < 0 {
+		hours = int(math.Abs(decimalHours))
+		minutes = int((math.Abs(decimalHours) - float64(hours)) * 60)
+		return fmt.Sprintf("-%02d:%02d", hours, minutes)
+	}
+
+	return fmt.Sprintf("%02d:%02d", hours, minutes)
 }
 
 func (f *Formatter) formatNumber(n float64) string {

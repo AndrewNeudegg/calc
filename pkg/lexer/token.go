@@ -87,6 +87,7 @@ const (
 	// Date/Time
 	TokenDate
 	TokenTime
+	TokenTimeValue // HH:MM or HH:MM:SS format
 )
 
 // Token represents a single lexical token.
@@ -231,6 +232,8 @@ func (t TokenType) String() string {
 		return "DATE"
 	case TokenTime:
 		return "TIME"
+	case TokenTimeValue:
+		return "TIMEVALUE"
 	default:
 		return "UNKNOWN"
 	}

@@ -178,6 +178,46 @@ func (l *Lexer) scanNumber() Token {
 		l.column++
 	}
 
+	// Check for time format (HH:MM or H:MM)
+	if l.pos < len(l.input) && l.input[l.pos] == ':' {
+		// Look ahead to see if this could be a time (colon followed by digits)
+		if l.pos+1 < len(l.input) && unicode.IsDigit(rune(l.input[l.pos+1])) {
+			// This looks like a time - scan it
+			l.pos++ // consume ':'
+			l.column++
+
+			// Scan minutes
+			minuteStart := l.pos
+			for l.pos < len(l.input) && unicode.IsDigit(rune(l.input[l.pos])) {
+				l.pos++
+				l.column++
+			}
+
+			// Check for seconds (optional)
+			if l.pos < len(l.input) && l.input[l.pos] == ':' {
+				l.pos++ // consume second ':'
+				l.column++
+
+				// Scan seconds
+				for l.pos < len(l.input) && unicode.IsDigit(rune(l.input[l.pos])) {
+					l.pos++
+					l.column++
+				}
+			}
+
+			// Make sure we have at least 2 digits for minutes
+			if l.pos-minuteStart >= 2 || l.pos-minuteStart == 1 {
+				literal := l.input[start:l.pos]
+				return Token{
+					Type:    TokenTimeValue,
+					Literal: literal,
+					Line:    l.line,
+					Column:  startCol,
+				}
+			}
+		}
+	}
+
 	// Check for decimal point
 	if l.pos < len(l.input) && l.input[l.pos] == '.' {
 		l.pos++

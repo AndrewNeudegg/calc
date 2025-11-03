@@ -654,6 +654,43 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		p.advance()
 		return &TimeExpr{Time: time.Now()}, nil
 
+	case lexer.TokenTimeValue:
+		// Parse time in HH:MM or HH:MM:SS format
+		timeStr := tok.Literal
+		parts := strings.Split(timeStr, ":")
+
+		if len(parts) < 2 || len(parts) > 3 {
+			return nil, fmt.Errorf("invalid time format: %s", timeStr)
+		}
+
+		hours, err := strconv.Atoi(parts[0])
+		if err != nil {
+			return nil, fmt.Errorf("invalid hours in time: %s", parts[0])
+		}
+
+		minutes, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("invalid minutes in time: %s", parts[1])
+		}
+
+		seconds := 0
+		if len(parts) == 3 {
+			seconds, err = strconv.Atoi(parts[2])
+			if err != nil {
+				return nil, fmt.Errorf("invalid seconds in time: %s", parts[2])
+			}
+		}
+
+		// Convert to decimal hours and store as a time unit
+		decimalHours := float64(hours) + float64(minutes)/60.0 + float64(seconds)/3600.0
+
+		p.advance()
+		// Return as a unit expression with "time" unit to preserve time format
+		return &UnitExpr{
+			Value: &NumberExpr{Value: decimalHours},
+			Unit:  "time",
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("unexpected token: %s", tok.Type)
 	}

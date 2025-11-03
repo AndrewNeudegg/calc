@@ -118,21 +118,46 @@ Fuzzy phrases work seamlessly with variables and assignments:
    = 100.00
 ```
 
+### Time Arithmetic
+Times in `HH:MM` format are recognised and maintain their format through calculations:
+
+```
+23> 11:00 - 09:00
+   = 02:00
+
+24> 14:00 + 2
+   = 16:00
+
+25> start = 09:30
+   = 09:30
+
+26> end = 17:45
+   = 17:45
+
+27> end - start
+   = 08:15
+
+28> meeting = start + 2
+   = 11:30
+```
+
+Times are stored as time units and displayed in `HH:MM` format. You can add or subtract hours (as numbers) or other times.
+
 ### Functions
 ```
-23> sum(10, 20, 30)
+29> sum(10, 20, 30)
    = 60.00
 
-24> average(3, 4, 5)
+30> average(3, 4, 5)
    = 4.00
 ```
 
 ### Date Arithmetic
 ```
-25> today + 3 weeks
+31> today + 3 weeks
    = 22 Nov 2025
 
-26> tomorrow - 2 days
+32> tomorrow - 2 days
    = 31 Oct 2025
 ```
 

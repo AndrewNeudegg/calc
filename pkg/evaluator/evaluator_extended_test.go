@@ -965,3 +965,84 @@ func TestScalarMultiplicationOfSpeedUnits(t *testing.T) {
 		})
 	}
 }
+
+// TestTimeArithmetic tests arithmetic operations with time in HH:MM format
+func TestTimeArithmetic(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected float64
+		wantErr  bool
+	}{
+		{
+			name:     "subtract times same day",
+			input:    "11:00 - 09:00",
+			expected: 2.0,
+			wantErr:  false,
+		},
+		{
+			name:     "subtract times equal",
+			input:    "14:00 - 14:00",
+			expected: 0.0,
+			wantErr:  false,
+		},
+		{
+			name:     "subtract times with minutes",
+			input:    "14:30 - 09:15",
+			expected: 5.25,
+			wantErr:  false,
+		},
+		{
+			name:     "add hours to time",
+			input:    "14:00 + 2",
+			expected: 16.0,
+			wantErr:  false,
+		},
+		{
+			name:     "add fractional hours to time",
+			input:    "09:00 + 2.5",
+			expected: 11.5,
+			wantErr:  false,
+		},
+		{
+			name:     "subtract hours from time",
+			input:    "14:00 - 2",
+			expected: 12.0,
+			wantErr:  false,
+		},
+		{
+			name:     "add time to number",
+			input:    "2 + 14:00",
+			expected: 16.0,
+			wantErr:  false,
+		},
+		{
+			name:     "subtract time across midnight",
+			input:    "02:00 - 23:00",
+			expected: -21.0,
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := evalExpr(tt.input)
+
+			if tt.wantErr {
+				if !result.IsError() {
+					t.Errorf("expected error, got %v", result)
+				}
+				return
+			}
+
+			if result.IsError() {
+				t.Errorf("unexpected error: %s", result.Error)
+				return
+			}
+
+			if math.Abs(result.Number-tt.expected) > 0.01 {
+				t.Errorf("expected %.2f, got %.2f", tt.expected, result.Number)
+			}
+		})
+	}
+}
