@@ -433,3 +433,201 @@ func TestIsCompoundUnit(t *testing.T) {
 		}
 	}
 }
+
+func TestDigitalStorageConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name      string
+		value     float64
+		from      string
+		to        string
+		expected  float64
+		tolerance float64
+	}{
+		// Bytes conversions
+		{"bytes to kilobytes", 2048, "bytes", "kb", 2, 0.01},
+		{"kilobytes to bytes", 1, "kb", "bytes", 1024, 1},
+		{"megabytes to bytes", 1, "mb", "bytes", 1048576, 1},
+		{"gigabytes to megabytes", 1, "gb", "mb", 1024, 1},
+		{"terabytes to gigabytes", 1, "tb", "gb", 1024, 1},
+		{"petabytes to terabytes", 1, "pb", "tb", 1024, 1},
+
+		// Bits conversions
+		{"bits to bytes", 8, "bits", "bytes", 1, 0.01},
+		{"bytes to bits", 1, "bytes", "bits", 8, 0.01},
+		{"kilobits to kilobytes", 8, "kbit", "kb", 1, 0.01},
+		{"megabits to megabytes", 8, "mbit", "mb", 1, 0.01},
+		{"gigabits to gigabytes", 8, "gbit", "gb", 1, 0.01},
+
+		// Mixed conversions
+		{"megabits to kilobytes", 1, "mbit", "kb", 128, 1},
+		{"gigabytes to megabits", 1, "gb", "mbit", 8192, 1},
+		{"100 megabits to megabytes", 100, "mbit", "mb", 12.5, 0.1},
+
+		// Large conversions
+		{"5 terabytes to gigabytes", 5, "tb", "gb", 5120, 1},
+		{"10 petabytes to terabytes", 10, "pb", "tb", 10240, 1},
+
+		// Practical examples
+		{"4k video size", 100, "gb", "tb", 0.09765625, 0.001},
+		{"internet speed conversion", 1000, "mbit", "mb", 125, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion %f %s to %s failed: %s",
+					tt.value, tt.from, tt.to, err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.tolerance {
+				t.Errorf("%s: %f %s in %s: expected %.6f, got %.6f",
+					tt.name, tt.value, tt.from, tt.to, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestDataRateConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name      string
+		value     float64
+		from      string
+		to        string
+		expected  float64
+		tolerance float64
+	}{
+		// Bytes per second conversions
+		{"bps to kbps", 2048, "bps", "kbps", 2, 0.01},
+		{"kbps to mbps", 1024, "kbps", "mbps", 1, 0.01},
+		{"mbps to gbps", 1024, "mbps", "gbps", 1, 0.01},
+		{"gbps to tbps", 1024, "gbps", "tbps", 1, 0.01},
+
+		// Uppercase variants (common in networking)
+		{"Bps to KBps", 2048, "Bps", "KBps", 2, 0.01},
+		{"MBps to GBps", 1024, "MBps", "GBps", 1, 0.01},
+
+		// Bits per second conversions
+		{"bitps to kbitps", 2048, "bitps", "kbitps", 2, 0.01},
+		{"kbitps to mbitps", 1024, "kbitps", "mbitps", 1, 0.01},
+		{"mbitps to gbitps", 1024, "mbitps", "gbitps", 1, 0.01},
+
+		// Mixed bits/bytes conversions
+		{"8 bitps to bps", 8, "bitps", "bps", 1, 0.01},
+		{"1 kbps to bitps", 1, "kbps", "bitps", 8192, 1},
+		{"100 mbps to kbps", 100, "mbps", "kbps", 102400, 1},
+
+		// Practical networking examples
+		{"gigabit ethernet", 1, "gbps", "mbps", 1024, 1},
+		{"100 megabit to bytes/sec", 100, "mbps", "bps", 104857600, 1000},
+		{"1 gbps to MBps", 1, "gbps", "MBps", 1024, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion %f %s to %s failed: %s",
+					tt.value, tt.from, tt.to, err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.tolerance {
+				t.Errorf("%s: %f %s in %s: expected %.6f, got %.6f",
+					tt.name, tt.value, tt.from, tt.to, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestDigitalUnitRecognition(t *testing.T) {
+	s := NewSystem()
+
+	// Test digital storage units
+	storageUnits := []string{
+		"b", "byte", "bytes",
+		"kb", "kilobyte", "kilobytes",
+		"mb", "megabyte", "megabytes",
+		"gb", "gigabyte", "gigabytes",
+		"tb", "terabyte", "terabytes",
+		"pb", "petabyte", "petabytes",
+		"bit", "bits",
+		"kbit", "kilobit", "kilobits",
+		"mbit", "megabit", "megabits",
+		"gbit", "gigabit", "gigabits",
+		"tbit", "terabit", "terabits",
+		"pbit", "petabit", "petabits",
+	}
+
+	for _, unit := range storageUnits {
+		if !s.IsUnit(unit) {
+			t.Errorf("Storage unit %q should be recognized", unit)
+		}
+	}
+
+	// Test data rate units
+	rateUnits := []string{
+		"bps", "kbps", "mbps", "gbps", "tbps",
+		"Bps", "KBps", "MBps", "GBps", "TBps",
+		"bitps", "kbitps", "mbitps", "gbitps", "tbitps",
+	}
+
+	for _, unit := range rateUnits {
+		if !s.IsUnit(unit) {
+			t.Errorf("Data rate unit %q should be recognized", unit)
+		}
+	}
+
+	// Test case insensitivity for common variants
+	upperUnits := []string{"KB", "MB", "GB", "TB", "PB"}
+	for _, unit := range upperUnits {
+		if !s.IsUnit(unit) {
+			t.Errorf("Unit %q (uppercase) should be recognized", unit)
+		}
+	}
+}
+
+func TestDigitalStorageEdgeCases(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name      string
+		value     float64
+		from      string
+		to        string
+		expected  float64
+		tolerance float64
+	}{
+		// Very small values
+		{"1 byte to kilobytes", 1, "byte", "kb", 0.0009765625, 0.0000001},
+		{"1 bit to bytes", 1, "bit", "byte", 0.125, 0.001},
+
+		// Very large values
+		{"1000 petabytes to terabytes", 1000, "pb", "tb", 1024000, 1000},
+
+		// Precision tests
+		{"128 bytes to bits", 128, "bytes", "bits", 1024, 1},
+		{"1.5 gigabytes to megabytes", 1.5, "gb", "mb", 1536, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion %f %s to %s failed: %s",
+					tt.value, tt.from, tt.to, err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.tolerance {
+				t.Errorf("%s: expected %.10f, got %.10f",
+					tt.name, tt.expected, result)
+			}
+		})
+	}
+}

@@ -310,6 +310,30 @@ func (l *Lexer) isKnownUnit(s string) bool {
 
 		// Temperature
 		"c": true, "f": true, "celsius": true, "fahrenheit": true,
+		"k": true, "kelvin": true,
+
+		// Digital storage (bytes)
+		"b": true, "byte": true, "bytes": true,
+		"kb": true, "kilobyte": true, "kilobytes": true,
+		"mb": true, "megabyte": true, "megabytes": true,
+		"gb": true, "gigabyte": true, "gigabytes": true,
+		"tb": true, "terabyte": true, "terabytes": true,
+		"pb": true, "petabyte": true, "petabytes": true,
+
+		// Digital storage (bits)
+		"bit": true, "bits": true,
+		"kbit": true, "kilobit": true, "kilobits": true,
+		"mbit": true, "megabit": true, "megabits": true,
+		"gbit": true, "gigabit": true, "gigabits": true,
+		"tbit": true, "terabit": true, "terabits": true,
+		"pbit": true, "petabit": true, "petabits": true,
+
+		// Data rate (bytes per second)
+		"bps": true, "kbps": true, "mbps": true, "gbps": true, "tbps": true,
+		"Bps": true, "KBps": true, "MBps": true, "GBps": true, "TBps": true,
+
+		// Data rate (bits per second)
+		"bitps": true, "kbitps": true, "mbitps": true, "gbitps": true, "tbitps": true,
 	}
 
 	return knownUnits[strings.ToLower(s)]

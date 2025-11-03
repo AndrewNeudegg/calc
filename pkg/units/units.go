@@ -16,6 +16,8 @@ const (
 	DimensionTemperature
 	DimensionVolume
 	DimensionArea
+	DimensionData     // Digital storage (bytes, bits)
+	DimensionDataRate // Data transfer rate (bytes/s, bits/s)
 )
 
 // Unit represents a unit of measurement.
@@ -155,6 +157,68 @@ func (s *System) initStandardUnits() {
 	s.addUnit("hectare", DimensionArea, 10000.0, "sqm")
 	s.addUnit("hectares", DimensionArea, 10000.0, "sqm")
 	s.addUnit("ha", DimensionArea, 10000.0, "sqm")
+
+	// Digital storage units (base: byte)
+	// Bytes
+	s.addUnit("b", DimensionData, 1.0, "b")
+	s.addUnit("byte", DimensionData, 1.0, "b")
+	s.addUnit("bytes", DimensionData, 1.0, "b")
+	s.addUnit("kb", DimensionData, 1024.0, "b")
+	s.addUnit("kilobyte", DimensionData, 1024.0, "b")
+	s.addUnit("kilobytes", DimensionData, 1024.0, "b")
+	s.addUnit("mb", DimensionData, 1048576.0, "b") // 1024^2
+	s.addUnit("megabyte", DimensionData, 1048576.0, "b")
+	s.addUnit("megabytes", DimensionData, 1048576.0, "b")
+	s.addUnit("gb", DimensionData, 1073741824.0, "b") // 1024^3
+	s.addUnit("gigabyte", DimensionData, 1073741824.0, "b")
+	s.addUnit("gigabytes", DimensionData, 1073741824.0, "b")
+	s.addUnit("tb", DimensionData, 1099511627776.0, "b") // 1024^4
+	s.addUnit("terabyte", DimensionData, 1099511627776.0, "b")
+	s.addUnit("terabytes", DimensionData, 1099511627776.0, "b")
+	s.addUnit("pb", DimensionData, 1125899906842624.0, "b") // 1024^5
+	s.addUnit("petabyte", DimensionData, 1125899906842624.0, "b")
+	s.addUnit("petabytes", DimensionData, 1125899906842624.0, "b")
+
+	// Bits
+	s.addUnit("bit", DimensionData, 0.125, "b") // 1 bit = 1/8 byte
+	s.addUnit("bits", DimensionData, 0.125, "b")
+	s.addUnit("kbit", DimensionData, 128.0, "b") // 1024 bits / 8
+	s.addUnit("kilobit", DimensionData, 128.0, "b")
+	s.addUnit("kilobits", DimensionData, 128.0, "b")
+	s.addUnit("mbit", DimensionData, 131072.0, "b") // 1024^2 bits / 8
+	s.addUnit("megabit", DimensionData, 131072.0, "b")
+	s.addUnit("megabits", DimensionData, 131072.0, "b")
+	s.addUnit("gbit", DimensionData, 134217728.0, "b") // 1024^3 bits / 8
+	s.addUnit("gigabit", DimensionData, 134217728.0, "b")
+	s.addUnit("gigabits", DimensionData, 134217728.0, "b")
+	s.addUnit("tbit", DimensionData, 137438953472.0, "b") // 1024^4 bits / 8
+	s.addUnit("terabit", DimensionData, 137438953472.0, "b")
+	s.addUnit("terabits", DimensionData, 137438953472.0, "b")
+	s.addUnit("pbit", DimensionData, 140737488355328.0, "b") // 1024^5 bits / 8
+	s.addUnit("petabit", DimensionData, 140737488355328.0, "b")
+	s.addUnit("petabits", DimensionData, 140737488355328.0, "b")
+
+	// Data rate units (base: bytes per second)
+	// Bytes per second
+	s.addUnit("bps", DimensionDataRate, 1.0, "bps")
+	s.addUnit("kbps", DimensionDataRate, 1024.0, "bps")
+	s.addUnit("mbps", DimensionDataRate, 1048576.0, "bps")
+	s.addUnit("gbps", DimensionDataRate, 1073741824.0, "bps")
+	s.addUnit("tbps", DimensionDataRate, 1099511627776.0, "bps")
+
+	// Uppercase variants (common in networking)
+	s.addUnit("Bps", DimensionDataRate, 1.0, "bps")
+	s.addUnit("KBps", DimensionDataRate, 1024.0, "bps")
+	s.addUnit("MBps", DimensionDataRate, 1048576.0, "bps")
+	s.addUnit("GBps", DimensionDataRate, 1073741824.0, "bps")
+	s.addUnit("TBps", DimensionDataRate, 1099511627776.0, "bps")
+
+	// Bits per second (lowercase)
+	s.addUnit("bitps", DimensionDataRate, 0.125, "bps")
+	s.addUnit("kbitps", DimensionDataRate, 128.0, "bps")
+	s.addUnit("mbitps", DimensionDataRate, 131072.0, "bps")
+	s.addUnit("gbitps", DimensionDataRate, 134217728.0, "bps")
+	s.addUnit("tbitps", DimensionDataRate, 137438953472.0, "bps")
 
 	// Temperature units (special handling needed)
 	s.addUnit("c", DimensionTemperature, 1.0, "c")

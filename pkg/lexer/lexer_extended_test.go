@@ -271,7 +271,19 @@ func TestLexerAllUnits(t *testing.T) {
 		"m2", "cm2", "km2", "ft2", "in2", "yd2", "mi2",
 		"acre", "acres", "hectare", "hectares", "ha",
 		// Temperature
-		"c", "f", "celsius", "fahrenheit",
+		"c", "f", "celsius", "fahrenheit", "k", "kelvin",
+		// Digital storage (bytes)
+		"b", "byte", "bytes", "kb", "kilobyte", "kilobytes",
+		"mb", "megabyte", "megabytes", "gb", "gigabyte", "gigabytes",
+		"tb", "terabyte", "terabytes", "pb", "petabyte", "petabytes",
+		// Digital storage (bits)
+		"bit", "bits", "kbit", "kilobit", "kilobits",
+		"mbit", "megabit", "megabits", "gbit", "gigabit", "gigabits",
+		"tbit", "terabit", "terabits", "pbit", "petabit", "petabits",
+		// Data rates
+		"bps", "kbps", "mbps", "gbps", "tbps",
+		"Bps", "KBps", "MBps", "GBps", "TBps",
+		"bitps", "kbitps", "mbitps", "gbitps", "tbitps",
 	}
 
 	for _, unit := range units {
@@ -331,6 +343,85 @@ func TestLexerNumbersWithUnits(t *testing.T) {
 		if !hasNumber || !hasUnit {
 			t.Errorf("%q: hasNumber=%v, hasUnit=%v (expected both true)",
 				tt.input, hasNumber, hasUnit)
+		}
+	}
+}
+
+// TestLexerDigitalUnits tests digital storage and data rate unit recognition
+func TestLexerDigitalUnits(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []TokenType
+		literals []string
+	}{
+		{"100 gb", []TokenType{TokenNumber, TokenUnit, TokenEOF}, []string{"100", "gb", ""}},
+		{"1 tb in mb", []TokenType{TokenNumber, TokenUnit, TokenIn, TokenUnit, TokenEOF}, []string{"1", "tb", "in", "mb", ""}},
+		{"50 mbps", []TokenType{TokenNumber, TokenUnit, TokenEOF}, []string{"50", "mbps", ""}},
+		{"100 MBps in GBps", []TokenType{TokenNumber, TokenUnit, TokenIn, TokenUnit, TokenEOF}, []string{"100", "MBps", "in", "GBps", ""}},
+		{"8 bits in bytes", []TokenType{TokenNumber, TokenUnit, TokenIn, TokenUnit, TokenEOF}, []string{"8", "bits", "in", "bytes", ""}},
+		{"1000 gigabits", []TokenType{TokenNumber, TokenUnit, TokenEOF}, []string{"1000", "gigabits", ""}},
+		{"500 kbps in mbps", []TokenType{TokenNumber, TokenUnit, TokenIn, TokenUnit, TokenEOF}, []string{"500", "kbps", "in", "mbps", ""}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			l := New(tt.input)
+			tokens := l.AllTokens()
+
+			if len(tokens) != len(tt.expected) {
+				t.Errorf("input %q: expected %d tokens, got %d",
+					tt.input, len(tt.expected), len(tokens))
+				return
+			}
+
+			for i, tok := range tokens {
+				if tok.Type != tt.expected[i] {
+					t.Errorf("input %q: token %d: expected type %v, got %v",
+						tt.input, i, tt.expected[i], tok.Type)
+				}
+				if tok.Literal != tt.literals[i] {
+					t.Errorf("input %q: token %d: expected literal %q, got %q",
+						tt.input, i, tt.literals[i], tok.Literal)
+				}
+			}
+		})
+	}
+}
+
+// TestLexerDigitalUnitVariants tests case sensitivity and variants
+func TestLexerDigitalUnitVariants(t *testing.T) {
+	// Test that both uppercase and lowercase variants work
+	variants := []struct {
+		unit     string
+		expected TokenType
+	}{
+		{"kb", TokenUnit},
+		{"KB", TokenUnit},
+		{"Kb", TokenUnit},
+		{"mb", TokenUnit},
+		{"MB", TokenUnit},
+		{"gb", TokenUnit},
+		{"GB", TokenUnit},
+		{"Bps", TokenUnit},
+		{"bps", TokenUnit},
+		{"MBps", TokenUnit},
+		{"mbps", TokenUnit},
+	}
+
+	for _, v := range variants {
+		l := New("10 " + v.unit)
+		tokens := l.AllTokens()
+
+		foundUnit := false
+		for _, tok := range tokens {
+			if tok.Type == TokenUnit {
+				foundUnit = true
+				break
+			}
+		}
+
+		if !foundUnit {
+			t.Errorf("unit %q not recognized as TokenUnit", v.unit)
 		}
 	}
 }
