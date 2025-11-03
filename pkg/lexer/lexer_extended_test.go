@@ -258,8 +258,9 @@ func TestLexerAllUnits(t *testing.T) {
 		"m", "cm", "mm", "km", "ft", "yd", "mi",
 		"mile", "metre", "meter", "foot", "feet", "inch", "yard",
 		// Mass
-		"g", "kg", "mg", "lb", "oz",
+		"g", "kg", "mg", "lb", "lbs", "oz",
 		"gram", "kilogram", "pound", "ounce",
+		"stone", "st", "tonne", "tonnes", "ton", "tons",
 		// Time
 		"s", "sec", "second", "min", "minute", "h", "hr", "hour",
 		"day", "week", "month", "year",

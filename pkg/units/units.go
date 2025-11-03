@@ -74,12 +74,21 @@ func (s *System) initStandardUnits() {
 	s.addUnit("gram", DimensionMass, 0.001, "kg")
 	s.addUnit("grams", DimensionMass, 0.001, "kg")
 	s.addUnit("mg", DimensionMass, 0.000001, "kg")
+	s.addUnit("milligram", DimensionMass, 0.000001, "kg")
+	s.addUnit("milligrams", DimensionMass, 0.000001, "kg")
 	s.addUnit("lb", DimensionMass, 0.453592, "kg")
+	s.addUnit("lbs", DimensionMass, 0.453592, "kg")
 	s.addUnit("pound", DimensionMass, 0.453592, "kg")
 	s.addUnit("pounds", DimensionMass, 0.453592, "kg")
 	s.addUnit("oz", DimensionMass, 0.0283495, "kg")
 	s.addUnit("ounce", DimensionMass, 0.0283495, "kg")
 	s.addUnit("ounces", DimensionMass, 0.0283495, "kg")
+	s.addUnit("stone", DimensionMass, 6.35029, "kg") // 14 pounds
+	s.addUnit("st", DimensionMass, 6.35029, "kg")
+	s.addUnit("tonne", DimensionMass, 1000.0, "kg") // metric ton
+	s.addUnit("tonnes", DimensionMass, 1000.0, "kg")
+	s.addUnit("ton", DimensionMass, 907.185, "kg") // US short ton (2000 lbs)
+	s.addUnit("tons", DimensionMass, 907.185, "kg")
 
 	// Time units (base: second)
 	s.addUnit("s", DimensionTime, 1.0, "s")

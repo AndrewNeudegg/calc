@@ -46,6 +46,16 @@ func TestMassConversions(t *testing.T) {
 		{1, "kg", "g", 1000},
 		{70, "kg", "lb", 154.324},
 		{1, "lb", "g", 453.592},
+		// New mass units
+		{1, "lbs", "kg", 0.453592},
+		{10, "stone", "kg", 63.5029},
+		{1, "stone", "lbs", 14},
+		{1, "tonne", "kg", 1000},
+		{1, "ton", "kg", 907.185},
+		{1, "ton", "lbs", 2000},
+		{1, "tonne", "ton", 1.10231},
+		{150, "lbs", "stone", 10.7143},
+		{100, "kg", "stone", 15.7473},
 	}
 
 	for _, tt := range tests {

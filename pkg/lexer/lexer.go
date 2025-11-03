@@ -279,9 +279,12 @@ func (l *Lexer) isKnownUnit(s string) bool {
 		"inch": true, "inches": true, "yard": true, "yards": true,
 
 		// Mass
-		"g": true, "kg": true, "mg": true, "lb": true, "oz": true,
-		"gram": true, "grams": true, "kilogram": true, "kilograms": true,
+		"g": true, "kg": true, "mg": true, "lb": true, "lbs": true, "oz": true,
+		"gram": true, "grams": true, "milligram": true, "milligrams": true,
+		"kilogram": true, "kilograms": true,
 		"pound": true, "pounds": true, "ounce": true, "ounces": true,
+		"stone": true, "st": true,
+		"tonne": true, "tonnes": true, "ton": true, "tons": true,
 
 		// Time
 		"s": true, "sec": true, "second": true, "seconds": true,
