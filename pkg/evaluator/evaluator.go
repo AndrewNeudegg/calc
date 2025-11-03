@@ -603,8 +603,29 @@ func (e *Evaluator) evalTimeDifference(node *parser.TimeDifferenceExpr) Value {
 		return NewError(err.Error())
 	}
 
-	// Return as a unit value in hours
-	return NewUnit(float64(offset), "hours")
+	// Convert to target unit if specified
+	hours := float64(offset)
+	if node.TargetUnit != "" {
+		unit := strings.ToLower(node.TargetUnit)
+		switch unit {
+		case "day", "days", "d":
+			hours = hours / 24
+			return NewUnit(hours, "days")
+		case "hour", "hours", "h", "hr":
+			return NewUnit(hours, "hours")
+		case "minute", "minutes", "min", "m":
+			hours = hours * 60
+			return NewUnit(hours, "minutes")
+		case "second", "seconds", "sec", "s":
+			hours = hours * 3600
+			return NewUnit(hours, "seconds")
+		default:
+			return NewError(fmt.Sprintf("unsupported time unit: %s", node.TargetUnit))
+		}
+	}
+
+	// Default: Return as hours
+	return NewUnit(hours, "hours")
 }
 
 func (e *Evaluator) evalTimeConversion(node *parser.TimeConversionExpr) Value {

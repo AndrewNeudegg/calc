@@ -284,7 +284,17 @@ func (p *Parser) tryParseTimezoneQuery() (Expr, bool) {
 
 		to := p.parseLocationName()
 
-		return &TimeDifferenceExpr{From: from, To: to}, true
+		// Optional "in [unit]" for target unit
+		var targetUnit string
+		if p.current().Type == lexer.TokenIn {
+			p.advance() // skip 'in'
+			if p.current().Type == lexer.TokenUnit || p.current().Type == lexer.TokenIdent {
+				targetUnit = p.current().Literal
+				p.advance()
+			}
+		}
+
+		return &TimeDifferenceExpr{From: from, To: to, TargetUnit: targetUnit}, true
 	}
 
 	return nil, false

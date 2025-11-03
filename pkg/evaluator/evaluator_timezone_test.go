@@ -150,6 +150,98 @@ func TestTimeDifference(t *testing.T) {
 	}
 }
 
+func TestTimeDifferenceWithUnitConversion(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		wantType   ValueType
+		wantNumber float64
+		wantUnit   string
+	}{
+		{
+			name:       "time difference in hours (explicit)",
+			input:      "time difference London Kabul in hours",
+			wantType:   ValueUnit,
+			wantNumber: 4,
+			wantUnit:   "hours",
+		},
+		{
+			name:       "time difference in days",
+			input:      "time difference London Kabul in days",
+			wantType:   ValueUnit,
+			wantNumber: 0.16666666666666666, // 4/24
+			wantUnit:   "days",
+		},
+		{
+			name:       "time difference in minutes",
+			input:      "time difference London Kabul in minutes",
+			wantType:   ValueUnit,
+			wantNumber: 240, // 4*60
+			wantUnit:   "minutes",
+		},
+		{
+			name:       "time difference in seconds",
+			input:      "time difference London Kabul in seconds",
+			wantType:   ValueUnit,
+			wantNumber: 14400, // 4*3600
+			wantUnit:   "seconds",
+		},
+		{
+			name:       "time difference New York London in days",
+			input:      "time difference New York London in days",
+			wantType:   ValueUnit,
+			wantNumber: 0.20833333333333334, // 5/24
+			wantUnit:   "days",
+		},
+		{
+			name:       "time difference Sydney Tokyo in minutes",
+			input:      "time difference Sydney Tokyo in minutes",
+			wantType:   ValueUnit,
+			wantNumber: -60, // -1*60
+			wantUnit:   "minutes",
+		},
+		{
+			name:       "time difference default (no unit)",
+			input:      "time difference London Paris",
+			wantType:   ValueUnit,
+			wantNumber: 1, // Paris is UTC+1, London is UTC+0
+			wantUnit:   "hours",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := NewEnvironment()
+			e := New(env)
+
+			l := lexer.New(tt.input)
+			tokens := l.AllTokens()
+			p := parser.New(tokens)
+			expr, err := p.Parse()
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			result := e.Eval(expr)
+			if result.IsError() {
+				t.Fatalf("Eval error: %v", result.Error)
+			}
+
+			if result.Type != tt.wantType {
+				t.Errorf("got type %v, want %v", result.Type, tt.wantType)
+			}
+
+			if result.Number != tt.wantNumber {
+				t.Errorf("got number %v, want %v", result.Number, tt.wantNumber)
+			}
+
+			if result.Unit != tt.wantUnit {
+				t.Errorf("got unit %v, want %v", result.Unit, tt.wantUnit)
+			}
+		})
+	}
+}
+
 func TestTimeConversion(t *testing.T) {
 	tests := []struct {
 		name     string

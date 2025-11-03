@@ -382,7 +382,7 @@ func TestParserNumberWords(t *testing.T) {
 		{"three thousand five hundred", 3500},
 		{"one million", 1000000},
 	}
-	
+
 	for _, tt := range tests {
 		expr, err := parseInput(tt.input)
 		if err != nil {
@@ -410,7 +410,7 @@ func TestParserNumberWordsInExpressions(t *testing.T) {
 		"three hundred and forty two divided by seventeen",
 		"one thousand plus five hundred",
 	}
-	
+
 	for _, input := range tests {
 		expr, err := parseInput(input)
 		if err != nil {
@@ -430,7 +430,7 @@ func TestParserNumberWordsWithUnits(t *testing.T) {
 		"ten kg in grams",
 		"twenty minutes in seconds",
 	}
-	
+
 	for _, input := range tests {
 		expr, err := parseInput(input)
 		if err != nil {
@@ -441,5 +441,78 @@ func TestParserNumberWordsWithUnits(t *testing.T) {
 		if !ok {
 			t.Errorf("%q: expected ConversionExpr, got %T", input, expr)
 		}
+	}
+}
+
+// TestParserTimeDifferenceWithUnits tests time difference expressions with unit conversion
+func TestParserTimeDifferenceWithUnits(t *testing.T) {
+	tests := []struct {
+		input    string
+		wantFrom string
+		wantTo   string
+		wantUnit string
+	}{
+		{
+			input:    "time difference London Kabul in days",
+			wantFrom: "London",
+			wantTo:   "Kabul",
+			wantUnit: "days",
+		},
+		{
+			input:    "time difference New York Tokyo in hours",
+			wantFrom: "New York",
+			wantTo:   "Tokyo",
+			wantUnit: "hours",
+		},
+		{
+			input:    "time difference Sydney Paris in minutes",
+			wantFrom: "Sydney",
+			wantTo:   "Paris",
+			wantUnit: "minutes",
+		},
+		{
+			input:    "time difference London Tokyo in seconds",
+			wantFrom: "London",
+			wantTo:   "Tokyo",
+			wantUnit: "seconds",
+		},
+		{
+			input:    "time difference between Berlin and Moscow in days",
+			wantFrom: "Berlin",
+			wantTo:   "Moscow",
+			wantUnit: "days",
+		},
+		{
+			input:    "time difference London Paris",
+			wantFrom: "London",
+			wantTo:   "Paris",
+			wantUnit: "", // no unit specified
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			expr, err := parseInput(tt.input)
+			if err != nil {
+				t.Fatalf("parse error: %v", err)
+			}
+
+			td, ok := expr.(*TimeDifferenceExpr)
+			if !ok {
+				t.Fatalf("expected TimeDifferenceExpr, got %T", expr)
+			}
+
+			if td.From != tt.wantFrom {
+				t.Errorf("From: got %q, want %q", td.From, tt.wantFrom)
+			}
+
+			if td.To != tt.wantTo {
+				t.Errorf("To: got %q, want %q", td.To, tt.wantTo)
+			}
+
+			if td.TargetUnit != tt.wantUnit {
+				t.Errorf("TargetUnit: got %q, want %q", td.TargetUnit, tt.wantUnit)
+			}
+		})
 	}
 }

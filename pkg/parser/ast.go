@@ -139,8 +139,9 @@ type TimeInLocationExpr struct {
 
 // TimeDifferenceExpr represents "time difference between London and Sydney".
 type TimeDifferenceExpr struct {
-	From string
-	To   string
+	From       string
+	To         string
+	TargetUnit string // Optional: "days", "hours", "minutes", etc.
 }
 
 // TimeConversionExpr represents "10am London in Sydney time" or "time in Sydney plus 3 hours in London".
