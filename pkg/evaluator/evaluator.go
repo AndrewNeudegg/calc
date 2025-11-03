@@ -476,10 +476,18 @@ func (e *Evaluator) evalCurrencyBinary(left Value, op string, right Value) Value
 	case "-":
 		return NewCurrency(left.Number-right.Number, left.Currency)
 	case "*":
-		if right.Type == ValueCurrency {
+		// Allow: currency * number OR number * currency
+		// Reject: currency * currency
+		if left.Type == ValueCurrency && right.Type == ValueCurrency {
 			return NewError("cannot multiply two currencies")
 		}
-		return NewCurrency(left.Number*right.Number, left.Currency)
+		// Determine which side has the currency
+		if left.Type == ValueCurrency {
+			return NewCurrency(left.Number*right.Number, left.Currency)
+		} else {
+			// right must be currency (since we're in evalCurrencyBinary)
+			return NewCurrency(left.Number*right.Number, right.Currency)
+		}
 	case "/":
 		if right.Number == 0 {
 			return NewError("division by zero")

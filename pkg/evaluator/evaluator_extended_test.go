@@ -178,6 +178,96 @@ func TestCurrencyOperations(t *testing.T) {
 	}
 }
 
+// TestCurrencyMultiplication tests multiplying currency by numbers
+func TestCurrencyMultiplication(t *testing.T) {
+	tests := []struct {
+		name     string
+		setup    string // variable to set up first
+		input    string
+		expected float64
+		currency string
+		hasError bool
+		errMsg   string
+	}{
+		{
+			name:     "multiply number by currency literal",
+			input:    "5 * $3.45",
+			expected: 17.25, // 5 * 3.45
+			currency: "$",
+			hasError: false,
+		},
+		{
+			name:     "multiply currency literal by number",
+			input:    "$3.45 * 37.5",
+			expected: 129.375, // 3.45 * 37.5
+			currency: "$",
+			hasError: false,
+		},
+		{
+			name:     "multiply currency by integer",
+			input:    "$10 * 5",
+			expected: 50,
+			currency: "$",
+			hasError: false,
+		},
+		{
+			name:     "multiply integer by currency",
+			input:    "3 * $20",
+			expected: 60,
+			currency: "$",
+			hasError: false,
+		},
+		{
+			name:     "multiply pound sterling by number",
+			input:    "£23.50 * 37.5",
+			expected: 881.25,
+			currency: "£",
+			hasError: false,
+		},
+		{
+			name:     "cannot multiply two currencies",
+			input:    "$10 * $20",
+			expected: 0,
+			hasError: true,
+			errMsg:   "cannot multiply two currencies",
+		},
+		{
+			name:     "cannot multiply different currencies",
+			input:    "£10 * $20",
+			expected: 0,
+			hasError: true,
+			errMsg:   "cannot multiply two currencies",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := evalExpr(tt.input)
+
+			if tt.hasError {
+				if !result.IsError() {
+					t.Errorf("expected error, got result: %v", result)
+				} else if tt.errMsg != "" && result.Error != tt.errMsg {
+					t.Errorf("expected error %q, got %q", tt.errMsg, result.Error)
+				}
+			} else {
+				if result.IsError() {
+					t.Errorf("unexpected error: %s", result.Error)
+				}
+				if result.Type != ValueCurrency {
+					t.Errorf("expected currency type, got %v", result.Type)
+				}
+				if math.Abs(result.Number-tt.expected) > 0.001 {
+					t.Errorf("expected %.2f, got %.2f", tt.expected, result.Number)
+				}
+				if result.Currency != tt.currency {
+					t.Errorf("expected %s currency, got %s", tt.currency, result.Currency)
+				}
+			}
+		})
+	}
+}
+
 // TestExtendedFuzzyPhrases tests fuzzy language phrases
 func TestExtendedFuzzyPhrases(t *testing.T) {
 	tests := []struct {
