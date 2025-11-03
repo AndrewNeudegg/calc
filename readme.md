@@ -66,11 +66,22 @@ go build ./cmd/calc
 
 9> $50 in GBP
    = £39.50
+
+10> 12 gbp in dollars
+   = $15.24
+
+11> 100 usd in euros
+   = €90.91
+
+12> 50 dollars + 25 euros
+   = $77.50
 ```
+
+Note: Currency can be written with symbols (£, $, €, ¥) before the number, or with codes/names (gbp, usd, dollars, euros, yen) after the number.
 
 ### Percentages
 ```
-10> 30 + 20%
+13> 30 + 20%
    = 36.00
 
 11> 20% of 50
@@ -231,10 +242,30 @@ celsius (c), fahrenheit (f)
 
 ## Currency Support
 
-- USD ($)
-- GBP (£)
-- EUR (€)
-- JPY (¥)
+Supported currencies:
+- USD ($) - US Dollar
+- GBP (£) - British Pound
+- EUR (€) - Euro
+- JPY (¥) - Japanese Yen
+
+### Currency Syntax
+
+You can write currency values in multiple formats:
+
+1. **Symbol prefix**: `£12`, `$50`, `€100`, `¥1000`
+2. **Code postfix**: `12 gbp`, `50 usd`, `100 eur`, `1000 jpy`
+3. **Name postfix**: `50 dollars`, `25 euros`, `1000 yen`
+
+Note: "pound" and "pounds" are ambiguous (weight vs currency), so use "gbp" or "£" for British Pounds.
+
+### Currency Conversion
+
+```
+12 gbp in dollars     → $15.24
+100 usd in euros      → €90.91
+£20 in eur            → €23.09
+50 dollars in yen     → ¥7,462.69
+```
 
 Exchange rates can be customised via the settings system.
 

@@ -1046,3 +1046,112 @@ func TestTimeArithmetic(t *testing.T) {
 		})
 	}
 }
+
+// TestPostfixCurrencyCodes tests currency with postfix codes (e.g., "12 gbp")
+func TestPostfixCurrencyCodes(t *testing.T) {
+	tests := []struct {
+		input            string
+		expectedCurrency string
+		expectedAmount   float64
+	}{
+		{"12 gbp", "£", 12.0},
+		{"100 usd", "$", 100.0},
+		{"50 dollars", "$", 50.0},
+		{"25 euro", "€", 25.0},
+		{"30 euros", "€", 30.0},
+		{"1000 yen", "¥", 1000.0},
+		{"15 eur", "€", 15.0},
+		{"20 jpy", "¥", 20.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := evalExpr(tt.input)
+			if result.IsError() {
+				t.Errorf("got error: %s", result.Error)
+				return
+			}
+
+			if result.Type != ValueCurrency {
+				t.Errorf("expected currency, got %v", result.Type)
+				return
+			}
+
+			if result.Currency != tt.expectedCurrency {
+				t.Errorf("expected currency %s, got %s", tt.expectedCurrency, result.Currency)
+			}
+
+			if math.Abs(result.Number-tt.expectedAmount) > 0.01 {
+				t.Errorf("expected amount %.2f, got %.2f", tt.expectedAmount, result.Number)
+			}
+		})
+	}
+}
+
+// TestCurrencyConversionWithNames tests currency conversion using names
+func TestCurrencyConversionWithNames(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected float64
+	}{
+		{"12 gbp in dollars", 15.24},   // 12 * 1.27 = 15.24
+		{"100 usd in euros", 90.91},    // 100 / 1.10 ≈ 90.91
+		{"50 dollars in yen", 7462.69}, // 50 / 0.0067 ≈ 7462.69
+		{"25 euro in usd", 27.50},      // 25 * 1.10 = 27.50
+		{"10 yen in dollars", 0.067},   // 10 * 0.0067 = 0.067
+		{"£20 in euros", 23.09},        // 20 * 1.27 / 1.10 ≈ 23.09
+		{"€100 in gbp", 86.61},         // 100 * 1.10 / 1.27 ≈ 86.61
+		{"$50 in jpy", 7462.69},        // 50 / 0.0067 ≈ 7462.69
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := evalExpr(tt.input)
+			if result.IsError() {
+				t.Errorf("got error: %s", result.Error)
+				return
+			}
+
+			if result.Type != ValueCurrency {
+				t.Errorf("expected currency, got %v", result.Type)
+				return
+			}
+
+			if math.Abs(result.Number-tt.expected) > 0.1 {
+				t.Errorf("expected %.2f, got %.2f", tt.expected, result.Number)
+			}
+		})
+	}
+}
+
+// TestCurrencyArithmetic tests arithmetic with postfix currency codes
+func TestCurrencyArithmetic(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected float64
+	}{
+		{"10 gbp + 5 gbp", 15.0},
+		{"100 dollars - 20 dollars", 80.0},
+		{"25 euros * 2", 50.0},
+		{"100 yen / 4", 25.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := evalExpr(tt.input)
+			if result.IsError() {
+				t.Errorf("got error: %s", result.Error)
+				return
+			}
+
+			if result.Type != ValueCurrency {
+				t.Errorf("expected currency, got %v", result.Type)
+				return
+			}
+
+			if math.Abs(result.Number-tt.expected) > 0.01 {
+				t.Errorf("expected %.2f, got %.2f", tt.expected, result.Number)
+			}
+		})
+	}
+}

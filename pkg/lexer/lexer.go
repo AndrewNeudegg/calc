@@ -457,6 +457,12 @@ func (l *Lexer) isKnownUnit(s string) bool {
 
 		// Data rate (bits per second)
 		"bitps": true, "kbitps": true, "mbitps": true, "gbitps": true, "tbitps": true,
+
+		// Currency codes and names
+		"usd": true, "dollar": true, "dollars": true,
+		"gbp": true, // "pound" and "pounds" already exist as mass units
+		"eur": true, "euro": true, "euros": true,
+		"jpy": true, "yen": true,
 	}
 
 	return knownUnits[strings.ToLower(s)]

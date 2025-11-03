@@ -106,14 +106,29 @@ func (s *System) normaliseCurrency(cur string) string {
 	case "¥":
 		return "JPY"
 	default:
-		return strings.ToUpper(cur)
+		// Handle currency names
+		upper := strings.ToUpper(cur)
+		switch upper {
+		case "DOLLAR", "DOLLARS":
+			return "USD"
+		case "EURO", "EUROS":
+			return "EUR"
+		case "YEN":
+			return "JPY"
+		// "POUND" and "POUNDS" are ambiguous (weight vs currency)
+		// So we don't map them here - users should use "gbp" or "£"
+		default:
+			return upper
+		}
 	}
 }
 
 // GetSymbol returns the symbol for a currency code.
 func (s *System) GetSymbol(code string) string {
-	code = strings.ToUpper(code)
-	switch code {
+	// First normalize the currency name/code
+	normalized := s.normaliseCurrency(code)
+
+	switch normalized {
 	case "USD":
 		return "$"
 	case "GBP":
@@ -123,6 +138,6 @@ func (s *System) GetSymbol(code string) string {
 	case "JPY":
 		return "¥"
 	default:
-		return code
+		return normalized
 	}
 }

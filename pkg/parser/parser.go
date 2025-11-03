@@ -58,6 +58,20 @@ func (p *Parser) expect(typ lexer.TokenType) (lexer.Token, error) {
 	return tok, nil
 }
 
+// isCurrencyCode checks if a unit string is a currency code or name
+func (p *Parser) isCurrencyCode(unit string) bool {
+	lower := strings.ToLower(unit)
+	switch lower {
+	case "usd", "dollar", "dollars",
+		"gbp",
+		"eur", "euro", "euros",
+		"jpy", "yen":
+		return true
+	default:
+		return false
+	}
+}
+
 func (p *Parser) parseExpression() (Expr, error) {
 	// Check for command
 	if p.current().Type == lexer.TokenColon {
@@ -520,26 +534,37 @@ func (p *Parser) parsePostfix() (Expr, error) {
 	if p.current().Type == lexer.TokenUnit {
 		unit := p.current().Literal
 		p.advance()
-		expr = &UnitExpr{Value: expr, Unit: unit}
 
-		// Check for "per" (rate) - only consume / if immediately followed by a unit
-		// If followed by a number, leave the / for the binary operator parser
-		if p.current().Type == lexer.TokenPer {
-			p.advance()
-			if p.current().Type == lexer.TokenUnit {
-				unit2 := p.current().Literal
-				p.advance()
-				expr = &UnitExpr{Value: expr, Unit: unit + "/" + unit2}
+		// Check if this unit is actually a currency code
+		if p.isCurrencyCode(unit) {
+			// Convert to CurrencyExpr
+			expr = &CurrencyExpr{
+				Value:    expr,
+				Currency: unit,
 			}
-		} else if p.current().Type == lexer.TokenDivide {
-			// Look ahead to see if this is a rate (/ followed by unit) or division (/ followed by number)
-			if p.peek(1).Type == lexer.TokenUnit {
-				p.advance() // consume the /
-				unit2 := p.current().Literal
+		} else {
+			// Regular unit
+			expr = &UnitExpr{Value: expr, Unit: unit}
+
+			// Check for "per" (rate) - only consume / if immediately followed by a unit
+			// If followed by a number, leave the / for the binary operator parser
+			if p.current().Type == lexer.TokenPer {
 				p.advance()
-				expr = &UnitExpr{Value: expr, Unit: unit + "/" + unit2}
+				if p.current().Type == lexer.TokenUnit {
+					unit2 := p.current().Literal
+					p.advance()
+					expr = &UnitExpr{Value: expr, Unit: unit + "/" + unit2}
+				}
+			} else if p.current().Type == lexer.TokenDivide {
+				// Look ahead to see if this is a rate (/ followed by unit) or division (/ followed by number)
+				if p.peek(1).Type == lexer.TokenUnit {
+					p.advance() // consume the /
+					unit2 := p.current().Literal
+					p.advance()
+					expr = &UnitExpr{Value: expr, Unit: unit + "/" + unit2}
+				}
+				// Otherwise, leave the / for the binary operator parser to handle
 			}
-			// Otherwise, leave the / for the binary operator parser to handle
 		}
 	}
 

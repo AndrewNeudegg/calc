@@ -270,7 +270,9 @@ func (e *Evaluator) evalCurrency(node *parser.CurrencyExpr) Value {
 		return val
 	}
 
-	return NewCurrency(val.Number, node.Currency)
+	// Normalize the currency code to a symbol for display
+	symbol := e.env.currency.GetSymbol(node.Currency)
+	return NewCurrency(val.Number, symbol)
 }
 
 func (e *Evaluator) evalPercent(node *parser.PercentExpr) Value {
