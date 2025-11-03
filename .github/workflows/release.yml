@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      
+      - name: Run tests
+        run: go test ./...
+      
+      - name: Build binaries
+        run: |
+          # Build flags for smallest binary size
+          # -s: omit symbol table and debug info
+          # -w: omit DWARF symbol table
+          # -trimpath: remove all file system paths from binary (reproducible builds)
+          LDFLAGS="-s -w"
+          BUILDFLAGS="-trimpath"
+          
+          # Linux amd64
+          GOOS=linux GOARCH=amd64 go build ${BUILDFLAGS} -ldflags="${LDFLAGS}" -o calc_linux_amd64 ./cmd/calc
+          
+          # Linux arm64
+          GOOS=linux GOARCH=arm64 go build ${BUILDFLAGS} -ldflags="${LDFLAGS}" -o calc_linux_arm64 ./cmd/calc
+          
+          # macOS amd64
+          GOOS=darwin GOARCH=amd64 go build ${BUILDFLAGS} -ldflags="${LDFLAGS}" -o calc_darwin_amd64 ./cmd/calc
+          
+          # macOS arm64 (Apple Silicon)
+          GOOS=darwin GOARCH=arm64 go build ${BUILDFLAGS} -ldflags="${LDFLAGS}" -o calc_darwin_arm64 ./cmd/calc
+      
+      - name: Show binary sizes
+        run: ls -lh calc_*
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            calc_linux_amd64
+            calc_linux_arm64
+            calc_darwin_amd64
+            calc_darwin_arm64
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

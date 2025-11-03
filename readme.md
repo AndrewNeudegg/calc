@@ -1,33 +1,307 @@
-# Calc - Terminal Notepad Calculator
+# calc
 
-A local-only, dependency-free terminal calculator inspired by Soulver. Mix free-form text with arithmetic, units, dates, currencies, and variables—all evaluated in real-time with keyboard-driven simplicity.
+Terminal calculator with units, currency conversion, and natural language expressions. Zero dependencies, runs locally.
 
 ## Features
 
-### Core Functionality
-- **Arithmetic & Variables**: Standard operations with operator precedence, parentheses, and named variables
-- **Unit Conversion**: SI units (length, mass, time, volume, temperature) with automatic conversion
-- **Custom Units**: Define your own units for domain-specific calculations
-- **Currency Operations**: Built-in currency conversion with static exchange rates
-- **Percentages**: Intuitive percentage calculations including "X% of Y", "increase/decrease by Y%"
-- **Date & Time Arithmetic**: Natural language date operations (today, tomorrow, next week, etc.)
-- **Fuzzy Phrases**: English phrases like "half of X", "double X", "three quarters of Y"
-- **Functions**: sum(), average(), mean(), and natural language equivalents
-- **Dependency Tracking**: Automatic recalculation when variables change
-
-### Design Principles
-- **Local & Deterministic**: No network calls, no AI, completely reproducible
-- **Zero Dependencies**: Built entirely with Go standard library
-- **Keyboard-Driven**: Fast, focused workflow with command mode
-- **British English**: All identifiers, comments, and documentation use British English
+- Arithmetic with operator precedence and parentheses
+- Named variables with dependency tracking
+- Unit conversions (length, mass, time, volume, temperature, etc.)
+- Currency conversion with postfix notation support
+- Date and time arithmetic
+- Percentage calculations
+- Natural language phrases ("half of", "double", etc.)
+- Built-in functions (sum, average, mean)
+- REPL with command mode
 
 ## Installation
 
+### Quick Install (Latest Release)
+
 ```bash
-go build ./cmd/calc
+curl -fsSL https://raw.githubusercontent.com/AndrewNeudegg/calc/main/install.sh | sh
 ```
 
-## Usage
+Or download manually from [releases](https://github.com/AndrewNeudegg/calc/releases).
+
+### Build from Source
+
+```bash
+go build -o calc ./cmd/calc
+./calc
+```
+
+Or run directly:
+```bash
+go run ./cmd/calc
+```
+
+### CLI Usage
+
+Single calculation mode:
+```bash
+./calc -c "12 gbp in dollars"
+```
+
+Show help:
+```bash
+./calc -h
+```
+
+## Quick Reference
+
+### Operators
+
+| Operator | Description | Example | Result |
+|----------|-------------|---------|--------|
+| `+` | Addition | `5 + 3` | `8.00` |
+| `-` | Subtraction | `10 - 4` | `6.00` |
+| `*` | Multiplication | `6 * 7` | `42.00` |
+| `/` | Division | `20 / 4` | `5.00` |
+| `%` | Percentage | `20%` | `0.20` |
+| `=` | Assignment | `x = 10` | `10.00` |
+| `in` | Unit conversion | `10 m in cm` | `1,000.00 cm` |
+
+### Currency Formats
+
+| Format | Example | Display |
+|--------|---------|---------|
+| Symbol prefix | `£12`, `$50`, `€100`, `¥1000` | Currency symbol shown |
+| Code postfix | `12 gbp`, `50 usd`, `100 eur` | Converted to symbol |
+| Name postfix | `50 dollars`, `25 euros`, `1000 yen` | Converted to symbol |
+
+Supported: USD ($), GBP (£), EUR (€), JPY (¥)
+
+**Note:** "pound" and "pounds" refer to weight (lb). Use "gbp" or "£" for currency.
+
+### Time Format
+
+Times in `HH:MM` format are recognized automatically:
+
+| Expression | Result |
+|------------|--------|
+| `14:00 + 2` | `16:00` |
+| `11:00 - 09:00` | `02:00` |
+| `17:45 - 09:30` | `08:15` |
+
+### Natural Language
+
+| Phrase | Example | Result |
+|--------|---------|--------|
+| `half of` | `half of 100` | `50.00` |
+| `double` | `double 25` | `50.00` |
+| `three quarters of` | `three quarters of 80` | `60.00` |
+| `X% of Y` | `20% of 50` | `10.00` |
+| `increase X by Y%` | `increase 100 by 10%` | `110.00` |
+| `decrease X by Y%` | `decrease 100 by 10%` | `90.00` |
+| `X is what % of Y` | `20 is what % of 50` | `40.00%` |
+
+### Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `sum(...)` | Sum of all arguments | `sum(10, 20, 30)` → `60.00` |
+| `average(...)` | Average of arguments | `average(10, 20, 30)` → `20.00` |
+| `mean(...)` | Alias for average | `mean(5, 10, 15)` → `10.00` |
+
+### Date Keywords
+
+| Keyword | Description |
+|---------|-------------|
+| `today` | Current date |
+| `tomorrow` | Today + 1 day |
+| `yesterday` | Today - 1 day |
+| `next week` | Today + 7 days |
+| `last week` | Today - 7 days |
+| `next month` | Today + 30 days |
+
+### REPL Commands
+
+| Command | Description |
+|---------|-------------|
+| `:help` | Show help |
+| `:set precision N` | Set decimal places (default: 2) |
+| `:set currency CODE` | Set default currency (USD, GBP, EUR, JPY) |
+| `:save file.txt` | Save workspace |
+| `:quit` | Exit |
+
+## Supported Units
+
+### Length
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| metre | meter, metres, meters | m |
+| centimetre | centimeter, centimetres, centimeters | cm |
+| millimetre | millimeter, millimetres, millimeters | mm |
+| kilometre | kilometer, kilometres, kilometers | km |
+| foot | feet | ft |
+| inch | inches | in |
+| yard | yards | yd |
+| mile | miles | mi |
+
+### Mass
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| kilogram | kilograms | kg |
+| gram | grams | g |
+| milligram | milligrams | mg |
+| microgram | micrograms | µg, ug |
+| pound | pounds | lb, lbs |
+| ounce | ounces | oz |
+| stone | stones | st |
+| carat | carats | ct |
+| tonne | tonnes, ton, tons | - |
+
+### Time
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| nanosecond | nanoseconds | ns |
+| microsecond | microseconds | µs, us |
+| millisecond | milliseconds | ms |
+| second | seconds, sec | s |
+| minute | minutes | min |
+| hour | hours | h, hr |
+| day | days | - |
+| week | weeks | - |
+| fortnight | fortnights | - |
+| month | months | - |
+| quarter | quarters | - |
+| semester | semesters | - |
+| year | years | - |
+
+### Volume
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| litre | liter, litres, liters | l |
+| millilitre | milliliter, millilitres, milliliters | ml |
+| centilitre | centiliter, centilitres, centiliters | cl |
+| decilitre | deciliter, decilitres, deciliters | dl |
+| gallon | gallons | gal |
+| US gallon | usgallon, usgallons | usgal |
+| UK gallon | ukgallon, ukgallons, imperialgallon | ukgal, impgal |
+| quart | quarts | qt |
+| pint | pints | pt |
+| cup | cups | - |
+| fluid ounce | fluidounce, fluidounces | floz |
+| tablespoon | tablespoons | tbsp |
+| teaspoon | teaspoons | tsp |
+
+### Temperature
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| celsius | - | c, °c |
+| fahrenheit | - | f, °f |
+| kelvin | - | k |
+| rankine | - | r, °r |
+
+### Speed
+
+| Unit | Description | Symbol |
+|------|-------------|--------|
+| metres per second | - | mps |
+| kilometres per hour | - | kph, kmh |
+| miles per hour | - | mph |
+| feet per second | - | fps |
+| knot | knots | kn |
+
+### Area
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| square metre | squaremeter, squaremetres, squaremeters | sqm, m², m2 |
+| square kilometre | squarekilometer, squarekilometres, squarekilometers | sqkm, km², km2 |
+| square centimetre | squarecentimeter, squarecentimetres, squarecentimeters | sqcm, cm², cm2 |
+| square millimetre | squaremillimeter, squaremillimetres, squaremillimeters | sqmm, mm², mm2 |
+| square foot | squarefoot, squarefeet | sqft, ft², ft2 |
+| square inch | squareinch, squareinches | sqin, in², in2 |
+| square yard | squareyard, squareyards | sqyd, yd², yd2 |
+| square mile | squaremile, squaremiles | sqmi, mi², mi2 |
+| acre | acres | - |
+| hectare | hectares | ha |
+
+### Pressure
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| pascal | pascals | pa |
+| kilopascal | kilopascals | kpa |
+| megapascal | megapascals | mpa |
+| bar | bars | - |
+| millibar | millibars | mbar |
+| atmosphere | atmospheres | atm |
+| pound per square inch | - | psi |
+| torr | - | - |
+| millimetres of mercury | - | mmhg |
+| inches of mercury | - | inhg |
+
+### Force
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| newton | newtons | n |
+| kilonewton | kilonewtons | kn |
+| meganewton | meganewtons | mn |
+| pound force | poundsforce | lbf |
+| kilogram force | - | kgf |
+| dyne | dynes | - |
+
+### Angle
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| degree | degrees | deg, ° |
+| radian | radians | rad |
+| gradian | gradians | grad, gon |
+| turn | turns, revolution, revolutions | - |
+
+### Frequency
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| hertz | - | hz |
+| kilohertz | - | khz |
+| megahertz | - | mhz |
+| gigahertz | - | ghz |
+| terahertz | - | thz |
+| revolutions per minute | - | rpm |
+
+### Data Storage (Bytes)
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| byte | bytes | b |
+| kilobyte | kilobytes | kb |
+| megabyte | megabytes | mb |
+| gigabyte | gigabytes | gb |
+| terabyte | terabytes | tb |
+| petabyte | petabytes | pb |
+
+### Data Storage (Bits)
+
+| Unit | Aliases | Symbol |
+|------|---------|--------|
+| bit | bits | - |
+| kilobit | kilobits | kbit |
+| megabit | megabits | mbit |
+| gigabit | gigabits | gbit |
+| terabit | terabits | tbit |
+| petabit | petabits | pbit |
+
+### Data Rate
+
+| Unit | Description |
+|------|-------------|
+| bps, kbps, mbps, gbps, tbps | Bits per second |
+| Bps, KBps, MBps, GBps, TBps | Bytes per second |
+
+## Examples
+
+## Examples
 
 ### Basic Arithmetic
 ```
@@ -154,142 +428,58 @@ Times in `HH:MM` format are recognised and maintain their format through calcula
 
 Times are stored as time units and displayed in `HH:MM` format. You can add or subtract hours (as numbers) or other times.
 
-### Functions
-```
-29> sum(10, 20, 30)
-   = 60.00
-
-30> average(3, 4, 5)
-   = 4.00
-```
-
-### Date Arithmetic
-```
-31> today + 3 weeks
-   = 22 Nov 2025
-
-32> tomorrow - 2 days
-   = 31 Oct 2025
-```
-
-### Commands
-```
-:help              Show available commands
-:set precision 3   Set decimal precision
-:set currency GBP  Set default currency
-:save file.txt     Save workspace
-:quit              Exit
-```
-
 ## Project Structure
 
 ```
 calc/
-├── cmd/
-│   └── calc/          # Main application entry point
+├── cmd/calc/          # Entry point, CLI flag handling
 ├── pkg/
-│   ├── lexer/         # Tokenisation
-│   ├── parser/        # AST generation
-│   ├── evaluator/     # Expression evaluation
-│   ├── units/         # Unit conversion system
-│   ├── currency/      # Currency handling
-│   ├── formatter/     # Output formatting
-│   ├── settings/      # User preferences
-│   ├── commands/      # Command mode
-│   ├── graph/         # Dependency tracking
+│   ├── lexer/         # Tokenizer (supports HH:MM, currency codes, etc.)
+│   ├── parser/        # Recursive descent parser, builds AST
+│   ├── evaluator/     # Tree-walking interpreter
+│   ├── units/         # Dimension-based unit system
+│   ├── currency/      # Currency conversion (static rates)
+│   ├── formatter/     # Output formatting (locale-aware)
+│   ├── settings/      # User preferences (~/.config/calc/)
+│   ├── commands/      # REPL command handling
+│   ├── graph/         # Variable dependency tracking
+│   ├── timezone/      # Date/time handling
 │   └── display/       # REPL interface
-└── docs/
-    ├── briefs/        # Project brief
-    └── specifications/# Detailed specifications
+└── docs/              # Specifications
 ```
 
 ## Testing
 
-Run the full test suite:
-
 ```bash
+# Run all tests
 go test ./...
-```
 
-Run with race detection:
-
-```bash
+# With race detection
 go test ./... -race
-```
 
-View test coverage:
-
-```bash
+# With coverage
 go test ./... -cover
-```
-
-## Supported Units
-
-### Length
-metre (m), centimetre (cm), millimetre (mm), kilometre (km), foot (ft), inch (in), yard (yd), mile (mi)
-
-### Mass
-kilogram (kg), gram (g), milligram (mg), pound (lb), ounce (oz)
-
-### Time
-second (s), minute (min), hour (h), day, week, month, year
-
-### Volume
-litre (l), millilitre (ml), gallon (gal)
-
-### Temperature
-celsius (c), fahrenheit (f)
-
-## Currency Support
-
-Supported currencies:
-- USD ($) - US Dollar
-- GBP (£) - British Pound
-- EUR (€) - Euro
-- JPY (¥) - Japanese Yen
-
-### Currency Syntax
-
-You can write currency values in multiple formats:
-
-1. **Symbol prefix**: `£12`, `$50`, `€100`, `¥1000`
-2. **Code postfix**: `12 gbp`, `50 usd`, `100 eur`, `1000 jpy`
-3. **Name postfix**: `50 dollars`, `25 euros`, `1000 yen`
-
-Note: "pound" and "pounds" are ambiguous (weight vs currency), so use "gbp" or "£" for British Pounds.
-
-### Currency Conversion
-
-```
-12 gbp in dollars     → $15.24
-100 usd in euros      → €90.91
-£20 in eur            → €23.09
-50 dollars in yen     → ¥7,462.69
-```
-
-Exchange rates can be customised via the settings system.
-
-## Settings
-
-Settings are stored in `~/.config/calc/settings.json`:
-
-```json
-{
-  "precision": 2,
-  "date_format": "2 Jan 2006",
-  "currency": "GBP",
-  "locale": "en_GB",
-  "fuzzy_mode": true
-}
 ```
 
 ## Implementation Notes
 
-- **Parsing**: Hand-written recursive descent parser for deterministic, fast parsing
-- **Evaluation**: Tree-walking interpreter with environment for variable storage
-- **Units**: Dimension-based system prevents incompatible unit operations
-- **No Dependencies**: Maintains project constraint of zero external dependencies
+- **Parser**: Hand-written recursive descent parser. No external parser generators.
+- **Units**: Dimensional analysis prevents incompatible operations (e.g., adding metres to kilograms).
+- **Currency**: Static exchange rates. Can be customized via settings.
+- **Variables**: Stored in environment with dependency graph for recalculation.
+- **Postfix currency**: "12 gbp" parsed as number + unit, then converted to CurrencyExpr if unit is a currency code.
+- **Zero dependencies**: Standard library only (fmt, strings, time, math, etc.).
 
-## Licence
+## Releases
 
-This is a demonstration project built to specification.
+To create a new release:
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Binaries are built automatically for:
+- Linux (amd64, arm64)
+- macOS (amd64, arm64)
+
+The install script downloads the appropriate binary for your platform.
