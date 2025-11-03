@@ -863,3 +863,105 @@ func TestDivisionWithUnits(t *testing.T) {
 		}
 	}
 }
+
+// TestScalarMultiplicationOfSpeedUnits tests scalar multiplication and subsequent arithmetic with speed units
+func TestScalarMultiplicationOfSpeedUnits(t *testing.T) {
+	tests := []struct {
+		name         string
+		inputs       []string // sequence of inputs to evaluate
+		expected     float64
+		expectedUnit string
+		shouldError  bool
+	}{
+		{
+			name:         "multiply scalar by mps",
+			inputs:       []string{"t = 50 * 3mps"},
+			expected:     150,
+			expectedUnit: "mps",
+			shouldError:  false,
+		},
+		{
+			name:         "multiply mps by scalar",
+			inputs:       []string{"t = 3mps * 50"},
+			expected:     150,
+			expectedUnit: "mps",
+			shouldError:  false,
+		},
+		{
+			name:         "multiply scalar by mps then subtract mps",
+			inputs:       []string{"t = 50 * 3mps", "t = t - 16mps"},
+			expected:     134,
+			expectedUnit: "mps",
+			shouldError:  false,
+		},
+		{
+			name:         "multiply scalar by mps then add mps",
+			inputs:       []string{"t = 50 * 3mps", "t = t + 16mps"},
+			expected:     166,
+			expectedUnit: "mps",
+			shouldError:  false,
+		},
+		{
+			name:         "simple meter case works",
+			inputs:       []string{"t = 5m", "t = t + 1m"},
+			expected:     6,
+			expectedUnit: "m",
+			shouldError:  false,
+		},
+		{
+			name:         "multiply scalar by kph",
+			inputs:       []string{"t = 10 * 5kph"},
+			expected:     50,
+			expectedUnit: "kph",
+			shouldError:  false,
+		},
+		{
+			name:         "multiply scalar by kph then subtract kph",
+			inputs:       []string{"t = 10 * 5kph", "t = t - 20kph"},
+			expected:     30,
+			expectedUnit: "kph",
+			shouldError:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := NewEnvironment()
+			var result Value
+
+			for _, input := range tt.inputs {
+				l := lexer.New(input)
+				tokens := l.AllTokens()
+				p := parser.New(tokens)
+				expr, err := p.Parse()
+				if err != nil {
+					t.Fatalf("parse error for %q: %v", input, err)
+				}
+
+				e := New(env)
+				result = e.Eval(expr)
+
+				if tt.shouldError {
+					if !result.IsError() {
+						t.Fatalf("expected error for %q, but got: %v", input, result)
+					}
+					return
+				}
+
+				if result.IsError() {
+					t.Fatalf("eval error for %q: %s", input, result.Error)
+				}
+			}
+
+			if !tt.shouldError {
+				if math.Abs(result.Number-tt.expected) > 0.01 {
+					t.Errorf("expected %.2f, got %.2f", tt.expected, result.Number)
+				}
+
+				if result.Unit != tt.expectedUnit {
+					t.Errorf("expected unit %q, got %q", tt.expectedUnit, result.Unit)
+				}
+			}
+		})
+	}
+}

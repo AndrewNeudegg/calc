@@ -524,7 +524,12 @@ func (e *Evaluator) evalUnitBinary(left Value, op string, right Value) Value {
 
 	case "*":
 		if right.Type == ValueUnit {
-			// Creating compound unit
+			// If left is a plain number (not a unit), this is scalar multiplication
+			// Result should be in the right's unit
+			if left.Type != ValueUnit {
+				return NewUnit(left.Number*right.Number, right.Unit)
+			}
+			// Both are units - creating compound unit
 			return NewUnit(left.Number*right.Number, left.Unit+"·"+right.Unit)
 		}
 		return NewUnit(left.Number*right.Number, left.Unit)
