@@ -95,21 +95,44 @@ go build ./cmd/calc
    = 150.00
 ```
 
+### Fuzzy Phrases with Variables
+Fuzzy phrases work seamlessly with variables and assignments:
+
+```
+17> fo = half of 99
+   = 49.50
+
+18> half of fo
+   = 24.75
+
+19> result = double fo
+   = 99.00
+
+20> x = 100
+   = 100.00
+
+21> y = half of x
+   = 50.00
+
+22> z = double y
+   = 100.00
+```
+
 ### Functions
 ```
-17> sum(10, 20, 30)
+23> sum(10, 20, 30)
    = 60.00
 
-18> average(3, 4, 5)
+24> average(3, 4, 5)
    = 4.00
 ```
 
 ### Date Arithmetic
 ```
-19> today + 3 weeks
+25> today + 3 weeks
    = 22 Nov 2025
 
-20> tomorrow - 2 days
+26> tomorrow - 2 days
    = 31 Oct 2025
 ```
 

@@ -110,6 +110,14 @@ func (p *Parser) parseAssignment() (Expr, error) {
 	p.advance() // skip identifier
 	p.advance() // skip '='
 
+	// Try parsing fuzzy phrases first in assignments
+	if expr, ok := p.tryParseFuzzyPhrase(); ok {
+		return &AssignExpr{
+			Name:  name,
+			Value: expr,
+		}, nil
+	}
+
 	value, err := p.parseConversion()
 	if err != nil {
 		return nil, err

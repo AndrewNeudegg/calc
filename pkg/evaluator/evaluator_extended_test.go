@@ -292,6 +292,78 @@ func TestExtendedFuzzyPhrases(t *testing.T) {
 	}
 }
 
+// TestFuzzyPhrasesWithAssignments tests fuzzy phrases in assignments and variable references
+func TestFuzzyPhrasesWithAssignments(t *testing.T) {
+	tests := []struct {
+		name     string
+		inputs   []string // sequence of inputs to evaluate
+		expected float64  // expected final result
+	}{
+		{
+			name:     "assign fuzzy phrase result",
+			inputs:   []string{"fo = half of 99"},
+			expected: 49.5,
+		},
+		{
+			name:     "assign then use variable with fuzzy phrase",
+			inputs:   []string{"fo = 99", "half of fo"},
+			expected: 49.5,
+		},
+		{
+			name:     "assign fuzzy phrase with variable reference",
+			inputs:   []string{"fo = 99", "result = half of fo"},
+			expected: 49.5,
+		},
+		{
+			name:     "double a variable",
+			inputs:   []string{"x = 25", "y = double x"},
+			expected: 50,
+		},
+		{
+			name:     "twice a variable",
+			inputs:   []string{"x = 10", "z = twice x"},
+			expected: 20,
+		},
+		{
+			name:     "three quarters of variable",
+			inputs:   []string{"amount = 200", "part = three quarters of amount"},
+			expected: 150,
+		},
+		{
+			name:     "chain fuzzy operations",
+			inputs:   []string{"x = 100", "y = half of x", "z = double y"},
+			expected: 100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := NewEnvironment()
+			var result Value
+
+			for _, input := range tt.inputs {
+				l := lexer.New(input)
+				tokens := l.AllTokens()
+				p := parser.New(tokens)
+				expr, err := p.Parse()
+				if err != nil {
+					t.Fatalf("parse error for %q: %v", input, err)
+				}
+
+				e := New(env)
+				result = e.Eval(expr)
+				if result.IsError() {
+					t.Fatalf("eval error for %q: %s", input, result.Error)
+				}
+			}
+
+			if math.Abs(result.Number-tt.expected) > 0.01 {
+				t.Errorf("expected %.2f, got %.2f", tt.expected, result.Number)
+			}
+		})
+	}
+}
+
 // TestExtendedFunctions tests built-in functions
 func TestExtendedFunctions(t *testing.T) {
 	tests := []struct {
