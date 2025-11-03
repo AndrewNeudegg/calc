@@ -116,6 +116,8 @@ func (s *System) initStandardUnits() {
 	s.addUnit("days", DimensionTime, 86400.0, "s")
 	s.addUnit("week", DimensionTime, 604800.0, "s")
 	s.addUnit("weeks", DimensionTime, 604800.0, "s")
+	s.addUnit("month", DimensionTime, 2629800.0, "s") // average month: 30.4375 days
+	s.addUnit("months", DimensionTime, 2629800.0, "s")
 	s.addUnit("year", DimensionTime, 31557600.0, "s") // 365.25 days
 	s.addUnit("years", DimensionTime, 31557600.0, "s")
 

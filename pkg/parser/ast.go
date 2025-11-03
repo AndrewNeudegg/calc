@@ -153,6 +153,11 @@ type TimeConversionExpr struct {
 	Operator string // "+" or "-" for offset
 }
 
+// MonthExpr represents a month name (e.g., "March", "December") for queries like "days in March".
+type MonthExpr struct {
+	Month string // month name
+}
+
 // Implement node() for all types
 func (*NumberExpr) node()         {}
 func (*BinaryExpr) node()         {}
@@ -177,6 +182,7 @@ func (*WeekdayExpr) node()        {}
 func (*TimeInLocationExpr) node() {}
 func (*TimeDifferenceExpr) node() {}
 func (*TimeConversionExpr) node() {}
+func (*MonthExpr) node()          {}
 
 // Implement expr() for expression types
 func (*NumberExpr) expr()         {}
@@ -198,6 +204,7 @@ func (*DateArithmeticExpr) expr() {}
 func (*FuzzyExpr) expr()          {}
 func (*CommandExpr) expr()        {}
 func (*RateExpr) expr()           {}
+func (*MonthExpr) expr()          {}
 func (*WeekdayExpr) expr()        {}
 func (*TimeInLocationExpr) expr() {}
 func (*TimeDifferenceExpr) expr() {}

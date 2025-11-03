@@ -8,12 +8,12 @@ const (
 	TokenEOF TokenType = iota
 	TokenError
 	TokenWhitespace
-	
+
 	// Literals
 	TokenNumber
 	TokenIdent
 	TokenString
-	
+
 	// Operators
 	TokenPlus
 	TokenMinus
@@ -21,13 +21,13 @@ const (
 	TokenDivide
 	TokenPercent
 	TokenEquals
-	
+
 	// Delimiters
 	TokenLParen
 	TokenRParen
 	TokenComma
 	TokenColon
-	
+
 	// Keywords
 	TokenIn
 	TokenOf
@@ -63,13 +63,27 @@ const (
 	TokenFriday
 	TokenSaturday
 	TokenSunday
-	
+
+	// Month names
+	TokenJanuary
+	TokenFebruary
+	TokenMarch
+	TokenApril
+	TokenMay
+	TokenJune
+	TokenJuly
+	TokenAugust
+	TokenSeptember
+	TokenOctober
+	TokenNovember
+	TokenDecember
+
 	// Units (commonly recognised)
 	TokenUnit
-	
+
 	// Currency symbols
 	TokenCurrency
-	
+
 	// Date/Time
 	TokenDate
 	TokenTime
@@ -185,6 +199,30 @@ func (t TokenType) String() string {
 		return "saturday"
 	case TokenSunday:
 		return "sunday"
+	case TokenJanuary:
+		return "january"
+	case TokenFebruary:
+		return "february"
+	case TokenMarch:
+		return "march"
+	case TokenApril:
+		return "april"
+	case TokenMay:
+		return "may"
+	case TokenJune:
+		return "june"
+	case TokenJuly:
+		return "july"
+	case TokenAugust:
+		return "august"
+	case TokenSeptember:
+		return "september"
+	case TokenOctober:
+		return "october"
+	case TokenNovember:
+		return "november"
+	case TokenDecember:
+		return "december"
 	case TokenUnit:
 		return "UNIT"
 	case TokenCurrency:

@@ -57,6 +57,18 @@ func New(input string) *Lexer {
 			"friday":    TokenFriday,
 			"saturday":  TokenSaturday,
 			"sunday":    TokenSunday,
+			"january":   TokenJanuary,
+			"february":  TokenFebruary,
+			"march":     TokenMarch,
+			"april":     TokenApril,
+			"may":       TokenMay,
+			"june":      TokenJune,
+			"july":      TokenJuly,
+			"august":    TokenAugust,
+			"september": TokenSeptember,
+			"october":   TokenOctober,
+			"november":  TokenNovember,
+			"december":  TokenDecember,
 		},
 	}
 	return l

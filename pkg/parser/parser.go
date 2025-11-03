@@ -637,6 +637,11 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		lexer.TokenThursday, lexer.TokenFriday, lexer.TokenSaturday, lexer.TokenSunday:
 		return p.parseWeekday()
 
+	case lexer.TokenJanuary, lexer.TokenFebruary, lexer.TokenMarch, lexer.TokenApril,
+		lexer.TokenMay, lexer.TokenJune, lexer.TokenJuly, lexer.TokenAugust,
+		lexer.TokenSeptember, lexer.TokenOctober, lexer.TokenNovember, lexer.TokenDecember:
+		return p.parseMonth()
+
 	case lexer.TokenNow:
 		p.advance()
 		return &TimeExpr{Time: time.Now()}, nil
@@ -764,6 +769,46 @@ func (p *Parser) parseWeekday() (Expr, error) {
 	return &WeekdayExpr{
 		Weekday:  weekday,
 		Modifier: modifier,
+	}, nil
+}
+
+func (p *Parser) parseMonth() (Expr, error) {
+	tok := p.current()
+	var monthName string
+
+	switch tok.Type {
+	case lexer.TokenJanuary:
+		monthName = "January"
+	case lexer.TokenFebruary:
+		monthName = "February"
+	case lexer.TokenMarch:
+		monthName = "March"
+	case lexer.TokenApril:
+		monthName = "April"
+	case lexer.TokenMay:
+		monthName = "May"
+	case lexer.TokenJune:
+		monthName = "June"
+	case lexer.TokenJuly:
+		monthName = "July"
+	case lexer.TokenAugust:
+		monthName = "August"
+	case lexer.TokenSeptember:
+		monthName = "September"
+	case lexer.TokenOctober:
+		monthName = "October"
+	case lexer.TokenNovember:
+		monthName = "November"
+	case lexer.TokenDecember:
+		monthName = "December"
+	default:
+		return nil, fmt.Errorf("expected month name, got %s", tok.Type)
+	}
+
+	p.advance()
+
+	return &MonthExpr{
+		Month: monthName,
 	}, nil
 }
 

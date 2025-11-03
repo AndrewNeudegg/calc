@@ -101,6 +101,9 @@ func (e *Evaluator) Eval(expr parser.Expr) Value {
 	case *parser.WeekdayExpr:
 		return e.evalWeekday(node)
 
+	case *parser.MonthExpr:
+		return e.evalMonth(node)
+
 	case *parser.TimeInLocationExpr:
 		return e.evalTimeInLocation(node)
 
@@ -603,6 +606,36 @@ func (e *Evaluator) evalWeekday(node *parser.WeekdayExpr) Value {
 	result = time.Date(result.Year(), result.Month(), result.Day(), 0, 0, 0, 0, result.Location())
 
 	return NewDate(result)
+}
+
+func (e *Evaluator) evalMonth(node *parser.MonthExpr) Value {
+	// Return the number of days in the specified month
+	// We'll use the current year, or next year if we're past that month
+	now := time.Now()
+
+	// Map month name to month number
+	monthMap := map[string]time.Month{
+		"January": time.January, "February": time.February, "March": time.March,
+		"April": time.April, "May": time.May, "June": time.June,
+		"July": time.July, "August": time.August, "September": time.September,
+		"October": time.October, "November": time.November, "December": time.December,
+	}
+
+	month, ok := monthMap[node.Month]
+	if !ok {
+		return NewError(fmt.Sprintf("unknown month: %s", node.Month))
+	}
+
+	// Use current year for the month
+	year := now.Year()
+
+	// Get the number of days in this month
+	// Create date for first day of next month, then subtract one day
+	firstOfNextMonth := time.Date(year, month+1, 1, 0, 0, 0, 0, time.UTC)
+	lastOfMonth := firstOfNextMonth.AddDate(0, 0, -1)
+	daysInMonth := float64(lastOfMonth.Day())
+
+	return NewUnit(daysInMonth, "days")
 }
 
 func (e *Evaluator) evalTimeInLocation(node *parser.TimeInLocationExpr) Value {
