@@ -324,6 +324,10 @@ func (l *Lexer) isKnownUnit(s string) bool {
 		"c": true, "f": true, "celsius": true, "fahrenheit": true,
 		"k": true, "kelvin": true,
 
+		// Speed
+		"mps": true, "kph": true, "kmh": true, "mph": true,
+		"fps": true, "knot": true, "knots": true, "kn": true,
+
 		// Digital storage (bytes)
 		"b": true, "byte": true, "bytes": true,
 		"kb": true, "kilobyte": true, "kilobytes": true,

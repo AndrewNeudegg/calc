@@ -18,6 +18,7 @@ const (
 	DimensionArea
 	DimensionData     // Digital storage (bytes, bits)
 	DimensionDataRate // Data transfer rate (bytes/s, bits/s)
+	DimensionSpeed    // Speed/velocity (m/s, mph, kph, etc.)
 )
 
 // Unit represents a unit of measurement.
@@ -229,6 +230,17 @@ func (s *System) initStandardUnits() {
 	s.addUnit("fahrenheit", DimensionTemperature, 1.0, "f")
 	s.addUnit("k", DimensionTemperature, 1.0, "k")
 	s.addUnit("kelvin", DimensionTemperature, 1.0, "k")
+
+	// Speed units (base: meters per second)
+	// These are shortcuts for compound units to avoid needing slashes
+	s.addUnit("mps", DimensionSpeed, 1.0, "mps")       // meters per second (base)
+	s.addUnit("kph", DimensionSpeed, 0.277778, "mps")  // kilometers per hour: 1 kph = 1000m/3600s
+	s.addUnit("kmh", DimensionSpeed, 0.277778, "mps")  // alternative: km/h without slash
+	s.addUnit("mph", DimensionSpeed, 0.44704, "mps")   // miles per hour: 1 mph = 1609.34m/3600s
+	s.addUnit("fps", DimensionSpeed, 0.3048, "mps")    // feet per second
+	s.addUnit("knot", DimensionSpeed, 0.514444, "mps") // nautical miles per hour
+	s.addUnit("knots", DimensionSpeed, 0.514444, "mps")
+	s.addUnit("kn", DimensionSpeed, 0.514444, "mps")
 }
 
 func (s *System) addUnit(name string, dim Dimension, toBase float64, baseUnit string) {
@@ -378,33 +390,78 @@ func (s *System) ParseCompoundUnit(unitStr string) (*CompoundUnit, error) {
 
 // ConvertCompoundUnit converts a value from one compound unit to another.
 // Example: Convert 50 km/h to m/s
+// This also handles conversions between speed abbreviations (kph, mph) and compound units (km/h, mi/h).
 func (s *System) ConvertCompoundUnit(value float64, fromUnit, toUnit string) (float64, error) {
-	from, err := s.ParseCompoundUnit(fromUnit)
-	if err != nil {
-		return 0, err
+	// If one or both units are speed abbreviations, convert through the base unit (mps)
+	fromIsSimple := !IsCompoundUnit(fromUnit)
+	toIsSimple := !IsCompoundUnit(toUnit)
+
+	// Case 1: Both are compound units - use normal compound unit conversion
+	if !fromIsSimple && !toIsSimple {
+		from, err := s.ParseCompoundUnit(fromUnit)
+		if err != nil {
+			return 0, err
+		}
+
+		to, err := s.ParseCompoundUnit(toUnit)
+		if err != nil {
+			return 0, err
+		}
+
+		// Check dimension compatibility
+		if from.Numerator.Dimension != to.Numerator.Dimension {
+			return 0, fmt.Errorf("incompatible numerator dimensions: %s vs %s",
+				fromUnit, toUnit)
+		}
+
+		if from.Denominator.Dimension != to.Denominator.Dimension {
+			return 0, fmt.Errorf("incompatible denominator dimensions: %s vs %s",
+				fromUnit, toUnit)
+		}
+
+		// Convert: value * (fromNum/fromDen) * (toDen/toNum)
+		result := value * (from.ToBaseNum / from.ToBaseDen) * (to.ToBaseDen / to.ToBaseNum)
+		return result, nil
 	}
 
-	to, err := s.ParseCompoundUnit(toUnit)
-	if err != nil {
-		return 0, err
+	// Case 2: Simple to compound, or compound to simple - convert through base unit
+	// For speed units, the base is mps (meters per second)
+	if fromIsSimple && !toIsSimple {
+		// Convert from simple (e.g., kph) to base (mps), then to compound (e.g., km/h)
+		// First convert simple unit to mps
+		inMps, err := s.Convert(value, fromUnit, "mps")
+		if err != nil {
+			return 0, err
+		}
+		// Then convert mps to compound unit
+		to, err := s.ParseCompoundUnit(toUnit)
+		if err != nil {
+			return 0, err
+		}
+		// mps is 1.0 m/s, so we need to convert to the target compound unit
+		// result = mps * (targetDen / targetNum)
+		result := inMps * (to.ToBaseDen / to.ToBaseNum)
+		return result, nil
 	}
 
-	// Check dimension compatibility
-	if from.Numerator.Dimension != to.Numerator.Dimension {
-		return 0, fmt.Errorf("incompatible numerator dimensions: %s vs %s",
-			fromUnit, toUnit)
+	if !fromIsSimple && toIsSimple {
+		// Convert from compound (e.g., km/h) to base (mps), then to simple (e.g., mph)
+		from, err := s.ParseCompoundUnit(fromUnit)
+		if err != nil {
+			return 0, err
+		}
+		// Convert compound to mps
+		inMps := value * (from.ToBaseNum / from.ToBaseDen)
+		// Then convert mps to simple unit
+		result, err := s.Convert(inMps, "mps", toUnit)
+		if err != nil {
+			return 0, err
+		}
+		return result, nil
 	}
 
-	if from.Denominator.Dimension != to.Denominator.Dimension {
-		return 0, fmt.Errorf("incompatible denominator dimensions: %s vs %s",
-			fromUnit, toUnit)
-	}
-
-	// Convert: value * (fromNum/fromDen) * (toDen/toNum)
-	// Example: 50 km/h = 50 * (1000m/3600s) * (1s/1m) = 50 * 1000/3600 = 13.89 m/s
-	result := value * (from.ToBaseNum / from.ToBaseDen) * (to.ToBaseDen / to.ToBaseNum)
-
-	return result, nil
+	// Case 3: Both simple - shouldn't happen in this function, but handle it
+	return s.Convert(value, fromUnit, toUnit)
 }
 
 // IsCompoundUnit checks if a string looks like a compound unit (contains /).

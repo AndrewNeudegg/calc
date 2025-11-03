@@ -294,6 +294,115 @@ func TestTemperatureUnitRecognition(t *testing.T) {
 	}
 }
 
+func TestSpeedConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64 // allowed difference for precision
+	}{
+		// mph conversions
+		{50, "mph", "kph", 80.4672, 0.001},
+		{60, "mph", "mps", 26.8224, 0.001},
+		{25, "mph", "fps", 36.6667, 0.001},
+		{100, "mph", "knots", 86.8976, 0.001},
+
+		// kph conversions
+		{100, "kph", "mph", 62.1371, 0.001},
+		{80, "kph", "mps", 22.2222, 0.001},
+		{50, "kmh", "kph", 50, 0.001}, // kmh alias test
+
+		// mps conversions (base unit)
+		{10, "mps", "kph", 36, 0.001},
+		{10, "mps", "mph", 22.3694, 0.001},
+		{10, "mps", "fps", 32.8084, 0.001},
+
+		// knots conversions
+		{20, "knots", "mph", 23.0156, 0.001},
+		{30, "knot", "kph", 55.5556, 0.01}, // slightly larger delta for rounding
+		{15, "kn", "mps", 7.71666, 0.001},
+
+		// fps conversions
+		{100, "fps", "mps", 30.48, 0.001},
+		{50, "fps", "mph", 34.0909, 0.001},
+	}
+
+	for _, tt := range tests {
+		result, err := s.Convert(tt.value, tt.from, tt.to)
+		if err != nil {
+			t.Errorf("conversion %f %s to %s failed: %s", tt.value, tt.from, tt.to, err)
+			continue
+		}
+
+		if math.Abs(result-tt.expected) > tt.delta {
+			t.Errorf("%f %s in %s: expected %.4f, got %.4f", tt.value, tt.from, tt.to, tt.expected, result)
+		}
+	}
+}
+
+func TestSpeedUnitRecognition(t *testing.T) {
+	s := NewSystem()
+
+	units := []string{"mps", "mph", "kph", "kmh", "fps", "knot", "knots", "kn"}
+
+	for _, unit := range units {
+		if !s.IsUnit(unit) {
+			t.Errorf("Speed unit %q should be recognized", unit)
+		}
+	}
+
+	// Test case insensitivity
+	upperUnits := []string{"MPS", "MPH", "KPH", "KMH", "FPS", "KNOT", "KNOTS", "KN"}
+	for _, unit := range upperUnits {
+		if !s.IsUnit(unit) {
+			t.Errorf("Speed unit %q (uppercase) should be recognized", unit)
+		}
+	}
+}
+
+func TestSpeedAbbreviationToCompoundUnit(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Abbreviation to compound unit
+		{50, "kph", "km/h", 50, 0.01},
+		{100, "mph", "mi/hr", 100, 0.01},
+		{30, "knots", "km/h", 55.56, 0.01},
+		{60, "fps", "m/s", 18.29, 0.01},
+
+		// Compound unit to abbreviation
+		{50, "km/h", "kph", 50, 0.01},
+		{100, "mi/hr", "mph", 100, 0.01},
+		{55.56, "km/h", "knots", 30, 0.01},
+		{18.29, "m/s", "fps", 60, 0.01},
+
+		// Mixed conversions
+		{50, "km/h", "mph", 31.07, 0.01},
+		{100, "mph", "km/h", 160.93, 0.01},
+	}
+
+	for _, tt := range tests {
+		result, err := s.ConvertCompoundUnit(tt.value, tt.from, tt.to)
+		if err != nil {
+			t.Errorf("conversion %f %s to %s failed: %s", tt.value, tt.from, tt.to, err)
+			continue
+		}
+
+		if math.Abs(result-tt.expected) > tt.delta {
+			t.Errorf("%f %s to %s: expected %.2f, got %.2f", tt.value, tt.from, tt.to, tt.expected, result)
+		}
+	}
+}
+
 func TestParseCompoundUnit(t *testing.T) {
 	s := NewSystem()
 
