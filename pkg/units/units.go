@@ -87,6 +87,10 @@ func (s *System) initStandardUnits() {
 	s.addUnit("mg", DimensionMass, 0.000001, "kg")
 	s.addUnit("milligram", DimensionMass, 0.000001, "kg")
 	s.addUnit("milligrams", DimensionMass, 0.000001, "kg")
+	s.addUnit("µg", DimensionMass, 0.000000001, "kg") // microgram = 1e-9 kg
+	s.addUnit("ug", DimensionMass, 0.000000001, "kg")
+	s.addUnit("microgram", DimensionMass, 0.000000001, "kg")
+	s.addUnit("micrograms", DimensionMass, 0.000000001, "kg")
 	s.addUnit("lb", DimensionMass, 0.453592, "kg")
 	s.addUnit("lbs", DimensionMass, 0.453592, "kg")
 	s.addUnit("pound", DimensionMass, 0.453592, "kg")
@@ -95,13 +99,33 @@ func (s *System) initStandardUnits() {
 	s.addUnit("ounce", DimensionMass, 0.0283495, "kg")
 	s.addUnit("ounces", DimensionMass, 0.0283495, "kg")
 	s.addUnit("stone", DimensionMass, 6.35029, "kg") // 14 pounds
+	s.addUnit("stones", DimensionMass, 6.35029, "kg")
 	s.addUnit("st", DimensionMass, 6.35029, "kg")
+	s.addUnit("carat", DimensionMass, 0.0002, "kg") // metric carat = 200 mg
+	s.addUnit("carats", DimensionMass, 0.0002, "kg")
+	s.addUnit("ct", DimensionMass, 0.0002, "kg")
+	s.addUnit("troyounce", DimensionMass, 0.0311035, "kg") // troy ounce ≈ 31.1035 g
+	s.addUnit("troyounces", DimensionMass, 0.0311035, "kg")
+	s.addUnit("troyoz", DimensionMass, 0.0311035, "kg")
+	s.addUnit("ozt", DimensionMass, 0.0311035, "kg")
 	s.addUnit("tonne", DimensionMass, 1000.0, "kg") // metric ton
 	s.addUnit("tonnes", DimensionMass, 1000.0, "kg")
 	s.addUnit("ton", DimensionMass, 907.185, "kg") // US short ton (2000 lbs)
 	s.addUnit("tons", DimensionMass, 907.185, "kg")
 
 	// Time units (base: second)
+	// Fine-grained units
+	s.addUnit("ns", DimensionTime, 0.000000001, "s") // nanosecond = 1e-9 s
+	s.addUnit("nanosecond", DimensionTime, 0.000000001, "s")
+	s.addUnit("nanoseconds", DimensionTime, 0.000000001, "s")
+	s.addUnit("µs", DimensionTime, 0.000001, "s") // microsecond = 1e-6 s
+	s.addUnit("us", DimensionTime, 0.000001, "s")
+	s.addUnit("microsecond", DimensionTime, 0.000001, "s")
+	s.addUnit("microseconds", DimensionTime, 0.000001, "s")
+	s.addUnit("ms", DimensionTime, 0.001, "s") // millisecond = 1e-3 s
+	s.addUnit("millisecond", DimensionTime, 0.001, "s")
+	s.addUnit("milliseconds", DimensionTime, 0.001, "s")
+	// Standard units
 	s.addUnit("s", DimensionTime, 1.0, "s")
 	s.addUnit("sec", DimensionTime, 1.0, "s")
 	s.addUnit("second", DimensionTime, 1.0, "s")
@@ -117,8 +141,14 @@ func (s *System) initStandardUnits() {
 	s.addUnit("days", DimensionTime, 86400.0, "s")
 	s.addUnit("week", DimensionTime, 604800.0, "s")
 	s.addUnit("weeks", DimensionTime, 604800.0, "s")
+	s.addUnit("fortnight", DimensionTime, 1209600.0, "s") // 2 weeks = 14 days
+	s.addUnit("fortnights", DimensionTime, 1209600.0, "s")
 	s.addUnit("month", DimensionTime, 2629800.0, "s") // average month: 30.4375 days
 	s.addUnit("months", DimensionTime, 2629800.0, "s")
+	s.addUnit("quarter", DimensionTime, 7889400.0, "s") // 3 months = 91.3125 days
+	s.addUnit("quarters", DimensionTime, 7889400.0, "s")
+	s.addUnit("semester", DimensionTime, 15778800.0, "s") // 6 months = 182.625 days
+	s.addUnit("semesters", DimensionTime, 15778800.0, "s")
 	s.addUnit("year", DimensionTime, 31557600.0, "s") // 365.25 days
 	s.addUnit("years", DimensionTime, 31557600.0, "s")
 

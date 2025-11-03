@@ -56,6 +56,26 @@ func TestMassConversions(t *testing.T) {
 		{1, "tonne", "ton", 1.10231},
 		{150, "lbs", "stone", 10.7143},
 		{100, "kg", "stone", 15.7473},
+		// Fine-grained mass units
+		{1, "mg", "µg", 1000},
+		{1, "g", "mg", 1000},
+		{1, "mg", "ug", 1000}, // alternative spelling
+		{1000, "µg", "mg", 1},
+		{1000000, "micrograms", "g", 1},
+		// Jewellery units
+		{1, "carat", "g", 0.2},
+		{5, "carats", "mg", 1000},
+		{1, "ct", "mg", 200},
+		{100, "carats", "oz", 0.705479},
+		// Troy measures
+		{1, "troyounce", "g", 31.1035},
+		{1, "ozt", "g", 31.1035},
+		{1, "troyoz", "oz", 1.09714}, // troy oz is heavier than regular oz
+		{10, "troyounces", "kg", 0.311035},
+		{1, "ozt", "carats", 155.517}, // troy ounce to carats
+		// Plural forms
+		{2, "stones", "kg", 12.7006},
+		{100, "micrograms", "µg", 100},
 	}
 
 	for _, tt := range tests {
@@ -83,6 +103,35 @@ func TestTimeConversions(t *testing.T) {
 		{2, "hours", "minutes", 120},
 		{1, "hour", "seconds", 3600},
 		{1, "day", "hours", 24},
+		// Fine-grained time units
+		{1, "s", "ms", 1000},
+		{1, "ms", "µs", 1000},
+		{1, "µs", "ns", 1000},
+		{1, "millisecond", "microseconds", 1000},
+		{1000, "ns", "µs", 1},
+		{1000000, "ns", "ms", 1},
+		{1000000000, "nanoseconds", "s", 1},
+		{0.5, "s", "ms", 500},
+		{250, "ms", "s", 0.25},
+		{100, "µs", "ns", 100000},
+		{1, "us", "ns", 1000}, // alternative spelling
+		// Informal time spans
+		{1, "fortnight", "days", 14},
+		{1, "fortnight", "weeks", 2},
+		{2, "fortnights", "days", 28},
+		{1, "quarter", "months", 3},
+		{1, "quarter", "days", 91.3125},
+		{4, "quarters", "year", 1},
+		{1, "semester", "months", 6},
+		{1, "semester", "days", 182.625},
+		{2, "semesters", "year", 1},
+		{1, "year", "quarters", 4},
+		{1, "year", "semesters", 2},
+		// Mixed conversions
+		{1, "week", "fortnight", 0.5},
+		{1, "month", "quarter", 0.333333},
+		{6, "months", "semester", 1},
+		{1, "fortnight", "hours", 336},
 	}
 
 	for _, tt := range tests {
@@ -359,6 +408,63 @@ func TestSpeedUnitRecognition(t *testing.T) {
 	for _, unit := range upperUnits {
 		if !s.IsUnit(unit) {
 			t.Errorf("Speed unit %q (uppercase) should be recognized", unit)
+		}
+	}
+}
+
+func TestMassUnitRecognition(t *testing.T) {
+	s := NewSystem()
+
+	units := []string{
+		// Fine-grained
+		"µg", "ug", "microgram", "micrograms",
+		// Jewellery
+		"carat", "carats", "ct",
+		"troyounce", "troyounces", "troyoz", "ozt",
+		// Plural
+		"stones",
+	}
+
+	for _, unit := range units {
+		if !s.IsUnit(unit) {
+			t.Errorf("Mass unit %q should be recognized", unit)
+		}
+	}
+
+	// Test case insensitivity
+	upperUnits := []string{"UG", "MICROGRAM", "CARAT", "CT", "OZT", "STONES"}
+	for _, unit := range upperUnits {
+		if !s.IsUnit(unit) {
+			t.Errorf("Mass unit %q (uppercase) should be recognized", unit)
+		}
+	}
+}
+
+func TestTimeUnitRecognition(t *testing.T) {
+	s := NewSystem()
+
+	units := []string{
+		// Fine-grained
+		"ns", "nanosecond", "nanoseconds",
+		"µs", "us", "microsecond", "microseconds",
+		"ms", "millisecond", "milliseconds",
+		// Informal spans
+		"fortnight", "fortnights",
+		"quarter", "quarters",
+		"semester", "semesters",
+	}
+
+	for _, unit := range units {
+		if !s.IsUnit(unit) {
+			t.Errorf("Time unit %q should be recognized", unit)
+		}
+	}
+
+	// Test case insensitivity
+	upperUnits := []string{"NS", "US", "MS", "FORTNIGHT", "QUARTER", "SEMESTER"}
+	for _, unit := range upperUnits {
+		if !s.IsUnit(unit) {
+			t.Errorf("Time unit %q (uppercase) should be recognized", unit)
 		}
 	}
 }
@@ -736,6 +842,156 @@ func TestDigitalStorageEdgeCases(t *testing.T) {
 			if math.Abs(result-tt.expected) > tt.tolerance {
 				t.Errorf("%s: expected %.10f, got %.10f",
 					tt.name, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestJewelleryMassConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Carat conversions (precious stones)
+		{"1 carat to milligrams", 1, "carat", "mg", 200, 0.01},
+		{"5 carats to grams", 5, "carats", "g", 1, 0.01},
+		{"100 ct to oz", 100, "ct", "oz", 0.7055, 0.001},
+		{"1 gram to carats", 1, "g", "carats", 5, 0.01},
+
+		// Troy ounce conversions (precious metals)
+		{"1 troy ounce to grams", 1, "troyounce", "g", 31.1035, 0.001},
+		{"1 ozt to regular oz", 1, "ozt", "oz", 1.09714, 0.001},
+		{"10 troy oz to kg", 10, "troyoz", "kg", 0.311035, 0.0001},
+		{"1 ozt to carats", 1, "ozt", "carats", 155.517, 0.01},
+		{"100 grams to ozt", 100, "g", "ozt", 3.2151, 0.001},
+
+		// Microgram conversions (laboratory)
+		{"1000 µg to mg", 1000, "µg", "mg", 1, 0.001},
+		{"1 mg to micrograms", 1, "mg", "micrograms", 1000, 0.01},
+		{"1 g to ug", 1, "g", "ug", 1000000, 1},
+		{"500 µg to g", 500, "µg", "g", 0.0005, 0.000001},
+
+		// Mixed conversions
+		{"1 carat to µg", 1, "carat", "µg", 200000, 1},
+		{"1 troy oz to carats", 1, "troyounce", "carats", 155.517, 0.01},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion failed: %s", err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.delta {
+				t.Errorf("expected %.6f, got %.6f", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestFineGrainedTimeConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Nanosecond conversions
+		{"1000 ns to µs", 1000, "ns", "µs", 1, 0.001},
+		{"1000000 ns to ms", 1000000, "ns", "ms", 1, 0.001},
+		{"1000000000 ns to s", 1000000000, "nanoseconds", "s", 1, 0.001},
+		{"1 second to ns", 1, "s", "ns", 1000000000, 1},
+
+		// Microsecond conversions
+		{"1000 µs to ms", 1000, "µs", "ms", 1, 0.001},
+		{"1000000 us to s", 1000000, "us", "s", 1, 0.001},
+		{"1 ms to microseconds", 1, "ms", "microseconds", 1000, 0.01},
+
+		// Millisecond conversions
+		{"1000 ms to s", 1000, "ms", "s", 1, 0.001},
+		{"500 milliseconds to s", 500, "milliseconds", "s", 0.5, 0.001},
+		{"1 s to ms", 1, "s", "ms", 1000, 0.01},
+		{"1 min to ms", 1, "min", "ms", 60000, 1},
+
+		// Cross-scale conversions
+		{"1 µs to ns", 1, "µs", "ns", 1000, 0.01},
+		{"1 ms to µs", 1, "ms", "µs", 1000, 0.01},
+		{"1 hour to ms", 1, "hour", "ms", 3600000, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion failed: %s", err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.delta {
+				t.Errorf("expected %.6f, got %.6f", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestInformalTimeSpans(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Fortnight conversions
+		{"1 fortnight to days", 1, "fortnight", "days", 14, 0.01},
+		{"1 fortnight to weeks", 1, "fortnight", "weeks", 2, 0.01},
+		{"2 fortnights to days", 2, "fortnights", "days", 28, 0.01},
+		{"1 fortnight to hours", 1, "fortnight", "hours", 336, 0.01},
+
+		// Quarter conversions
+		{"1 quarter to months", 1, "quarter", "months", 3, 0.01},
+		{"1 quarter to days", 1, "quarter", "days", 91.3125, 0.01},
+		{"4 quarters to year", 4, "quarters", "year", 1, 0.01},
+		{"1 year to quarters", 1, "year", "quarters", 4, 0.01},
+
+		// Semester conversions
+		{"1 semester to months", 1, "semester", "months", 6, 0.01},
+		{"1 semester to days", 1, "semester", "days", 182.625, 0.01},
+		{"2 semesters to year", 2, "semesters", "year", 1, 0.01},
+		{"1 year to semesters", 1, "year", "semesters", 2, 0.01},
+
+		// Mixed conversions
+		{"1 week to fortnight", 1, "week", "fortnight", 0.5, 0.01},
+		{"1 month to quarter", 1, "month", "quarter", 0.333333, 0.001},
+		{"6 months to semester", 6, "months", "semester", 1, 0.01},
+		{"1 quarter to fortnights", 1, "quarter", "fortnights", 6.522, 0.01},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion failed: %s", err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.delta {
+				t.Errorf("expected %.6f, got %.6f", tt.expected, result)
 			}
 		})
 	}

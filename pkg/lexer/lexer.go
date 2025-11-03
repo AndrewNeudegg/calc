@@ -291,19 +291,30 @@ func (l *Lexer) isKnownUnit(s string) bool {
 		"inch": true, "inches": true, "yard": true, "yards": true,
 
 		// Mass
-		"g": true, "kg": true, "mg": true, "lb": true, "lbs": true, "oz": true,
+		"g": true, "kg": true, "mg": true, "µg": true, "ug": true,
+		"lb": true, "lbs": true, "oz": true,
 		"gram": true, "grams": true, "milligram": true, "milligrams": true,
+		"microgram": true, "micrograms": true,
 		"kilogram": true, "kilograms": true,
 		"pound": true, "pounds": true, "ounce": true, "ounces": true,
-		"stone": true, "st": true,
+		"stone": true, "stones": true, "st": true,
+		"carat": true, "carats": true, "ct": true,
+		"troyounce": true, "troyounces": true, "troyoz": true, "ozt": true,
 		"tonne": true, "tonnes": true, "ton": true, "tons": true,
 
 		// Time
+		"ns": true, "nanosecond": true, "nanoseconds": true,
+		"µs": true, "us": true, "microsecond": true, "microseconds": true,
+		"ms": true, "millisecond": true, "milliseconds": true,
 		"s": true, "sec": true, "second": true, "seconds": true,
 		"min": true, "minute": true, "minutes": true,
 		"h": true, "hr": true, "hour": true, "hours": true,
 		"day": true, "days": true, "week": true, "weeks": true,
-		"month": true, "months": true, "year": true, "years": true,
+		"fortnight": true, "fortnights": true,
+		"month": true, "months": true,
+		"quarter": true, "quarters": true,
+		"semester": true, "semesters": true,
+		"year": true, "years": true,
 
 		// Volume
 		"l": true, "ml": true, "litre": true, "litres": true, "liter": true, "liters": true,
