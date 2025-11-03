@@ -16,9 +16,13 @@ const (
 	DimensionTemperature
 	DimensionVolume
 	DimensionArea
-	DimensionData     // Digital storage (bytes, bits)
-	DimensionDataRate // Data transfer rate (bytes/s, bits/s)
-	DimensionSpeed    // Speed/velocity (m/s, mph, kph, etc.)
+	DimensionData      // Digital storage (bytes, bits)
+	DimensionDataRate  // Data transfer rate (bytes/s, bits/s)
+	DimensionSpeed     // Speed/velocity (m/s, mph, kph, etc.)
+	DimensionPressure  // Pressure (Pa, bar, atm, psi)
+	DimensionForce     // Force (N, lbf)
+	DimensionAngle     // Angle (degrees, radians, gradians)
+	DimensionFrequency // Frequency (Hz, kHz, MHz, GHz)
 )
 
 // Unit represents a unit of measurement.
@@ -153,20 +157,88 @@ func (s *System) initStandardUnits() {
 	s.addUnit("years", DimensionTime, 31557600.0, "s")
 
 	// Volume units (base: litre)
+	// Metric
 	s.addUnit("l", DimensionVolume, 1.0, "l")
 	s.addUnit("litre", DimensionVolume, 1.0, "l")
 	s.addUnit("litres", DimensionVolume, 1.0, "l")
 	s.addUnit("liter", DimensionVolume, 1.0, "l")
 	s.addUnit("liters", DimensionVolume, 1.0, "l")
 	s.addUnit("ml", DimensionVolume, 0.001, "l")
-	s.addUnit("gal", DimensionVolume, 3.78541, "l")
+	s.addUnit("millilitre", DimensionVolume, 0.001, "l")
+	s.addUnit("millilitres", DimensionVolume, 0.001, "l")
+	s.addUnit("milliliter", DimensionVolume, 0.001, "l")
+	s.addUnit("milliliters", DimensionVolume, 0.001, "l")
+	s.addUnit("cl", DimensionVolume, 0.01, "l")
+	s.addUnit("centilitre", DimensionVolume, 0.01, "l")
+	s.addUnit("centilitres", DimensionVolume, 0.01, "l")
+	s.addUnit("centiliter", DimensionVolume, 0.01, "l")
+	s.addUnit("centiliters", DimensionVolume, 0.01, "l")
+	s.addUnit("dl", DimensionVolume, 0.1, "l")
+	s.addUnit("decilitre", DimensionVolume, 0.1, "l")
+	s.addUnit("decilitres", DimensionVolume, 0.1, "l")
+	s.addUnit("deciliter", DimensionVolume, 0.1, "l")
+	s.addUnit("deciliters", DimensionVolume, 0.1, "l")
+	// Cubic measures
+	s.addUnit("m3", DimensionVolume, 1000.0, "l") // 1 m³ = 1000 litres
+	s.addUnit("m³", DimensionVolume, 1000.0, "l")
+	s.addUnit("cm3", DimensionVolume, 0.001, "l") // 1 cm³ = 1 ml
+	s.addUnit("cm³", DimensionVolume, 0.001, "l")
+	s.addUnit("cc", DimensionVolume, 0.001, "l")     // cubic centimeter
+	s.addUnit("mm3", DimensionVolume, 0.000001, "l") // 1 mm³ = 0.001 ml
+	s.addUnit("mm³", DimensionVolume, 0.000001, "l")
+	s.addUnit("ft3", DimensionVolume, 28.3168, "l") // cubic foot
+	s.addUnit("ft³", DimensionVolume, 28.3168, "l")
+	s.addUnit("in3", DimensionVolume, 0.0163871, "l") // cubic inch
+	s.addUnit("in³", DimensionVolume, 0.0163871, "l")
+	// US customary
+	s.addUnit("usgal", DimensionVolume, 3.78541, "l") // US gallon
+	s.addUnit("usgallon", DimensionVolume, 3.78541, "l")
+	s.addUnit("usgallons", DimensionVolume, 3.78541, "l")
+	s.addUnit("gal", DimensionVolume, 3.78541, "l") // default to US gallon
 	s.addUnit("gallon", DimensionVolume, 3.78541, "l")
 	s.addUnit("gallons", DimensionVolume, 3.78541, "l")
+	s.addUnit("usquart", DimensionVolume, 0.946353, "l") // US quart
+	s.addUnit("usquarts", DimensionVolume, 0.946353, "l")
+	s.addUnit("quart", DimensionVolume, 0.946353, "l")
+	s.addUnit("quarts", DimensionVolume, 0.946353, "l")
+	s.addUnit("qt", DimensionVolume, 0.946353, "l")
+	s.addUnit("uspint", DimensionVolume, 0.473176, "l") // US pint
+	s.addUnit("uspints", DimensionVolume, 0.473176, "l")
+	s.addUnit("pint", DimensionVolume, 0.473176, "l")
+	s.addUnit("pints", DimensionVolume, 0.473176, "l")
+	s.addUnit("pt", DimensionVolume, 0.473176, "l")
+	s.addUnit("cup", DimensionVolume, 0.236588, "l") // US cup
+	s.addUnit("cups", DimensionVolume, 0.236588, "l")
+	s.addUnit("floz", DimensionVolume, 0.0295735, "l") // US fluid ounce
+	s.addUnit("fluidounce", DimensionVolume, 0.0295735, "l")
+	s.addUnit("fluidounces", DimensionVolume, 0.0295735, "l")
+	s.addUnit("tbsp", DimensionVolume, 0.0147868, "l") // US tablespoon
+	s.addUnit("tablespoon", DimensionVolume, 0.0147868, "l")
+	s.addUnit("tablespoons", DimensionVolume, 0.0147868, "l")
+	s.addUnit("tsp", DimensionVolume, 0.00492892, "l") // US teaspoon
+	s.addUnit("teaspoon", DimensionVolume, 0.00492892, "l")
+	s.addUnit("teaspoons", DimensionVolume, 0.00492892, "l")
+	// UK/Imperial
+	s.addUnit("ukgal", DimensionVolume, 4.54609, "l") // UK gallon (larger)
+	s.addUnit("ukgallon", DimensionVolume, 4.54609, "l")
+	s.addUnit("ukgallons", DimensionVolume, 4.54609, "l")
+	s.addUnit("impgal", DimensionVolume, 4.54609, "l")
+	s.addUnit("imperialgallon", DimensionVolume, 4.54609, "l")
+	s.addUnit("ukquart", DimensionVolume, 1.13652, "l") // UK quart
+	s.addUnit("ukquarts", DimensionVolume, 1.13652, "l")
+	s.addUnit("ukpint", DimensionVolume, 0.568261, "l") // UK pint (larger than US)
+	s.addUnit("ukpints", DimensionVolume, 0.568261, "l")
+	s.addUnit("imppint", DimensionVolume, 0.568261, "l")
+	s.addUnit("imperialpint", DimensionVolume, 0.568261, "l")
 
 	// Area units (base: square meter)
+	// Numeric notation
 	s.addUnit("sqm", DimensionArea, 1.0, "sqm")
 	s.addUnit("m2", DimensionArea, 1.0, "sqm")
 	s.addUnit("m²", DimensionArea, 1.0, "sqm")
+	s.addUnit("sqmm", DimensionArea, 0.000001, "sqm")
+	s.addUnit("mm2", DimensionArea, 0.000001, "sqm")
+	s.addUnit("mm²", DimensionArea, 0.000001, "sqm")
 	s.addUnit("sqcm", DimensionArea, 0.0001, "sqm")
 	s.addUnit("cm2", DimensionArea, 0.0001, "sqm")
 	s.addUnit("cm²", DimensionArea, 0.0001, "sqm")
@@ -185,11 +257,33 @@ func (s *System) initStandardUnits() {
 	s.addUnit("sqmi", DimensionArea, 2589988.11, "sqm")
 	s.addUnit("mi2", DimensionArea, 2589988.11, "sqm")
 	s.addUnit("mi²", DimensionArea, 2589988.11, "sqm")
+	// Spelled phrases
+	s.addUnit("squaremetre", DimensionArea, 1.0, "sqm")
+	s.addUnit("squaremetres", DimensionArea, 1.0, "sqm")
+	s.addUnit("squaremeter", DimensionArea, 1.0, "sqm")
+	s.addUnit("squaremeters", DimensionArea, 1.0, "sqm")
+	s.addUnit("squarefoot", DimensionArea, 0.092903, "sqm")
+	s.addUnit("squarefeet", DimensionArea, 0.092903, "sqm")
+	s.addUnit("squareinch", DimensionArea, 0.00064516, "sqm")
+	s.addUnit("squareinches", DimensionArea, 0.00064516, "sqm")
+	s.addUnit("squareyard", DimensionArea, 0.836127, "sqm")
+	s.addUnit("squareyards", DimensionArea, 0.836127, "sqm")
+	s.addUnit("squaremile", DimensionArea, 2589988.11, "sqm")
+	s.addUnit("squaremiles", DimensionArea, 2589988.11, "sqm")
+	s.addUnit("squarekilometre", DimensionArea, 1000000.0, "sqm")
+	s.addUnit("squarekilometres", DimensionArea, 1000000.0, "sqm")
+	s.addUnit("squarekilometer", DimensionArea, 1000000.0, "sqm")
+	s.addUnit("squarekilometers", DimensionArea, 1000000.0, "sqm")
+	// Land area units
 	s.addUnit("acre", DimensionArea, 4046.86, "sqm")
 	s.addUnit("acres", DimensionArea, 4046.86, "sqm")
 	s.addUnit("hectare", DimensionArea, 10000.0, "sqm")
 	s.addUnit("hectares", DimensionArea, 10000.0, "sqm")
 	s.addUnit("ha", DimensionArea, 10000.0, "sqm")
+	s.addUnit("are", DimensionArea, 100.0, "sqm") // 10m x 10m
+	s.addUnit("ares", DimensionArea, 100.0, "sqm")
+	s.addUnit("decare", DimensionArea, 1000.0, "sqm") // 10 ares
+	s.addUnit("decares", DimensionArea, 1000.0, "sqm")
 
 	// Digital storage units (base: byte)
 	// Bytes
@@ -260,6 +354,9 @@ func (s *System) initStandardUnits() {
 	s.addUnit("fahrenheit", DimensionTemperature, 1.0, "f")
 	s.addUnit("k", DimensionTemperature, 1.0, "k")
 	s.addUnit("kelvin", DimensionTemperature, 1.0, "k")
+	s.addUnit("r", DimensionTemperature, 1.0, "r")
+	s.addUnit("rankine", DimensionTemperature, 1.0, "r")
+	s.addUnit("°r", DimensionTemperature, 1.0, "r")
 
 	// Speed units (base: meters per second)
 	// These are shortcuts for compound units to avoid needing slashes
@@ -271,6 +368,77 @@ func (s *System) initStandardUnits() {
 	s.addUnit("knot", DimensionSpeed, 0.514444, "mps") // nautical miles per hour
 	s.addUnit("knots", DimensionSpeed, 0.514444, "mps")
 	s.addUnit("kn", DimensionSpeed, 0.514444, "mps")
+
+	// Pressure units (base: Pascal)
+	s.addUnit("pa", DimensionPressure, 1.0, "pa")
+	s.addUnit("pascal", DimensionPressure, 1.0, "pa")
+	s.addUnit("pascals", DimensionPressure, 1.0, "pa")
+	s.addUnit("kpa", DimensionPressure, 1000.0, "pa")
+	s.addUnit("kilopascal", DimensionPressure, 1000.0, "pa")
+	s.addUnit("kilopascals", DimensionPressure, 1000.0, "pa")
+	s.addUnit("mpa", DimensionPressure, 1000000.0, "pa")
+	s.addUnit("megapascal", DimensionPressure, 1000000.0, "pa")
+	s.addUnit("megapascals", DimensionPressure, 1000000.0, "pa")
+	s.addUnit("bar", DimensionPressure, 100000.0, "pa") // 1 bar = 100,000 Pa
+	s.addUnit("bars", DimensionPressure, 100000.0, "pa")
+	s.addUnit("mbar", DimensionPressure, 100.0, "pa") // millibar
+	s.addUnit("millibar", DimensionPressure, 100.0, "pa")
+	s.addUnit("millibars", DimensionPressure, 100.0, "pa")
+	s.addUnit("atm", DimensionPressure, 101325.0, "pa") // standard atmosphere
+	s.addUnit("atmosphere", DimensionPressure, 101325.0, "pa")
+	s.addUnit("atmospheres", DimensionPressure, 101325.0, "pa")
+	s.addUnit("psi", DimensionPressure, 6894.76, "pa")  // pounds per square inch
+	s.addUnit("torr", DimensionPressure, 133.322, "pa") // 1/760 atm
+	s.addUnit("mmhg", DimensionPressure, 133.322, "pa") // millimeters of mercury
+	s.addUnit("inhg", DimensionPressure, 3386.39, "pa") // inches of mercury
+
+	// Force units (base: Newton)
+	s.addUnit("n", DimensionForce, 1.0, "n")
+	s.addUnit("newton", DimensionForce, 1.0, "n")
+	s.addUnit("newtons", DimensionForce, 1.0, "n")
+	// Note: "kn" is reserved for knots (speed), use "kilonewton" for force
+	s.addUnit("kilonewton", DimensionForce, 1000.0, "n")
+	s.addUnit("kilonewtons", DimensionForce, 1000.0, "n")
+	s.addUnit("mn", DimensionForce, 1000000.0, "n")
+	s.addUnit("meganewton", DimensionForce, 1000000.0, "n")
+	s.addUnit("meganewtons", DimensionForce, 1000000.0, "n")
+	s.addUnit("lbf", DimensionForce, 4.44822, "n") // pound-force
+	s.addUnit("poundforce", DimensionForce, 4.44822, "n")
+	s.addUnit("poundsforce", DimensionForce, 4.44822, "n")
+	s.addUnit("kgf", DimensionForce, 9.80665, "n") // kilogram-force
+	s.addUnit("kilogramforce", DimensionForce, 9.80665, "n")
+	s.addUnit("dyne", DimensionForce, 0.00001, "n") // cgs unit
+	s.addUnit("dynes", DimensionForce, 0.00001, "n")
+
+	// Angle units (base: degrees)
+	s.addUnit("deg", DimensionAngle, 1.0, "deg")
+	s.addUnit("degree", DimensionAngle, 1.0, "deg")
+	s.addUnit("degrees", DimensionAngle, 1.0, "deg")
+	s.addUnit("°", DimensionAngle, 1.0, "deg")
+	s.addUnit("rad", DimensionAngle, 57.2958, "deg") // 180/π
+	s.addUnit("radian", DimensionAngle, 57.2958, "deg")
+	s.addUnit("radians", DimensionAngle, 57.2958, "deg")
+	s.addUnit("grad", DimensionAngle, 0.9, "deg") // 360/400
+	s.addUnit("gradian", DimensionAngle, 0.9, "deg")
+	s.addUnit("gradians", DimensionAngle, 0.9, "deg")
+	s.addUnit("gon", DimensionAngle, 0.9, "deg")    // same as gradian
+	s.addUnit("turn", DimensionAngle, 360.0, "deg") // full rotation
+	s.addUnit("turns", DimensionAngle, 360.0, "deg")
+	s.addUnit("revolution", DimensionAngle, 360.0, "deg")
+	s.addUnit("revolutions", DimensionAngle, 360.0, "deg")
+
+	// Frequency units (base: Hertz)
+	s.addUnit("hz", DimensionFrequency, 1.0, "hz")
+	s.addUnit("hertz", DimensionFrequency, 1.0, "hz")
+	s.addUnit("khz", DimensionFrequency, 1000.0, "hz")
+	s.addUnit("kilohertz", DimensionFrequency, 1000.0, "hz")
+	s.addUnit("mhz", DimensionFrequency, 1000000.0, "hz")
+	s.addUnit("megahertz", DimensionFrequency, 1000000.0, "hz")
+	s.addUnit("ghz", DimensionFrequency, 1000000000.0, "hz")
+	s.addUnit("gigahertz", DimensionFrequency, 1000000000.0, "hz")
+	s.addUnit("thz", DimensionFrequency, 1000000000000.0, "hz")
+	s.addUnit("terahertz", DimensionFrequency, 1000000000000.0, "hz")
+	s.addUnit("rpm", DimensionFrequency, 0.0166667, "hz") // revolutions per minute
 }
 
 func (s *System) addUnit(name string, dim Dimension, toBase float64, baseUnit string) {
@@ -356,6 +524,8 @@ func (s *System) convertTemperature(value float64, from, to string) (float64, er
 		celsius = (value - 32) * 5 / 9
 	case "k", "kelvin":
 		celsius = value - 273.15
+	case "r", "rankine", "°r":
+		celsius = (value - 491.67) * 5 / 9 // R to C: (R - 491.67) × 5/9
 	default:
 		return 0, fmt.Errorf("unknown temperature unit: %s", from)
 	}
@@ -368,6 +538,8 @@ func (s *System) convertTemperature(value float64, from, to string) (float64, er
 		return celsius*9/5 + 32, nil
 	case "k", "kelvin":
 		return celsius + 273.15, nil
+	case "r", "rankine", "°r":
+		return (celsius + 273.15) * 9 / 5, nil // C to R: (C + 273.15) × 9/5
 	default:
 		return 0, fmt.Errorf("unknown temperature unit: %s", to)
 	}

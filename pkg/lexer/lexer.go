@@ -318,26 +318,82 @@ func (l *Lexer) isKnownUnit(s string) bool {
 
 		// Volume
 		"l": true, "ml": true, "litre": true, "litres": true, "liter": true, "liters": true,
+		"millilitre": true, "millilitres": true, "milliliter": true, "milliliters": true,
+		"cl": true, "centilitre": true, "centilitres": true, "centiliter": true, "centiliters": true,
+		"dl": true, "decilitre": true, "decilitres": true, "deciliter": true, "deciliters": true,
+		"m3": true, "m³": true, "cm3": true, "cm³": true, "mm3": true, "mm³": true,
+		"ft3": true, "ft³": true, "in3": true, "in³": true, "cc": true,
 		"gal": true, "gallon": true, "gallons": true,
+		"usgal": true, "usgallon": true, "usgallons": true,
+		"ukgal": true, "ukgallon": true, "ukgallons": true,
+		"impgal": true, "imperialgallon": true,
+		"quart": true, "quarts": true, "qt": true,
+		"usquart": true, "usquarts": true, "ukquart": true, "ukquarts": true,
+		"pint": true, "pints": true, "pt": true,
+		"uspint": true, "uspints": true, "ukpint": true, "ukpints": true,
+		"imppint": true, "imperialpint": true,
+		"cup": true, "cups": true,
+		"floz": true, "fluidounce": true, "fluidounces": true,
+		"tbsp": true, "tablespoon": true, "tablespoons": true,
+		"tsp": true, "teaspoon": true, "teaspoons": true,
 
 		// Area
 		"sqm": true, "m2": true, "m²": true,
+		"sqmm": true, "mm2": true, "mm²": true,
 		"sqcm": true, "cm2": true, "cm²": true,
 		"sqkm": true, "km2": true, "km²": true,
 		"sqft": true, "ft2": true, "ft²": true,
 		"sqin": true, "in2": true, "in²": true,
 		"sqyd": true, "yd2": true, "yd²": true,
 		"sqmi": true, "mi2": true, "mi²": true,
+		"squaremetre": true, "squaremetres": true, "squaremeter": true, "squaremeters": true,
+		"squarefoot": true, "squarefeet": true,
+		"squareinch": true, "squareinches": true,
+		"squareyard": true, "squareyards": true,
+		"squaremile": true, "squaremiles": true,
+		"squarekilometre": true, "squarekilometres": true, "squarekilometer": true, "squarekilometers": true,
 		"acre": true, "acres": true,
 		"hectare": true, "hectares": true, "ha": true,
+		"are": true, "ares": true, "decare": true, "decares": true,
 
 		// Temperature
 		"c": true, "f": true, "celsius": true, "fahrenheit": true,
 		"k": true, "kelvin": true,
+		"r": true, "rankine": true, "°r": true,
 
 		// Speed
 		"mps": true, "kph": true, "kmh": true, "mph": true,
 		"fps": true, "knot": true, "knots": true, "kn": true,
+
+		// Pressure
+		"pa": true, "pascal": true, "pascals": true,
+		"kpa": true, "kilopascal": true, "kilopascals": true,
+		"mpa": true, "megapascal": true, "megapascals": true,
+		"bar": true, "bars": true, "mbar": true, "millibar": true, "millibars": true,
+		"atm": true, "atmosphere": true, "atmospheres": true,
+		"psi": true, "torr": true, "mmhg": true, "inhg": true,
+
+		// Force
+		"n": true, "newton": true, "newtons": true,
+		"kilonewton": true, "kilonewtons": true,
+		"mn": true, "meganewton": true, "meganewtons": true,
+		"lbf": true, "poundforce": true, "poundsforce": true,
+		"kgf": true, "kilogramforce": true,
+		"dyne": true, "dynes": true,
+
+		// Angle
+		"deg": true, "degree": true, "degrees": true, "°": true,
+		"rad": true, "radian": true, "radians": true,
+		"grad": true, "gradian": true, "gradians": true, "gon": true,
+		"turn": true, "turns": true, "revolution": true, "revolutions": true,
+
+		// Frequency
+		"hz": true, "hertz": true,
+		"khz": true, "kilohertz": true,
+		"mhz": true, "megahertz": true,
+		"ghz": true, "gigahertz": true,
+		"thz": true, "terahertz": true,
+		"rpm": true,
 
 		// Digital storage (bytes)
 		"b": true, "byte": true, "bytes": true,

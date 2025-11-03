@@ -996,3 +996,362 @@ func TestInformalTimeSpans(t *testing.T) {
 		})
 	}
 }
+
+func TestExtendedVolumeConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Metric subunits
+		{"100 cl to litres", 100, "cl", "l", 1, 0.01},
+		{"10 dl to litres", 10, "dl", "l", 1, 0.01},
+		{"1 litre to cl", 1, "l", "cl", 100, 0.01},
+		{"1 litre to dl", 1, "l", "dl", 10, 0.01},
+
+		// Cubic measures
+		{"1 m³ to litres", 1, "m3", "l", 1000, 0.1},
+		{"1000 cm³ to litre", 1000, "cm3", "l", 1, 0.01},
+		{"1 cc to ml", 1, "cc", "ml", 1, 0.01},
+		{"1 litre to cc", 1, "l", "cc", 1000, 0.1},
+		{"1 ft³ to litres", 1, "ft3", "l", 28.3168, 0.01},
+		{"1000 mm³ to ml", 1000, "mm3", "ml", 1, 0.01},
+
+		// Kitchen measures (US)
+		{"1 cup to ml", 1, "cup", "ml", 236.588, 0.01},
+		{"16 tbsp to cup", 16, "tbsp", "cup", 1, 0.01},
+		{"3 tsp to tbsp", 3, "tsp", "tbsp", 1, 0.01},
+		{"8 floz to cup", 8, "floz", "cup", 1, 0.01},
+		{"2 cups to pint", 2, "cups", "pint", 1, 0.01},
+		{"2 pints to quart", 2, "pints", "quart", 1, 0.01},
+		{"4 quarts to gallon", 4, "quarts", "gallon", 1, 0.01},
+
+		// US vs UK gallons/pints
+		{"1 usgal to ukgal", 1, "usgal", "ukgal", 0.832674, 0.001},
+		{"1 ukgal to usgal", 1, "ukgal", "usgal", 1.20095, 0.001},
+		{"1 uspint to ukpint", 1, "uspint", "ukpint", 0.832674, 0.001},
+		{"1 ukpint to l", 1, "ukpint", "l", 0.568261, 0.001},
+		{"1 uspint to l", 1, "uspint", "l", 0.473176, 0.001},
+		{"1 imperialgallon to l", 1, "imperialgallon", "l", 4.54609, 0.001},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion failed: %s", err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.delta {
+				t.Errorf("expected %.6f, got %.6f", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestExtendedAreaConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Spelled phrases
+		{"1 squaremetre to sqm", 1, "squaremetre", "sqm", 1, 0.01},
+		{"1 squarefoot to sqft", 1, "squarefoot", "sqft", 1, 0.01},
+		{"100 squaremetres to are", 100, "squaremetres", "are", 1, 0.01},
+
+		// Scientific units
+		{"1 are to sqm", 1, "are", "sqm", 100, 0.01},
+		{"10 ares to decare", 10, "ares", "decare", 1, 0.01},
+		{"10 decares to hectare", 10, "decares", "hectare", 1, 0.01},
+		{"100 ares to hectare", 100, "ares", "hectare", 1, 0.01},
+
+		// Small units
+		{"1 sqmm to mm²", 1, "sqmm", "mm²", 1, 0.01},
+		{"1000000 mm² to m²", 1000000, "mm²", "m²", 1, 0.01},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion failed: %s", err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.delta {
+				t.Errorf("expected %.6f, got %.6f", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestRankineTemperature(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Rankine to other scales
+		{"Absolute zero R to F", 0, "r", "f", -459.67, 0.01},
+		{"Absolute zero R to C", 0, "r", "c", -273.15, 0.01},
+		{"Absolute zero R to K", 0, "r", "k", 0, 0.01},
+		{"Water freezing R to F", 491.67, "r", "f", 32, 0.01},
+		{"Water boiling R to F", 671.67, "r", "f", 212, 0.01},
+
+		// Other scales to Rankine
+		{"Absolute zero F to R", -459.67, "f", "r", 0, 0.01},
+		{"Water freezing F to R", 32, "f", "r", 491.67, 0.01},
+		{"Water boiling F to R", 212, "f", "r", 671.67, 0.01},
+		{"0 C to R", 0, "c", "r", 491.67, 0.01},
+		{"100 C to R", 100, "c", "r", 671.67, 0.01},
+		{"273.15 K to R", 273.15, "k", "r", 491.67, 0.01},
+
+		// Using degree symbol
+		{"500 °R to F", 500, "°r", "f", 40.33, 0.01},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion failed: %s", err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.delta {
+				t.Errorf("expected %.2f, got %.2f", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestPressureConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Basic Pascal conversions
+		{"1 kPa to Pa", 1, "kpa", "pa", 1000, 1},
+		{"1 MPa to kPa", 1, "mpa", "kpa", 1000, 1},
+		{"1 bar to Pa", 1, "bar", "pa", 100000, 1},
+		{"1000 mbar to bar", 1000, "mbar", "bar", 1, 0.01},
+
+		// Atmospheric pressure
+		{"1 atm to Pa", 1, "atm", "pa", 101325, 1},
+		{"1 atm to bar", 1, "atm", "bar", 1.01325, 0.001},
+		{"1 atm to psi", 1, "atm", "psi", 14.6959, 0.01},
+
+		// PSI conversions (tyres)
+		{"30 psi to bar", 30, "psi", "bar", 2.06843, 0.001},
+		{"2.5 bar to psi", 2.5, "bar", "psi", 36.2594, 0.01},
+		{"35 psi to kPa", 35, "psi", "kpa", 241.317, 0.1},
+
+		// Torr and mmHg
+		{"760 torr to atm", 760, "torr", "atm", 1, 0.01},
+		{"760 mmhg to atm", 760, "mmhg", "atm", 1, 0.01},
+		{"1 inhg to mmhg", 1, "inhg", "mmhg", 25.4, 0.1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion failed: %s", err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.delta {
+				t.Errorf("expected %.4f, got %.4f", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestForceConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Newton conversions
+		{"1 kN to N", 1, "kilonewton", "n", 1000, 1},
+		{"1 MN to kN", 1, "mn", "kilonewton", 1000, 1},
+
+		// Pound-force
+		{"1 lbf to N", 1, "lbf", "n", 4.44822, 0.001},
+		{"100 N to lbf", 100, "n", "lbf", 22.4809, 0.01},
+
+		// Kilogram-force
+		{"1 kgf to N", 1, "kgf", "n", 9.80665, 0.001},
+		{"10 kgf to lbf", 10, "kgf", "lbf", 22.0462, 0.01},
+
+		// Dyne (CGS unit)
+		{"100000 dyne to N", 100000, "dyne", "n", 1, 0.01},
+		{"1 N to dynes", 1, "n", "dynes", 100000, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion failed: %s", err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.delta {
+				t.Errorf("expected %.4f, got %.4f", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestAngleConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Degrees to radians
+		{"180 deg to rad", 180, "deg", "rad", 3.14159, 0.001},
+		{"90 degrees to radians", 90, "degrees", "radians", 1.5708, 0.001},
+		{"360 deg to rad", 360, "deg", "rad", 6.28319, 0.001},
+
+		// Radians to degrees
+		{"π rad to deg", 3.14159, "rad", "deg", 180, 0.01},
+		{"1 radian to degrees", 1, "radian", "degrees", 57.2958, 0.01},
+
+		// Gradians
+		{"100 grad to deg", 100, "grad", "deg", 90, 0.01},
+		{"400 gradians to degrees", 400, "gradians", "degrees", 360, 0.01},
+		{"200 gon to deg", 200, "gon", "deg", 180, 0.01},
+
+		// Turns/revolutions
+		{"1 turn to deg", 1, "turn", "deg", 360, 0.01},
+		{"0.5 turns to degrees", 0.5, "turns", "degrees", 180, 0.01},
+		{"1 revolution to deg", 1, "revolution", "deg", 360, 0.01},
+		{"2 revolutions to rad", 2, "revolutions", "rad", 12.5664, 0.001},
+
+		// Degree symbol
+		{"90 ° to rad", 90, "°", "rad", 1.5708, 0.001},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion failed: %s", err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.delta {
+				t.Errorf("expected %.4f, got %.4f", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestFrequencyConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		delta    float64
+	}{
+		// Basic frequency conversions
+		{"1 kHz to Hz", 1, "khz", "hz", 1000, 1},
+		{"1 MHz to kHz", 1, "mhz", "khz", 1000, 1},
+		{"1 GHz to MHz", 1, "ghz", "mhz", 1000, 1},
+		{"1 THz to GHz", 1, "thz", "ghz", 1000, 1},
+
+		// Practical examples
+		{"2.4 GHz WiFi", 2.4, "ghz", "mhz", 2400, 1},
+		{"5 GHz WiFi", 5, "ghz", "mhz", 5000, 1},
+		{"100 MHz FM radio", 100, "mhz", "hz", 100000000, 100},
+
+		// RPM conversions
+		{"60 rpm to Hz", 60, "rpm", "hz", 1, 0.01},
+		{"3000 rpm to Hz", 3000, "rpm", "hz", 50, 0.1},
+		{"1 Hz to rpm", 1, "hz", "rpm", 60, 0.1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion failed: %s", err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.delta {
+				t.Errorf("expected %.4f, got %.4f", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestAllNewUnitsRecognition(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		category string
+		units    []string
+	}{
+		{"Volume metric", []string{"cl", "centilitre", "dl", "decilitre"}},
+		{"Volume cubic", []string{"m3", "m³", "cm3", "cm³", "mm3", "mm³", "ft3", "ft³", "in3", "in³", "cc"}},
+		{"Volume kitchen", []string{"cup", "cups", "floz", "tbsp", "tsp", "tablespoon", "teaspoon"}},
+		{"Volume US", []string{"usgal", "usgallon", "usquart", "uspint", "quart", "pint", "qt", "pt"}},
+		{"Volume UK", []string{"ukgal", "ukgallon", "impgal", "imperialgallon", "ukquart", "ukpint", "imppint"}},
+		{"Area spelled", []string{"squaremetre", "squarefoot", "squareinch", "squareyard", "squaremile"}},
+		{"Area scientific", []string{"are", "ares", "decare", "decares", "sqmm", "mm2", "mm²"}},
+		{"Temperature", []string{"r", "rankine", "°r"}},
+		{"Pressure", []string{"pa", "pascal", "kpa", "bar", "mbar", "atm", "psi", "torr", "mmhg", "inhg"}},
+		{"Force", []string{"n", "newton", "kilonewton", "mn", "lbf", "kgf", "dyne"}},
+		{"Angle", []string{"deg", "degree", "rad", "radian", "grad", "gradian", "gon", "turn", "revolution", "°"}},
+		{"Frequency", []string{"hz", "khz", "mhz", "ghz", "thz", "rpm"}},
+	}
+
+	for _, category := range tests {
+		for _, unit := range category.units {
+			if !s.IsUnit(unit) {
+				t.Errorf("%s unit %q should be recognized", category.category, unit)
+			}
+		}
+	}
+}
