@@ -110,6 +110,9 @@ func (e *Evaluator) Eval(expr parser.Expr) Value {
 	case *parser.TimeConversionExpr:
 		return e.evalTimeConversion(node)
 
+	case *parser.RateExpr:
+		return e.evalRate(node)
+
 	default:
 		return NewError(fmt.Sprintf("unknown expression type: %T", expr))
 	}
@@ -224,6 +227,25 @@ func (e *Evaluator) evalConversion(node *parser.ConversionExpr) Value {
 
 	// Handle unit conversion
 	if val.Type == ValueUnit {
+		// Check if we're converting to a compound unit
+		if units.IsCompoundUnit(node.ToUnit) {
+			result, err := e.env.units.ConvertCompoundUnit(val.Number, val.Unit, node.ToUnit)
+			if err != nil {
+				return NewError(err.Error())
+			}
+			return NewUnit(result, node.ToUnit)
+		}
+
+		// Check if we're converting from a compound unit
+		if units.IsCompoundUnit(val.Unit) {
+			result, err := e.env.units.ConvertCompoundUnit(val.Number, val.Unit, node.ToUnit)
+			if err != nil {
+				return NewError(err.Error())
+			}
+			return NewUnit(result, node.ToUnit)
+		}
+
+		// Regular simple unit conversion
 		result, err := e.env.units.Convert(val.Number, val.Unit, node.ToUnit)
 		if err != nil {
 			return NewError(err.Error())
@@ -696,4 +718,38 @@ func (e *Evaluator) evalTimeConversion(node *parser.TimeConversionExpr) Value {
 	targetTime := baseTime.Add(time.Duration(toLoc.Offset-fromLoc.Offset) * time.Hour)
 
 	return NewDate(targetTime)
+}
+
+func (e *Evaluator) evalRate(node *parser.RateExpr) Value {
+	// Evaluate numerator and denominator
+	num := e.Eval(node.Numerator)
+	if num.IsError() {
+		return num
+	}
+
+	den := e.Eval(node.Denominator)
+	if den.IsError() {
+		return den
+	}
+
+	// Both must have units
+	if num.Type != ValueUnit {
+		return NewError("rate numerator must have a unit")
+	}
+
+	if den.Type != ValueUnit {
+		return NewError("rate denominator must have a unit")
+	}
+
+	// Calculate the rate value
+	if den.Number == 0 {
+		return NewError("division by zero in rate")
+	}
+
+	rateValue := num.Number / den.Number
+
+	// Create compound unit string
+	compoundUnit := num.Unit + "/" + den.Unit
+
+	return NewUnit(rateValue, compoundUnit)
 }

@@ -11,18 +11,18 @@ import (
 func parseAndEval(input string) Value {
 	lex := lexer.New(input)
 	tokens := lex.AllTokens()
-	
+
 	// Remove EOF
 	if len(tokens) > 0 && tokens[len(tokens)-1].Type == lexer.TokenEOF {
 		tokens = tokens[:len(tokens)-1]
 	}
-	
+
 	p := parser.New(tokens)
 	expr, err := p.Parse()
 	if err != nil {
 		return NewError(err.Error())
 	}
-	
+
 	env := NewEnvironment()
 	eval := New(env)
 	return eval.Eval(expr)
@@ -39,14 +39,14 @@ func TestArithmeticBasic(t *testing.T) {
 		{"6 * 7", 42},
 		{"100 / 4", 25},
 	}
-	
+
 	for _, tt := range tests {
 		result := parseAndEval(tt.input)
 		if result.IsError() {
 			t.Errorf("input %q: unexpected error: %s", tt.input, result.Error)
 			continue
 		}
-		
+
 		if math.Abs(result.Number-tt.expected) > 0.01 {
 			t.Errorf("input %q: expected %.2f, got %.2f", tt.input, tt.expected, result.Number)
 		}
@@ -56,7 +56,7 @@ func TestArithmeticBasic(t *testing.T) {
 func TestVariableAssignment(t *testing.T) {
 	env := NewEnvironment()
 	eval := New(env)
-	
+
 	// x = 10
 	lex1 := lexer.New("x = 10")
 	tokens1 := lex1.AllTokens()
@@ -64,15 +64,15 @@ func TestVariableAssignment(t *testing.T) {
 	p1 := parser.New(tokens1)
 	expr1, _ := p1.Parse()
 	result1 := eval.Eval(expr1)
-	
+
 	if result1.IsError() {
 		t.Fatalf("assignment failed: %s", result1.Error)
 	}
-	
+
 	if result1.Number != 10 {
 		t.Errorf("expected 10, got %.2f", result1.Number)
 	}
-	
+
 	// y = x + 3
 	lex2 := lexer.New("y = x + 3")
 	tokens2 := lex2.AllTokens()
@@ -80,11 +80,11 @@ func TestVariableAssignment(t *testing.T) {
 	p2 := parser.New(tokens2)
 	expr2, _ := p2.Parse()
 	result2 := eval.Eval(expr2)
-	
+
 	if result2.IsError() {
 		t.Fatalf("y assignment failed: %s", result2.Error)
 	}
-	
+
 	if result2.Number != 13 {
 		t.Errorf("expected 13, got %.2f", result2.Number)
 	}
@@ -95,19 +95,19 @@ func TestPercentages(t *testing.T) {
 		input    string
 		expected float64
 	}{
-		{"30 + 20%", 36},     // 30 + (30 * 0.20)
-		{"20% of 50", 10},    // 50 * 0.20
+		{"30 + 20%", 36},  // 30 + (30 * 0.20)
+		{"20% of 50", 10}, // 50 * 0.20
 		{"increase 100 by 10%", 110},
 		{"decrease 100 by 10%", 90},
 	}
-	
+
 	for _, tt := range tests {
 		result := parseAndEval(tt.input)
 		if result.IsError() {
 			t.Errorf("input %q: unexpected error: %s", tt.input, result.Error)
 			continue
 		}
-		
+
 		if math.Abs(result.Number-tt.expected) > 0.01 {
 			t.Errorf("input %q: expected %.2f, got %.2f", tt.input, tt.expected, result.Number)
 		}
@@ -124,14 +124,14 @@ func TestFuzzyPhrases(t *testing.T) {
 		{"twice 4", 8},
 		{"three quarters of 200", 150},
 	}
-	
+
 	for _, tt := range tests {
 		result := parseAndEval(tt.input)
 		if result.IsError() {
 			t.Errorf("input %q: unexpected error: %s", tt.input, result.Error)
 			continue
 		}
-		
+
 		if math.Abs(result.Number-tt.expected) > 0.01 {
 			t.Errorf("input %q: expected %.2f, got %.2f", tt.input, tt.expected, result.Number)
 		}
@@ -146,14 +146,14 @@ func TestFunctions(t *testing.T) {
 		{"sum(10, 20, 30)", 60},
 		{"average(3, 4, 5)", 4},
 	}
-	
+
 	for _, tt := range tests {
 		result := parseAndEval(tt.input)
 		if result.IsError() {
 			t.Errorf("input %q: unexpected error: %s", tt.input, result.Error)
 			continue
 		}
-		
+
 		if math.Abs(result.Number-tt.expected) > 0.01 {
 			t.Errorf("input %q: expected %.2f, got %.2f", tt.input, tt.expected, result.Number)
 		}
@@ -165,15 +165,15 @@ func TestCurrency(t *testing.T) {
 	if result.IsError() {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	
+
 	if result.Type != ValueCurrency {
 		t.Errorf("expected currency type, got %v", result.Type)
 	}
-	
+
 	if result.Number != 50 {
 		t.Errorf("expected 50, got %.2f", result.Number)
 	}
-	
+
 	if result.Currency != "$" {
 		t.Errorf("expected $, got %s", result.Currency)
 	}
@@ -184,16 +184,151 @@ func TestUnits(t *testing.T) {
 	if result.IsError() {
 		t.Fatalf("unexpected error: %s", result.Error)
 	}
-	
+
 	if result.Type != ValueUnit {
 		t.Errorf("expected unit type, got %v", result.Type)
 	}
-	
+
 	if result.Number != 10 {
 		t.Errorf("expected 10, got %.2f", result.Number)
 	}
-	
+
 	if result.Unit != "m" {
 		t.Errorf("expected m, got %s", result.Unit)
+	}
+}
+
+func TestRateExpressions(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		expected  float64
+		unit      string
+		tolerance float64
+	}{
+		{"simple division", "100 km / 2 h", 50, "km/h", 0.01},
+		{"meters per second", "100 m / 10 s", 10, "m/s", 0.01},
+		{"miles per hour", "120 mi / 2 hr", 60, "mi/hr", 0.01},
+		{"feet per second", "300 ft / 10 s", 30, "ft/s", 0.01},
+		{"specification example", "200 km / 4 h", 50, "km/h", 0.01},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseAndEval(tt.input)
+			if result.IsError() {
+				t.Fatalf("input %q: unexpected error: %s", tt.input, result.Error)
+			}
+
+			if result.Type != ValueUnit {
+				t.Errorf("input %q: expected unit type, got %v", tt.input, result.Type)
+			}
+
+			if math.Abs(result.Number-tt.expected) > tt.tolerance {
+				t.Errorf("input %q: expected %.4f, got %.4f",
+					tt.input, tt.expected, result.Number)
+			}
+
+			if result.Unit != tt.unit {
+				t.Errorf("input %q: expected unit %s, got %s",
+					tt.input, tt.unit, result.Unit)
+			}
+		})
+	}
+}
+
+func TestRateConversions(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		expected  float64
+		unit      string
+		tolerance float64
+	}{
+		{"km/h to m/s", "100 km / 2 h in m/s", 13.8889, "m/s", 0.01},
+		{"specification example", "200 km / 4 h in m/s", 13.8889, "m/s", 0.01},
+		{"m/s to km/h", "10 m / 1 s in km/h", 36, "km/h", 0.1},
+		{"mi/hr to km/h", "60 mi / 1 hr in km/h", 96.56, "km/h", 0.1},
+		{"ft/s to m/s", "100 ft / 1 s in m/s", 30.48, "m/s", 0.01},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseAndEval(tt.input)
+			if result.IsError() {
+				t.Fatalf("input %q: unexpected error: %s", tt.input, result.Error)
+			}
+
+			if result.Type != ValueUnit {
+				t.Errorf("input %q: expected unit type, got %v", tt.input, result.Type)
+			}
+
+			if math.Abs(result.Number-tt.expected) > tt.tolerance {
+				t.Errorf("input %q: expected %.4f, got %.4f",
+					tt.input, tt.expected, result.Number)
+			}
+
+			if result.Unit != tt.unit {
+				t.Errorf("input %q: expected unit %s, got %s",
+					tt.input, tt.unit, result.Unit)
+			}
+		})
+	}
+}
+
+func TestRateErrors(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"zero denominator", "100 km / 0 h"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseAndEval(tt.input)
+			if !result.IsError() {
+				t.Errorf("input %q: expected error, got result: %.2f %s",
+					tt.input, result.Number, result.Unit)
+			}
+		})
+	}
+}
+
+func TestCompoundUnitConversions(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		expected  float64
+		unit      string
+		tolerance float64
+	}{
+		{"direct compound conversion", "50 km/h in m/s", 13.8889, "m/s", 0.01},
+		{"reverse compound conversion", "13.8889 m/s in km/h", 50, "km/h", 0.1},
+		{"mi/hr to km/h", "60 mi/hr in km/h", 96.56, "km/h", 0.1},
+		{"ft/s to m/s", "100 ft/s in m/s", 30.48, "m/s", 0.01},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseAndEval(tt.input)
+			if result.IsError() {
+				t.Fatalf("input %q: unexpected error: %s", tt.input, result.Error)
+			}
+
+			if result.Type != ValueUnit {
+				t.Errorf("input %q: expected unit type, got %v", tt.input, result.Type)
+			}
+
+			if math.Abs(result.Number-tt.expected) > tt.tolerance {
+				t.Errorf("input %q: expected %.4f, got %.4f",
+					tt.input, tt.expected, result.Number)
+			}
+
+			if result.Unit != tt.unit {
+				t.Errorf("input %q: expected unit %s, got %s",
+					tt.input, tt.unit, result.Unit)
+			}
+		})
 	}
 }

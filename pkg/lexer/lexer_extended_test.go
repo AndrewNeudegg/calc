@@ -266,6 +266,10 @@ func TestLexerAllUnits(t *testing.T) {
 		"day", "week", "month", "year",
 		// Volume
 		"l", "ml", "litre", "liter", "gal", "gallon",
+		// Area
+		"sqm", "sqft", "sqcm", "sqkm", "sqin", "sqyd", "sqmi",
+		"m2", "cm2", "km2", "ft2", "in2", "yd2", "mi2",
+		"acre", "acres", "hectare", "hectares", "ha",
 		// Temperature
 		"c", "f", "celsius", "fahrenheit",
 	}

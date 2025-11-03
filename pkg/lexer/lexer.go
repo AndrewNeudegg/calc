@@ -298,7 +298,15 @@ func (l *Lexer) isKnownUnit(s string) bool {
 		"gal": true, "gallon": true, "gallons": true,
 
 		// Area
-		"sqm": true, "sqft": true,
+		"sqm": true, "m2": true, "m²": true,
+		"sqcm": true, "cm2": true, "cm²": true,
+		"sqkm": true, "km2": true, "km²": true,
+		"sqft": true, "ft2": true, "ft²": true,
+		"sqin": true, "in2": true, "in²": true,
+		"sqyd": true, "yd2": true, "yd²": true,
+		"sqmi": true, "mi2": true, "mi²": true,
+		"acre": true, "acres": true,
+		"hectare": true, "hectares": true, "ha": true,
 
 		// Temperature
 		"c": true, "f": true, "celsius": true, "fahrenheit": true,

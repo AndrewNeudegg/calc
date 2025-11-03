@@ -351,6 +351,23 @@ func (p *Parser) parseConversion() (Expr, error) {
 		p.advance()
 		toUnit := p.current().Literal
 		p.advance()
+
+		// Check if this is a compound unit (e.g., "m/s" or "km per hour")
+		if p.current().Type == lexer.TokenPer {
+			p.advance()
+			if p.current().Type == lexer.TokenUnit {
+				toUnit = toUnit + "/" + p.current().Literal
+				p.advance()
+			}
+		} else if p.current().Type == lexer.TokenDivide {
+			// Look ahead to see if next token is a unit
+			if p.peek(1).Type == lexer.TokenUnit {
+				p.advance() // consume /
+				toUnit = toUnit + "/" + p.current().Literal
+				p.advance()
+			}
+		}
+
 		return &ConversionExpr{Value: expr, ToUnit: toUnit}, nil
 	}
 

@@ -27,6 +27,14 @@ type Unit struct {
 	IsCustom  bool
 }
 
+// CompoundUnit represents a compound unit like km/h or m/s.
+type CompoundUnit struct {
+	Numerator   *Unit
+	Denominator *Unit
+	ToBaseNum   float64 // conversion factor for numerator to base
+	ToBaseDen   float64 // conversion factor for denominator to base
+}
+
 // System manages all units and conversions.
 type System struct {
 	units  map[string]*Unit
@@ -119,6 +127,34 @@ func (s *System) initStandardUnits() {
 	s.addUnit("gal", DimensionVolume, 3.78541, "l")
 	s.addUnit("gallon", DimensionVolume, 3.78541, "l")
 	s.addUnit("gallons", DimensionVolume, 3.78541, "l")
+
+	// Area units (base: square meter)
+	s.addUnit("sqm", DimensionArea, 1.0, "sqm")
+	s.addUnit("m2", DimensionArea, 1.0, "sqm")
+	s.addUnit("m²", DimensionArea, 1.0, "sqm")
+	s.addUnit("sqcm", DimensionArea, 0.0001, "sqm")
+	s.addUnit("cm2", DimensionArea, 0.0001, "sqm")
+	s.addUnit("cm²", DimensionArea, 0.0001, "sqm")
+	s.addUnit("sqkm", DimensionArea, 1000000.0, "sqm")
+	s.addUnit("km2", DimensionArea, 1000000.0, "sqm")
+	s.addUnit("km²", DimensionArea, 1000000.0, "sqm")
+	s.addUnit("sqft", DimensionArea, 0.092903, "sqm")
+	s.addUnit("ft2", DimensionArea, 0.092903, "sqm")
+	s.addUnit("ft²", DimensionArea, 0.092903, "sqm")
+	s.addUnit("sqin", DimensionArea, 0.00064516, "sqm")
+	s.addUnit("in2", DimensionArea, 0.00064516, "sqm")
+	s.addUnit("in²", DimensionArea, 0.00064516, "sqm")
+	s.addUnit("sqyd", DimensionArea, 0.836127, "sqm")
+	s.addUnit("yd2", DimensionArea, 0.836127, "sqm")
+	s.addUnit("yd²", DimensionArea, 0.836127, "sqm")
+	s.addUnit("sqmi", DimensionArea, 2589988.11, "sqm")
+	s.addUnit("mi2", DimensionArea, 2589988.11, "sqm")
+	s.addUnit("mi²", DimensionArea, 2589988.11, "sqm")
+	s.addUnit("acre", DimensionArea, 4046.86, "sqm")
+	s.addUnit("acres", DimensionArea, 4046.86, "sqm")
+	s.addUnit("hectare", DimensionArea, 10000.0, "sqm")
+	s.addUnit("hectares", DimensionArea, 10000.0, "sqm")
+	s.addUnit("ha", DimensionArea, 10000.0, "sqm")
 
 	// Temperature units (special handling needed)
 	s.addUnit("c", DimensionTemperature, 1.0, "c")
@@ -242,4 +278,70 @@ func (s *System) GetDimension(name string) (Dimension, error) {
 		return DimensionNone, fmt.Errorf("unknown unit: %s", name)
 	}
 	return unit.Dimension, nil
+}
+
+// ParseCompoundUnit parses a compound unit string like "km/h" or "m/s".
+func (s *System) ParseCompoundUnit(unitStr string) (*CompoundUnit, error) {
+	unitStr = strings.ToLower(unitStr)
+	parts := strings.Split(unitStr, "/")
+
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid compound unit format: %s", unitStr)
+	}
+
+	numStr := strings.TrimSpace(parts[0])
+	denStr := strings.TrimSpace(parts[1])
+
+	num, ok := s.units[numStr]
+	if !ok {
+		return nil, fmt.Errorf("unknown numerator unit: %s", numStr)
+	}
+
+	den, ok := s.units[denStr]
+	if !ok {
+		return nil, fmt.Errorf("unknown denominator unit: %s", denStr)
+	}
+
+	return &CompoundUnit{
+		Numerator:   num,
+		Denominator: den,
+		ToBaseNum:   num.ToBase,
+		ToBaseDen:   den.ToBase,
+	}, nil
+}
+
+// ConvertCompoundUnit converts a value from one compound unit to another.
+// Example: Convert 50 km/h to m/s
+func (s *System) ConvertCompoundUnit(value float64, fromUnit, toUnit string) (float64, error) {
+	from, err := s.ParseCompoundUnit(fromUnit)
+	if err != nil {
+		return 0, err
+	}
+
+	to, err := s.ParseCompoundUnit(toUnit)
+	if err != nil {
+		return 0, err
+	}
+
+	// Check dimension compatibility
+	if from.Numerator.Dimension != to.Numerator.Dimension {
+		return 0, fmt.Errorf("incompatible numerator dimensions: %s vs %s",
+			fromUnit, toUnit)
+	}
+
+	if from.Denominator.Dimension != to.Denominator.Dimension {
+		return 0, fmt.Errorf("incompatible denominator dimensions: %s vs %s",
+			fromUnit, toUnit)
+	}
+
+	// Convert: value * (fromNum/fromDen) * (toDen/toNum)
+	// Example: 50 km/h = 50 * (1000m/3600s) * (1s/1m) = 50 * 1000/3600 = 13.89 m/s
+	result := value * (from.ToBaseNum / from.ToBaseDen) * (to.ToBaseDen / to.ToBaseNum)
+
+	return result, nil
+}
+
+// IsCompoundUnit checks if a string looks like a compound unit (contains /).
+func IsCompoundUnit(unitStr string) bool {
+	return strings.Contains(unitStr, "/")
 }
