@@ -197,7 +197,12 @@ func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 			if err != nil {
 				return nil, false
 			}
-			return &PercentChangeExpr{Base: base, Percent: percent, Increase: true}, true
+			expr := &PercentChangeExpr{Base: base, Percent: percent, Increase: true}
+			// Optional trailing conversion: "in <unit>"
+			if wrapped, ok := p.tryWrapWithConversion(expr); ok {
+				return wrapped, true
+			}
+			return expr, true
 		}
 	}
 
@@ -214,7 +219,11 @@ func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 			if err != nil {
 				return nil, false
 			}
-			return &PercentChangeExpr{Base: base, Percent: percent, Increase: false}, true
+			expr := &PercentChangeExpr{Base: base, Percent: percent, Increase: false}
+			if wrapped, ok := p.tryWrapWithConversion(expr); ok {
+				return wrapped, true
+			}
+			return expr, true
 		}
 	}
 
@@ -235,11 +244,43 @@ func (p *Parser) tryParseFuzzyPhrase() (Expr, bool) {
 			if err != nil {
 				return nil, false
 			}
-			return &WhatPercentExpr{Part: part, Whole: whole}, true
+			expr := &WhatPercentExpr{Part: part, Whole: whole}
+			if wrapped, ok := p.tryWrapWithConversion(expr); ok {
+				return wrapped, true
+			}
+			return expr, true
 		}
 	}
 
 	return nil, false
+}
+
+// tryWrapWithConversion checks for a trailing "in ..." conversion and wraps the given expr
+func (p *Parser) tryWrapWithConversion(expr Expr) (Expr, bool) {
+	if p.current().Type != lexer.TokenIn {
+		return nil, false
+	}
+	// Parse one or more chained conversions
+	for p.current().Type == lexer.TokenIn {
+		p.advance()
+		toUnit := p.current().Literal
+		p.advance()
+		if p.current().Type == lexer.TokenPer {
+			p.advance()
+			if p.current().Type == lexer.TokenUnit {
+				toUnit = toUnit + "/" + p.current().Literal
+				p.advance()
+			}
+		} else if p.current().Type == lexer.TokenDivide {
+			if p.peek(1).Type == lexer.TokenUnit {
+				p.advance()
+				toUnit = toUnit + "/" + p.current().Literal
+				p.advance()
+			}
+		}
+		expr = &ConversionExpr{Value: expr, ToUnit: toUnit}
+	}
+	return expr, true
 }
 
 // tryParseTimezoneQuery attempts to parse timezone-related queries
@@ -336,7 +377,7 @@ func (p *Parser) parseLocationName() string {
 
 		for i, part := range cityParts {
 			if p.peek(i).Type != lexer.TokenIdent ||
-				strings.ToLower(p.peek(i).Literal) != strings.ToLower(part) {
+				!strings.EqualFold(p.peek(i).Literal, part) {
 				matches = false
 				break
 			}
@@ -363,13 +404,14 @@ func (p *Parser) parseLocationName() string {
 }
 
 func (p *Parser) parseConversion() (Expr, error) {
+	// Parse the left-hand side expression first
 	expr, err := p.parseAdditive()
 	if err != nil {
 		return nil, err
 	}
 
-	// Check for "in" conversion
-	if p.current().Type == lexer.TokenIn {
+	// Handle one or more postfix "in ..." conversions that apply to the current expr
+	for p.current().Type == lexer.TokenIn {
 		p.advance()
 		toUnit := p.current().Literal
 		p.advance()
@@ -390,7 +432,38 @@ func (p *Parser) parseConversion() (Expr, error) {
 			}
 		}
 
-		return &ConversionExpr{Value: expr, ToUnit: toUnit}, nil
+		expr = &ConversionExpr{Value: expr, ToUnit: toUnit}
+	}
+
+	// After applying any conversions, allow additive tail (e.g., "(a in x) + b")
+	for {
+		tok := p.current()
+		var op string
+
+		if tok.Type == lexer.TokenPlus {
+			op = "+"
+		} else if tok.Type == lexer.TokenMinus {
+			op = "-"
+		} else if tok.Type == lexer.TokenIdent {
+			if tok.Literal == "plus" {
+				op = "+"
+			} else if tok.Literal == "minus" || tok.Literal == "and" {
+				op = map[bool]string{true: "+", false: "-"}[tok.Literal == "plus" || tok.Literal == "and"]
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+
+		p.advance()
+
+		right, err := p.parseMultiplicative()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &BinaryExpr{Left: expr, Operator: op, Right: right}
 	}
 
 	return expr, nil
@@ -542,6 +615,28 @@ func (p *Parser) parsePostfix() (Expr, error) {
 				Value:    expr,
 				Currency: unit,
 			}
+
+			// Check for "per" (rate) after currency - e.g., "32 dollars per day"
+			if p.current().Type == lexer.TokenPer {
+				p.advance()
+				if p.current().Type == lexer.TokenUnit {
+					unit2 := p.current().Literal
+					p.advance()
+					// Convert to a unit expression with currency/time rate
+					// Store as a UnitExpr with compound unit like "$/day"
+					currencySymbol := p.getCurrencySymbol(unit)
+					expr = &UnitExpr{Value: expr, Unit: currencySymbol + "/" + unit2}
+				}
+			} else if p.current().Type == lexer.TokenDivide {
+				// Look ahead to see if this is a rate (/ followed by unit)
+				if p.peek(1).Type == lexer.TokenUnit {
+					p.advance() // consume the /
+					unit2 := p.current().Literal
+					p.advance()
+					currencySymbol := p.getCurrencySymbol(unit)
+					expr = &UnitExpr{Value: expr, Unit: currencySymbol + "/" + unit2}
+				}
+			}
 		} else {
 			// Regular unit
 			expr = &UnitExpr{Value: expr, Unit: unit}
@@ -648,7 +743,8 @@ func (p *Parser) parsePrimary() (Expr, error) {
 
 	case lexer.TokenLParen:
 		p.advance()
-		expr, err := p.parseAdditive()
+		// Allow conversions inside parentheses
+		expr, err := p.parseConversion()
 		if err != nil {
 			return nil, err
 		}
@@ -780,7 +876,8 @@ func (p *Parser) parseFunctionCall(name string) (Expr, error) {
 	var args []Expr
 
 	for p.current().Type != lexer.TokenRParen && p.current().Type != lexer.TokenEOF {
-		arg, err := p.parseAdditive()
+		// Allow conversions within function arguments
+		arg, err := p.parseConversion()
 		if err != nil {
 			return nil, err
 		}
@@ -801,6 +898,23 @@ func (p *Parser) parseFunctionCall(name string) (Expr, error) {
 		Name: strings.ToLower(name),
 		Args: args,
 	}, nil
+}
+
+// getCurrencySymbol maps known currency names/codes to their canonical symbol
+func (p *Parser) getCurrencySymbol(code string) string {
+	switch strings.ToLower(strings.TrimSpace(code)) {
+	case "$", "usd", "dollar", "dollars":
+		return "$"
+	case "£", "gbp":
+		return "£"
+	case "€", "eur", "euro", "euros":
+		return "€"
+	case "¥", "jpy", "yen":
+		return "¥"
+	default:
+		// Fallback: return as-is
+		return code
+	}
 }
 
 func (p *Parser) parseDateKeyword() (Expr, error) {

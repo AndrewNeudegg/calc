@@ -265,17 +265,52 @@ func (e *Evaluator) evalConversion(node *parser.ConversionExpr) Value {
 
 	// Handle unit conversion
 	if val.Type == ValueUnit {
-		// Check if we're converting to a compound unit
-		if units.IsCompoundUnit(node.ToUnit) {
-			result, err := e.env.units.ConvertCompoundUnit(val.Number, val.Unit, node.ToUnit)
-			if err != nil {
-				return NewError(err.Error())
-			}
-			return NewUnit(result, node.ToUnit)
-		}
+		// Special case: currency/time rates (e.g., $/day) to other currency/time (e.g., gbp/month)
+		if units.IsCompoundUnit(val.Unit) || units.IsCompoundUnit(node.ToUnit) {
+			fromParts := strings.Split(val.Unit, "/")
+			toParts := strings.Split(node.ToUnit, "/")
 
-		// Check if we're converting from a compound unit
-		if units.IsCompoundUnit(val.Unit) {
+			// Handle currency rate: currency in numerator and time in denominator
+			if len(fromParts) == 2 && e.env.currency.IsCurrency(strings.TrimSpace(fromParts[0])) {
+				fromCur := strings.TrimSpace(fromParts[0])
+				fromTime := strings.TrimSpace(fromParts[1])
+
+				// If target is compound currency/time
+				if len(toParts) == 2 && e.env.currency.IsCurrency(strings.TrimSpace(toParts[0])) {
+					toCur := strings.TrimSpace(toParts[0])
+					toTime := strings.TrimSpace(toParts[1])
+
+					// Scale rate to the target time period
+					// factor = (1 toTime) expressed in fromTime units
+					timeFactor, err := e.env.units.Convert(1, toTime, fromTime)
+					if err != nil {
+						return NewError(err.Error())
+					}
+
+					perTarget := val.Number * timeFactor
+
+					// Convert currency
+					converted, err := e.env.currency.Convert(perTarget, fromCur, toCur)
+					if err != nil {
+						return NewError(err.Error())
+					}
+
+					// Return total amount per target period as a currency value (e.g., monthly amount)
+					return NewCurrency(converted, e.env.currency.GetSymbol(toCur))
+				}
+
+				// If target is a different time unit but same currency rate
+				if len(toParts) == 2 && !e.env.currency.IsCurrency(strings.TrimSpace(toParts[0])) {
+					// Non-currency compound target: delegate to unit conversion if possible
+					result, err := e.env.units.ConvertCompoundUnit(val.Number, val.Unit, node.ToUnit)
+					if err != nil {
+						return NewError(err.Error())
+					}
+					return NewUnit(result, node.ToUnit)
+				}
+			}
+
+			// Generic compound unit conversions (non-currency)
 			result, err := e.env.units.ConvertCompoundUnit(val.Number, val.Unit, node.ToUnit)
 			if err != nil {
 				return NewError(err.Error())
