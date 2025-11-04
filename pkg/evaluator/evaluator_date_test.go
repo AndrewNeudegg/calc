@@ -3,6 +3,9 @@ package evaluator
 import (
 	"testing"
 	"time"
+
+	"github.com/andrewneudegg/calc/pkg/lexer"
+	"github.com/andrewneudegg/calc/pkg/parser"
 )
 
 // TestDateArithmeticWithKeywords tests date arithmetic using keywords like "today"
@@ -48,6 +51,66 @@ func TestDateArithmeticWithKeywords(t *testing.T) {
 
 			if !resultDate.Equal(expectedDate) {
 				t.Errorf("expected %v, got %v", expectedDate.Format("2006-01-02"), resultDate.Format("2006-01-02"))
+			}
+		})
+	}
+}
+
+func TestDateArithmeticSupportsHoursAndMinutes(t *testing.T) {
+	e := New(NewEnvironment())
+
+	inputs := []string{
+		"now + 3 days + 2 hours + five minutes",
+		"today + 1 hour",
+		"today + 90 minutes",
+		"yesterday + 3600 seconds",
+	}
+
+	for _, in := range inputs {
+		t.Run(in, func(t *testing.T) {
+			l := lexer.New(in)
+			toks := l.AllTokens()
+			p := parser.New(toks)
+			expr, err := p.Parse()
+			if err != nil {
+				t.Fatalf("parse error: %v", err)
+			}
+			v := e.Eval(expr)
+			if v.IsError() {
+				t.Fatalf("unexpected error: %s", v.Error)
+			}
+			if v.Type != ValueDate {
+				t.Fatalf("expected ValueDate, got %v", v.Type)
+			}
+		})
+	}
+}
+
+func TestDateArithmeticSubtractsHoursMinutesSeconds(t *testing.T) {
+	e := New(NewEnvironment())
+
+	inputs := []string{
+		"now - 2 hours",
+		"today - 30 minutes",
+		"tomorrow - 86400 seconds",
+		"now + 1 day - 2 hours - five minutes",
+	}
+
+	for _, in := range inputs {
+		t.Run(in, func(t *testing.T) {
+			l := lexer.New(in)
+			toks := l.AllTokens()
+			p := parser.New(toks)
+			expr, err := p.Parse()
+			if err != nil {
+				t.Fatalf("parse error: %v", err)
+			}
+			v := e.Eval(expr)
+			if v.IsError() {
+				t.Fatalf("unexpected error: %s", v.Error)
+			}
+			if v.Type != ValueDate {
+				t.Fatalf("expected ValueDate, got %v", v.Type)
 			}
 		})
 	}

@@ -153,6 +153,12 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 			newDate = left.Date.AddDate(0, int(offset), 0)
 		case "year", "years", "y":
 			newDate = left.Date.AddDate(int(offset), 0, 0)
+		case "hour", "hours", "h", "hr":
+			newDate = left.Date.Add(time.Duration(offset * float64(time.Hour)))
+		case "minute", "minutes", "min":
+			newDate = left.Date.Add(time.Duration(offset * float64(time.Minute)))
+		case "second", "seconds", "s", "sec":
+			newDate = left.Date.Add(time.Duration(offset * float64(time.Second)))
 		default:
 			return NewError(fmt.Sprintf("cannot add unit '%s' to date", unit))
 		}
@@ -490,6 +496,12 @@ func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {
 		result = base.Date.AddDate(0, offsetVal, 0)
 	case "year", "years":
 		result = base.Date.AddDate(offsetVal, 0, 0)
+	case "hour", "hours", "h", "hr":
+		result = base.Date.Add(time.Duration(offsetVal) * time.Hour)
+	case "minute", "minutes", "min":
+		result = base.Date.Add(time.Duration(offsetVal) * time.Minute)
+	case "second", "seconds", "s", "sec":
+		result = base.Date.Add(time.Duration(offsetVal) * time.Second)
 	default:
 		return NewError(fmt.Sprintf("unknown time unit: %s", node.Unit))
 	}
