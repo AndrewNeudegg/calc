@@ -1,12 +1,68 @@
 package commands
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/andrewneudegg/calc/pkg/settings"
 )
 
+func TestSaveWritesSettingsAndMessage(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "settings.json")
+	s := settings.Default()
+	s.Precision = 5
+	s.Currency = "EUR"
+	s.ConfigPath = cfg
+
+	h := New(s)
+	msg := h.Execute("save", []string{"session.log"})
+	if msg != "saved to session.log" {
+		t.Fatalf("unexpected message: %q", msg)
+	}
+
+	// File should exist with JSON reflecting our settings
+	b, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatalf("reading saved settings: %v", err)
+	}
+	var got settings.Settings
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatalf("unmarshal settings: %v", err)
+	}
+	if got.Precision != 5 || got.Currency != "EUR" || got.DateFormat != s.DateFormat || got.Locale != s.Locale || got.FuzzyMode != s.FuzzyMode {
+		t.Fatalf("settings not saved correctly: %+v", got)
+	}
+}
+
+func TestSaveUsageNoArgs(t *testing.T) {
+	s := settings.Default()
+	s.ConfigPath = filepath.Join(t.TempDir(), "settings.json")
+	h := New(s)
+	msg := h.Execute("save", nil)
+	if msg != "usage: :save <filename>" {
+		t.Fatalf("unexpected usage: %q", msg)
+	}
+}
+
+func TestOpenMessageAndUsage(t *testing.T) {
+	s := settings.Default()
+	s.ConfigPath = filepath.Join(t.TempDir(), "settings.json")
+	h := New(s)
+
+	msg := h.Execute("open", []string{"workspace.calc"})
+	if msg != "loaded workspace.calc" {
+		t.Fatalf("unexpected open message: %q", msg)
+	}
+
+	msg = h.Execute("open", nil)
+	if msg != "usage: :open <filename>" {
+		t.Fatalf("unexpected open usage: %q", msg)
+	}
+}
 func TestExecuteHelp(t *testing.T) {
 	s := settings.Default()
 	h := New(s)

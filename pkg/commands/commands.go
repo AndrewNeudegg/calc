@@ -13,6 +13,9 @@ import (
 type Handler struct {
 	settings *settings.Settings
 	timezone *timezone.System
+	// Optional workspace operations provided by the REPL
+	SaveWorkspace func(filename string) error
+	LoadWorkspace func(filename string) error
 }
 
 // New creates a new command handler.
@@ -51,10 +54,16 @@ func (h *Handler) save(args []string) string {
 		return "usage: :save <filename>"
 	}
 
-	// This would save the current workspace
-	// For now, just save settings
+	// Save settings first (preferences)
 	if err := h.settings.Save(); err != nil {
 		return fmt.Sprintf("error saving settings: %s", err)
+	}
+
+	// Save the current workspace if a handler is available
+	if h.SaveWorkspace != nil {
+		if err := h.SaveWorkspace(args[0]); err != nil {
+			return fmt.Sprintf("error saving workspace: %s", err)
+		}
 	}
 
 	return fmt.Sprintf("saved to %s", args[0])
@@ -63,6 +72,12 @@ func (h *Handler) save(args []string) string {
 func (h *Handler) open(args []string) string {
 	if len(args) == 0 {
 		return "usage: :open <filename>"
+	}
+
+	if h.LoadWorkspace != nil {
+		if err := h.LoadWorkspace(args[0]); err != nil {
+			return fmt.Sprintf("error loading %s: %v", args[0], err)
+		}
 	}
 
 	return fmt.Sprintf("loaded %s", args[0])
@@ -107,9 +122,9 @@ func (h *Handler) timezone_cmd(args []string) string {
 	if len(args) == 0 {
 		return "usage: :tz list"
 	}
-	
+
 	subcmd := strings.ToLower(args[0])
-	
+
 	switch subcmd {
 	case "list":
 		locations := h.timezone.ListLocations()

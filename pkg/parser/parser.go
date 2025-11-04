@@ -107,16 +107,54 @@ func (p *Parser) parseCommand() (Expr, error) {
 	command := p.current().Literal
 	p.advance()
 
-	var args []string
+	// Reconstruct the remainder of the line into a raw tail string while
+	// preserving filename/path punctuation like '.', '/', and '-' by gluing
+	// those to adjacent tokens without spaces. Then split on spaces to get args.
+	var tailBuilder strings.Builder
+	glue := map[string]bool{".": true, "/": true, "-": true}
+	wrote := false
 	for p.current().Type != lexer.TokenEOF {
-		args = append(args, p.current().Literal)
+		lit := p.current().Literal
+		if wrote {
+			// Add a space before this token unless either side is a glue token
+			if !glue[lit] {
+				// Also peek previous written rune to handle trailing glue
+				// We can't easily get previous token here, so approximate by
+				// checking last rune written.
+				if tailBuilder.Len() > 0 {
+					last, _ := utf8DecLastRune(&tailBuilder)
+					if last != '.' && last != '/' && last != '-' {
+						tailBuilder.WriteByte(' ')
+					}
+				}
+			}
+		}
+		tailBuilder.WriteString(lit)
+		wrote = true
 		p.advance()
+	}
+	tail := strings.TrimSpace(tailBuilder.String())
+	var args []string
+	if tail != "" {
+		args = strings.Fields(tail)
 	}
 
 	return &CommandExpr{
 		Command: command,
 		Args:    args,
 	}, nil
+}
+
+// utf8DecLastRune returns the last rune written in a strings.Builder and a bool indicating success.
+func utf8DecLastRune(b *strings.Builder) (rune, bool) {
+	// strings.Builder doesn't expose bytes; use String(), acceptable for short command tails
+	s := b.String()
+	if s == "" {
+		return 0, false
+	}
+	// Walk back to decode last rune
+	// Bytes are ASCII for our glue checks; this is sufficient and safe.
+	return rune(s[len(s)-1]), true
 }
 
 func (p *Parser) parseAssignment() (Expr, error) {
