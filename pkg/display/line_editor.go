@@ -15,6 +15,7 @@ type Editor struct {
 	cur    int
 	hist   []string
 	hIndex int // -1 means new entry (not on history)
+	hlFn   func(string) string
 }
 
 // NewEditor creates a new editor instance for a single line entry.
@@ -27,6 +28,9 @@ func NewEditor(prompt string, history []string) *Editor {
 		hIndex: -1,
 	}
 }
+
+// SetHighlighter sets an optional function to colorize the buffer when rendering.
+func (e *Editor) SetHighlighter(fn func(string) string) { e.hlFn = fn }
 
 // ReadLine reads a line using raw key processing. It returns the line, whether it was aborted (Ctrl-C), and whether EOF (Ctrl-D on empty).
 func (e *Editor) ReadLine(r *bufio.Reader, w io.Writer) (string, bool, bool) {
@@ -248,7 +252,11 @@ func (e *Editor) render(w io.Writer) {
 	// Move to line start, clear line, print prompt and buffer, then move cursor back if needed
 	fmt.Fprint(w, "\r\x1b[2K")
 	fmt.Fprint(w, e.prompt)
-	fmt.Fprint(w, string(e.buf))
+	content := string(e.buf)
+	if e.hlFn != nil {
+		content = e.hlFn(content)
+	}
+	fmt.Fprint(w, content)
 	// Move cursor to correct position
 	tail := len(e.buf) - e.cur
 	if tail > 0 {

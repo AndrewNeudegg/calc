@@ -34,6 +34,7 @@ type REPL struct {
 	commands  *commands.Handler
 	settings  *settings.Settings
 	depGraph  *graph.Graph
+	theme     *Theme
 }
 
 // NewREPL creates a new REPL instance.
@@ -59,6 +60,7 @@ func NewREPL() *REPL {
 		commands:  commands.New(sett),
 		settings:  sett,
 		depGraph:  graph.NewGraph(),
+		theme:     DefaultTheme(),
 	}
 	// Wire workspace handlers for :save and :open
 	r.commands.SaveWorkspace = r.saveWorkspace
@@ -113,8 +115,12 @@ func (r *REPL) runInteractive() {
 	defer restoreRawMode(int(os.Stdin.Fd()), state)
 
 	for {
-		prompt := fmt.Sprintf("%d> ", r.nextID)
+		rawPrompt := fmt.Sprintf("%d> ", r.nextID)
+		prompt := r.theme.wrap(rawPrompt, r.theme.Prompt) + r.theme.Reset
 		ed := NewEditor(prompt, r.collectHistory())
+		// Install syntax highlighter for the buffer
+		hl := NewHighlighter(r.theme)
+		ed.SetHighlighter(hl.Colorize)
 		line, aborted, eof := ed.ReadLine(reader, os.Stdout)
 		if eof {
 			fmt.Fprintln(os.Stdout)
