@@ -178,6 +178,51 @@ func (l *Lexer) scanNumber() Token {
 		l.column++
 	}
 
+	// Check for date format (DD/MM/YYYY or MM/DD/YYYY)
+	if l.pos < len(l.input) && l.input[l.pos] == '/' {
+		// Look ahead to see if this could be a date
+		savedPos := l.pos
+		savedCol := l.column
+
+		l.pos++ // consume first '/'
+		l.column++
+
+		// Scan second number (month or day)
+		secondStart := l.pos
+		for l.pos < len(l.input) && unicode.IsDigit(rune(l.input[l.pos])) {
+			l.pos++
+			l.column++
+		}
+
+		// Check for second '/'
+		if l.pos < len(l.input) && l.input[l.pos] == '/' && l.pos > secondStart {
+			l.pos++ // consume second '/'
+			l.column++
+
+			// Scan year
+			yearStart := l.pos
+			for l.pos < len(l.input) && unicode.IsDigit(rune(l.input[l.pos])) {
+				l.pos++
+				l.column++
+			}
+
+			// If we have year digits, this is a date
+			if l.pos > yearStart {
+				literal := l.input[start:l.pos]
+				return Token{
+					Type:    TokenDate,
+					Literal: literal,
+					Line:    l.line,
+					Column:  startCol,
+				}
+			}
+		}
+
+		// Not a date, reset
+		l.pos = savedPos
+		l.column = savedCol
+	}
+
 	// Check for time format (HH:MM or H:MM)
 	if l.pos < len(l.input) && l.input[l.pos] == ':' {
 		// Look ahead to see if this could be a time (colon followed by digits)

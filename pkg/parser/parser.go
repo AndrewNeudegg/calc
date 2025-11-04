@@ -716,6 +716,53 @@ func (p *Parser) parsePrimary() (Expr, error) {
 			Unit:  "time",
 		}, nil
 
+	case lexer.TokenDate:
+		// Parse date in DD/MM/YYYY format (British style)
+		// TODO: Add locale support for MM/DD/YYYY (US style)
+		dateStr := tok.Literal
+		p.advance()
+
+		parts := strings.Split(dateStr, "/")
+		if len(parts) != 3 {
+			return nil, fmt.Errorf("invalid date format: %s", dateStr)
+		}
+
+		day, err := strconv.Atoi(parts[0])
+		if err != nil {
+			return nil, fmt.Errorf("invalid day in date: %s", parts[0])
+		}
+
+		month, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("invalid month in date: %s", parts[1])
+		}
+
+		year, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return nil, fmt.Errorf("invalid year in date: %s", parts[2])
+		}
+
+		// Validate ranges
+		if day < 1 || day > 31 {
+			return nil, fmt.Errorf("invalid day: %d", day)
+		}
+		if month < 1 || month > 12 {
+			return nil, fmt.Errorf("invalid month: %d", month)
+		}
+		if year < 1000 || year > 9999 {
+			return nil, fmt.Errorf("invalid year: %d", year)
+		}
+
+		// Create date (DD/MM/YYYY format)
+		parsedDate := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+
+		// Validate that the date is valid (e.g., not 31/02/2024)
+		if parsedDate.Day() != day || parsedDate.Month() != time.Month(month) || parsedDate.Year() != year {
+			return nil, fmt.Errorf("invalid date: %s (day/month/year out of range)", dateStr)
+		}
+
+		return &DateExpr{Date: parsedDate}, nil
+
 	default:
 		return nil, fmt.Errorf("unexpected token: %s", tok.Type)
 	}

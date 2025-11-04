@@ -132,6 +132,41 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 		return right
 	}
 
+	// Handle date + unit or date - unit (date arithmetic)
+	if left.Type == ValueDate && right.Type == ValueUnit && (node.Operator == "+" || node.Operator == "-") {
+		// Extract offset value and unit
+		offset := right.Number
+		if node.Operator == "-" {
+			offset = -offset
+		}
+
+		// Calculate new date based on unit
+		unit := right.Unit
+		var newDate time.Time
+
+		switch strings.ToLower(unit) {
+		case "day", "days", "d":
+			newDate = left.Date.AddDate(0, 0, int(offset))
+		case "week", "weeks", "w":
+			newDate = left.Date.AddDate(0, 0, int(offset*7))
+		case "month", "months", "mo":
+			newDate = left.Date.AddDate(0, int(offset), 0)
+		case "year", "years", "y":
+			newDate = left.Date.AddDate(int(offset), 0, 0)
+		default:
+			return NewError(fmt.Sprintf("cannot add unit '%s' to date", unit))
+		}
+
+		return NewDate(newDate)
+	}
+
+	// Handle date-date subtraction (returns days with unit)
+	if left.Type == ValueDate && right.Type == ValueDate && node.Operator == "-" {
+		duration := left.Date.Sub(right.Date)
+		days := duration.Hours() / 24.0
+		return NewUnit(days, "days")
+	}
+
 	// Handle currency operations
 	if left.Type == ValueCurrency || right.Type == ValueCurrency {
 		return e.evalCurrencyBinary(left, node.Operator, right)
