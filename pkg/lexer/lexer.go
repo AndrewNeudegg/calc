@@ -76,7 +76,7 @@ func New(input string) *Lexer {
 
 // NextToken returns the next token from the input.
 func (l *Lexer) NextToken() Token {
-	l.skipWhitespace()
+	l.skipIgnored()
 
 	if l.pos >= len(l.input) {
 		return l.makeToken(TokenEOF, "")
@@ -165,6 +165,36 @@ func (l *Lexer) skipWhitespace() {
 			l.column++
 		}
 		l.pos++
+	}
+}
+
+// skipIgnored skips whitespace and '//' line comments repeatedly.
+func (l *Lexer) skipIgnored() {
+	for {
+		// Skip any whitespace first
+		l.skipWhitespace()
+		if l.pos >= len(l.input) {
+			return
+		}
+		// Skip '//' comments
+		if l.input[l.pos] == '/' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '/' {
+			// Advance until end of line or input
+			l.pos += 2
+			l.column += 2
+			for l.pos < len(l.input) && l.input[l.pos] != '\n' {
+				l.pos++
+				l.column++
+			}
+			// If at newline, consume it and move to next line
+			if l.pos < len(l.input) && l.input[l.pos] == '\n' {
+				l.pos++
+				l.line++
+				l.column = 1
+			}
+			// Loop to skip following whitespace/comments
+			continue
+		}
+		return
 	}
 }
 
