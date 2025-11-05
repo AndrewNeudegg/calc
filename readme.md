@@ -12,7 +12,9 @@ Terminal calculator with units, currency conversion, and natural language expres
 - Percentage calculations
 - Natural language phrases ("half of", "double", etc.)
 - Built-in functions (sum, average, mean)
-- REPL with command mode
+- REPL with command mode, syntax highlighting, and themes
+- Line comments with // (ignored by the lexer)
+- Save/load workspace files from the REPL
 
 ## Installation
 
@@ -70,7 +72,7 @@ Show help:
 | Code postfix | `12 gbp`, `50 usd`, `100 eur` | Converted to symbol |
 | Name postfix | `50 dollars`, `25 euros`, `1000 yen` | Converted to symbol |
 
-Supported: USD ($), GBP (£), EUR (€), JPY (¥)
+Supported: USD ($), GBP (£), EUR (€), JPY (¥), and many more codes including: AUD, CAD, NZD, CHF, CNY, HKD, SGD, INR, KRW, TWD, SEK, NOK, DKK, TRY, RUB, PLN, CZK, HUF, RON, ILS, AED, SAR, THB, MYR, IDR, PHP, ZAR, MXN, BRL
 
 **Note:** "pound" and "pounds" refer to weight (lb). Use "gbp" or "£" for currency.
 
@@ -104,10 +106,16 @@ Times in `HH:MM` format are recognized automatically:
 | `average(...)` | Average of arguments | `average(10, 20, 30)` → `20.00` |
 | `mean(...)` | Alias for average | `mean(5, 10, 15)` → `10.00` |
 
+Notes:
+- Function arguments can be expressions and may include units (e.g., `sum(10 m, 5 m)` → `15.00 m`).
+- `sum()` with no arguments returns `0`.
+- `average()` requires at least one argument; calling it with none is an error.
+
 ### Date Keywords
 
 | Keyword | Description |
 |---------|-------------|
+| `now` | Current date/time |
 | `today` | Current date |
 | `tomorrow` | Today + 1 day |
 | `yesterday` | Today - 1 day |
@@ -115,15 +123,43 @@ Times in `HH:MM` format are recognized automatically:
 | `last week` | Today - 7 days |
 | `next month` | Today + 30 days |
 
+Also supported in date arithmetic: smaller units including hours, minutes, and seconds (e.g., `today + 3 days + 2 hours`).
+
 ### REPL Commands
 
 | Command | Description |
 |---------|-------------|
-| `:help` | Show help |
-| `:set precision N` | Set decimal places (default: 2) |
-| `:set currency CODE` | Set default currency (USD, GBP, EUR, JPY) |
-| `:save file.txt` | Save workspace |
-| `:quit` | Exit |
+| `:help` | Show available commands |
+| `:save <file>` | Save current workspace to the current directory |
+| `:open <file>` | Open a workspace file and restore variables |
+| `:set <key> <value>` | Update a preference (see below) |
+| `:quit` / `:exit` / `:q` | Exit |
+| `:tz list` | List available timezones |
+
+Settings keys for `:set`:
+- `precision <n>` – Number of decimal places (default: 2)
+- `dateformat <fmt>` – Date format string (default: `2 Jan 2006`)
+- `currency <CODE>` – Default currency code (GBP, USD, EUR, JPY)
+- `locale <locale>` – Locale for formatting (default: `en_GB`)
+- `fuzzy <on|off>` – Enable/disable natural-language parsing
+
+Tips:
+- Press Ctrl-C to cancel the current input line.
+- Press Ctrl-D to exit (same as `:quit`).
+- Type `:help` any time to see the command summary.
+
+Notes on saving:
+- `:save <file>` writes a plain-text workspace file in your current working directory. Only expressions are saved (commands are skipped).
+- Preferences are stored separately at `~/.config/calc/settings.json` and are also saved when you run `:save`.
+
+### Comments
+
+Use `//` for line comments. Everything after `//` on a line is ignored:
+
+```
+x = 10 // hourly rate
+rate = 2.5 // per hour
+```
 
 ## Supported Units
 
@@ -428,26 +464,6 @@ Times in `HH:MM` format are recognised and maintain their format through calcula
 
 Times are stored as time units and displayed in `HH:MM` format. You can add or subtract hours (as numbers) or other times.
 
-## Project Structure
-
-```
-calc/
-├── cmd/calc/          # Entry point, CLI flag handling
-├── pkg/
-│   ├── lexer/         # Tokenizer (supports HH:MM, currency codes, etc.)
-│   ├── parser/        # Recursive descent parser, builds AST
-│   ├── evaluator/     # Tree-walking interpreter
-│   ├── units/         # Dimension-based unit system
-│   ├── currency/      # Currency conversion (static rates)
-│   ├── formatter/     # Output formatting (locale-aware)
-│   ├── settings/      # User preferences (~/.config/calc/)
-│   ├── commands/      # REPL command handling
-│   ├── graph/         # Variable dependency tracking
-│   ├── timezone/      # Date/time handling
-│   └── display/       # REPL interface
-└── docs/              # Specifications
-```
-
 ## Testing
 
 ```bash
@@ -460,15 +476,6 @@ go test ./... -race
 # With coverage
 go test ./... -cover
 ```
-
-## Implementation Notes
-
-- **Parser**: Hand-written recursive descent parser. No external parser generators.
-- **Units**: Dimensional analysis prevents incompatible operations (e.g., adding metres to kilograms).
-- **Currency**: Static exchange rates. Can be customized via settings.
-- **Variables**: Stored in environment with dependency graph for recalculation.
-- **Postfix currency**: "12 gbp" parsed as number + unit, then converted to CurrencyExpr if unit is a currency code.
-- **Zero dependencies**: Standard library only (fmt, strings, time, math, etc.).
 
 ## Releases
 

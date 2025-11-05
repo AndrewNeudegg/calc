@@ -538,6 +538,14 @@ func (l *Lexer) isKnownUnit(s string) bool {
 		"gbp": true, // "pound" and "pounds" already exist as mass units
 		"eur": true, "euro": true, "euros": true,
 		"jpy": true, "yen": true,
+		// Expanded currency codes
+		"aud": true, "cad": true, "nzd": true,
+		"chf": true, "sek": true, "nok": true, "dkk": true,
+		"pln": true, "czk": true, "huf": true, "ron": true,
+		"rub": true, "try": true,
+		"aed": true, "sar": true, "ils": true,
+		"cny": true, "hkd": true, "sgd": true, "inr": true, "krw": true, "twd": true, "thb": true, "myr": true, "idr": true, "php": true,
+		"mxn": true, "brl": true, "zar": true,
 	}
 
 	return knownUnits[strings.ToLower(s)]

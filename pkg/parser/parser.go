@@ -65,7 +65,15 @@ func (p *Parser) isCurrencyCode(unit string) bool {
 	case "usd", "dollar", "dollars",
 		"gbp",
 		"eur", "euro", "euros",
-		"jpy", "yen":
+		"jpy", "yen",
+		// Expanded 3-letter codes
+		"aud", "cad", "nzd",
+		"chf", "sek", "nok", "dkk",
+		"pln", "czk", "huf", "ron",
+		"rub", "try",
+		"aed", "sar", "ils",
+		"cny", "hkd", "sgd", "inr", "krw", "twd", "thb", "myr", "idr", "php",
+		"mxn", "brl", "zar":
 		return true
 	default:
 		return false
@@ -949,6 +957,11 @@ func (p *Parser) getCurrencySymbol(code string) string {
 		return "€"
 	case "¥", "jpy", "yen":
 		return "¥"
+	// For other currencies without a unique 1-char symbol, return the uppercase code
+	case "aud", "cad", "nzd", "chf", "sek", "nok", "dkk", "pln", "czk", "huf", "ron",
+		"rub", "try", "aed", "sar", "ils", "cny", "hkd", "sgd", "inr", "krw", "twd",
+		"thb", "myr", "idr", "php", "mxn", "brl", "zar":
+		return strings.ToUpper(strings.TrimSpace(code))
 	default:
 		// Fallback: return as-is
 		return code
