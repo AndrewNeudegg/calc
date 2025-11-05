@@ -17,7 +17,7 @@ import (
 
 const helpText = `Calc - Terminal Notepad Calculator
 
-A local-only, dependency-free terminal calculator inspired by Soulver.
+A local-only terminal calculator.
 Mix arithmetic, units, dates, currencies, and variables with natural language.
 
 USAGE:

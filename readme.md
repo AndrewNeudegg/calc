@@ -60,6 +60,30 @@ Show help:
 ./calc -h
 ```
 
+## Examples
+
+Jump in with a few ready-made scripts (open the files to see how they’re built):
+
+- Trip budget planner: `examples/trip.calc`
+- Global stand-up planner: `examples/global-standup.calc`
+- Kubernetes cluster cost model: `examples/k8s-cluster.calc`
+
+Run them from the CLI:
+
+```bash
+./calc -f examples/trip.calc
+./calc -f examples/global-standup.calc
+./calc -f examples/k8s-cluster.calc
+```
+
+Trip example (screenshot):
+
+![Trip budget planning](examples/trip.png)
+
+Global stand-up example (screenshot):
+
+![Global stand-up planner](examples/global-standup.png)
+
 ## Quick Reference
 
 ### Operators
