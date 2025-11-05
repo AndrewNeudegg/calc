@@ -1,0 +1,30 @@
+// === Trip budget planning: Zurich conference, priced in EUR, with mixed-currency costs ===
+// We'll keep everything in EUR until the end, then show totals in GBP and USD.
+
+:set precision 2 // keep outputs tidy
+
+base = 1200 eur // base conference and registration fees billed in EUR
+
+flights = 950 usd in eur // flights charged in USD, convert to EUR so totals align
+
+hotel_per_night = 120 chf in eur // hotel bills in Swiss francs (CHF), convert to EUR
+nights = 5                       // four full days plus a late checkout
+hotel = hotel_per_night * nights // total room cost
+
+food_per_day = 50 gbp in eur // food budget originally planned in GBP
+trip_days = nights + 1       // include arrival day: 5 nights => 6 “spend” days
+food = food_per_day * trip_days
+
+misc = 200 aud in eur // adapters, transit, and incidentals paid on an AUD card
+
+subtotal = base + flights + hotel + food + misc // clean subtotal in one currency and preserve €
+
+grand_total = increase subtotal by 10% // add a 10% contingency for surprises
+
+total_in_gbp = grand_total in gbp // show final number in home currency
+total_in_usd = grand_total in usd // and in USD for the travel card
+
+// Optional, nice-to-know figures (keep as comments or run them if useful):
+// avg_per_day = total / trip_days         // average all-in per day
+// hotel_share = (hotel / total) * 100%    // hotel as a percentage of the total
+// food_share  = (food / total) * 100%     // food as a percentage of the total

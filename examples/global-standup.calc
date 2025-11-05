@@ -1,0 +1,22 @@
+// === Global stand-up planner: align UK, US, and APAC teams ===
+// We’ll check current times across locations, compute offsets, pick a sane window,
+// and show when a UK-hosted meeting lands for colleagues in New York and Sydney.
+
+:set precision 2 // clean display for numeric results
+:tz list         // quick scan of supported timezone locations
+
+// Timezone sanity checks
+london_to_sydney = time difference between London and Sydney in hours // typical: ~10–11 hours
+ny_to_london     = time difference between New York and London in hours // typical: ~5 hours
+
+// If the UK host starts in three hours...
+uk_now = time in London
+apac_in_3h = time in London plus 3 hours in Sydney   // Sydney local time when UK starts +3h
+us_in_3h   = time in London plus 3 hours in New York // New York local time for the same slot
+
+// Find a safe meeting window: keep under 2h, and never exceed (London↔Sydney offset - 8)
+window_hours = min(2, london_to_sydney - 8)
+
+// Sprint planning helpers
+days_until_next_monday = next monday - today // plan from the next Monday
+days_in_feb = February                        // days in February this year

@@ -35,6 +35,7 @@ type REPL struct {
 	settings  *settings.Settings
 	depGraph  *graph.Graph
 	theme     *Theme
+	silent    bool
 }
 
 // NewREPL creates a new REPL instance.
@@ -65,6 +66,8 @@ func NewREPL() *REPL {
 	// Wire workspace handlers for :save and :open
 	r.commands.SaveWorkspace = r.saveWorkspace
 	r.commands.LoadWorkspace = r.loadWorkspace
+	// Wire clear handler for :clear
+	r.commands.ClearWorkspace = r.clearWorkspace
 	return r
 }
 
@@ -166,6 +169,11 @@ func (r *REPL) EvaluateLine(input string) evaluator.Value {
 		tokens = tokens[:len(tokens)-1]
 	}
 
+	// If the line reduces to nothing (e.g., comment-only or whitespace), treat as no-op
+	if len(tokens) == 0 {
+		return evaluator.NewError("")
+	}
+
 	// Parse
 	p := parser.New(tokens)
 	expr, err := p.Parse()
@@ -176,7 +184,9 @@ func (r *REPL) EvaluateLine(input string) evaluator.Value {
 	// Check if it's a command
 	if cmd, ok := expr.(*parser.CommandExpr); ok {
 		msg := r.commands.Execute(cmd.Command, cmd.Args)
-		printWithCRLF(os.Stdout, msg)
+		if !r.silent {
+			printWithCRLF(os.Stdout, msg)
+		}
 		// Return a sentinel error value with empty message so caller skips printing a result line.
 		return evaluator.NewError("")
 	}
@@ -196,6 +206,22 @@ func (r *REPL) EvaluateLine(input string) evaluator.Value {
 	}
 
 	return result
+}
+
+// clearWorkspace resets the current REPL session: history, variables, and evaluation state.
+func (r *REPL) clearWorkspace() error {
+	// Reset stored lines and prompt counter
+	r.lines = make(map[int]*Line)
+	r.nextID = 1
+
+	// Reset evaluation environment and evaluator (clears variables and systems)
+	r.env = evaluator.NewEnvironment()
+	r.eval = evaluator.New(r.env)
+
+	// Reset dependency graph
+	r.depGraph = graph.NewGraph()
+
+	return nil
 }
 
 // saveWorkspace writes the current REPL inputs to a file.
@@ -289,4 +315,15 @@ func (r *REPL) ListLines() []*Line {
 		}
 	}
 	return lines
+}
+
+// Formatter returns the formatter used by the REPL. This reflects live settings
+// updates made via :set commands during the session.
+func (r *REPL) Formatter() *formatter.Formatter {
+	return r.formatter
+}
+
+// SetSilent toggles printing of command outputs during EvaluateLine. Useful for batch/script mode.
+func (r *REPL) SetSilent(s bool) {
+	r.silent = s
 }

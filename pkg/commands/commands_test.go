@@ -170,3 +170,19 @@ func TestSettingsIntegration(t *testing.T) {
 		t.Errorf("Expected precision 5, got %d", s.Precision)
 	}
 }
+
+func TestExecuteClearInvokesCallbackAndReturnsAnsi(t *testing.T) {
+	s := settings.Default()
+	h := New(s)
+
+	called := false
+	h.ClearWorkspace = func() error { called = true; return nil }
+
+	out := h.Execute("clear", nil)
+	if !called {
+		t.Fatalf(":clear did not invoke ClearWorkspace callback")
+	}
+	if !strings.Contains(out, "\x1b[2J") {
+		t.Fatalf("expected ANSI clear sequence in output, got: %q", out)
+	}
+}

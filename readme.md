@@ -45,6 +45,16 @@ Single calculation mode:
 ./calc -c "12 gbp in dollars"
 ```
 
+Execute a script file:
+```bash
+./calc -f examples/k8s-cluster.calc
+```
+
+Read from stdin (use '-' as the file):
+```bash
+cat examples/k8s-cluster.calc | ./calc -f -
+```
+
 Show help:
 ```bash
 ./calc -h
@@ -105,11 +115,15 @@ Times in `HH:MM` format are recognized automatically:
 | `sum(...)` | Sum of all arguments | `sum(10, 20, 30)` → `60.00` |
 | `average(...)` | Average of arguments | `average(10, 20, 30)` → `20.00` |
 | `mean(...)` | Alias for average | `mean(5, 10, 15)` → `10.00` |
+| `min(...)` | Minimum of arguments | `min(3, 7, 2, 9)` → `2.00` |
+| `max(...)` | Maximum of arguments | `max(3, 7, 2, 9)` → `9.00` |
 
 Notes:
-- Function arguments can be expressions and may include units (e.g., `sum(10 m, 5 m)` → `15.00 m`).
+- Function arguments can be expressions.
 - `sum()` with no arguments returns `0`.
 - `average()` requires at least one argument; calling it with none is an error.
+- `min()`/`max()` require at least one argument; calling either with none is an error.
+- Functions return plain numbers. If you need to preserve units or currency, convert to a common unit first or use explicit operators (e.g., `a + b` instead of `sum(a, b)`).
 
 ### Date Keywords
 
@@ -133,6 +147,7 @@ Also supported in date arithmetic: smaller units including hours, minutes, and s
 | `:save <file>` | Save current workspace to the current directory |
 | `:open <file>` | Open a workspace file and restore variables |
 | `:set <key> <value>` | Update a preference (see below) |
+| `:clear` | Clear screen and reset current session |
 | `:quit` / `:exit` / `:q` | Exit |
 | `:tz list` | List available timezones |
 
@@ -335,7 +350,6 @@ rate = 2.5 // per hour
 | bps, kbps, mbps, gbps, tbps | Bits per second |
 | Bps, KBps, MBps, GBps, TBps | Bytes per second |
 
-## Examples
 
 ## Examples
 

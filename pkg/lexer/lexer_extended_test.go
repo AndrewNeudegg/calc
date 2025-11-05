@@ -441,3 +441,24 @@ func TestLexerMultipleTokens(t *testing.T) {
 		t.Errorf("last token should be EOF, got %s", lastToken.Type)
 	}
 }
+
+// Test that line comments are skipped by the lexer
+func TestLexer_SkipsLineComments(t *testing.T) {
+	// Trailing comment should be skipped; token count should match plain statement (plus EOF)
+	l1 := New("x = 3 // trailing")
+	t1 := l1.AllTokens()
+
+	l2 := New("x = 3")
+	t2 := l2.AllTokens()
+
+	if len(t1) != len(t2) {
+		t.Fatalf("token count mismatch with trailing comment: got %d, want %d", len(t1), len(t2))
+	}
+
+	// Comment-only should yield only EOF
+	l3 := New("// only a comment")
+	t3 := l3.AllTokens()
+	if len(t3) != 1 || t3[0].Type != TokenEOF {
+		t.Fatalf("expected only EOF for comment-only line, got %v tokens (last=%v)", len(t3), t3[len(t3)-1].Type)
+	}
+}

@@ -178,6 +178,14 @@ func (p *Parser) parseAssignment() (Expr, error) {
 		}, nil
 	}
 
+	// Allow timezone queries on the right-hand side of assignments
+	if expr, ok := p.tryParseTimezoneQuery(); ok {
+		return &AssignExpr{
+			Name:  name,
+			Value: expr,
+		}, nil
+	}
+
 	value, err := p.parseConversion()
 	if err != nil {
 		return nil, err
@@ -774,6 +782,15 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		}
 
 		return &IdentExpr{Name: name}, nil
+
+	case lexer.TokenUnit:
+		// Allow function names that collide with unit tokens, e.g., "min(...)"
+		name := tok.Literal
+		p.advance()
+		if p.current().Type == lexer.TokenLParen {
+			return p.parseFunctionCall(name)
+		}
+		return nil, fmt.Errorf("unexpected token: %s", tok.Type)
 
 	case lexer.TokenThree:
 		// Could be "three quarters" or just "three" as a number

@@ -438,6 +438,10 @@ func (e *Evaluator) evalFunctionCall(node *parser.FunctionCallExpr) Value {
 		return e.evalSum(node.Args)
 	case "average", "mean":
 		return e.evalAverage(node.Args)
+	case "min":
+		return e.evalMin(node.Args)
+	case "max":
+		return e.evalMax(node.Args)
 	default:
 		return NewError(fmt.Sprintf("unknown function: %s", node.Name))
 	}
@@ -466,6 +470,56 @@ func (e *Evaluator) evalAverage(args []parser.Expr) Value {
 	}
 
 	return NewNumber(sumVal.Number / float64(len(args)))
+}
+
+func (e *Evaluator) evalMin(args []parser.Expr) Value {
+	if len(args) == 0 {
+		return NewError("min requires at least one argument")
+	}
+
+	// Evaluate first argument to initialize
+	first := e.Eval(args[0])
+	if first.IsError() {
+		return first
+	}
+	minVal := first.Number
+
+	for i := 1; i < len(args); i++ {
+		v := e.Eval(args[i])
+		if v.IsError() {
+			return v
+		}
+		if v.Number < minVal {
+			minVal = v.Number
+		}
+	}
+
+	return NewNumber(minVal)
+}
+
+func (e *Evaluator) evalMax(args []parser.Expr) Value {
+	if len(args) == 0 {
+		return NewError("max requires at least one argument")
+	}
+
+	// Evaluate first argument to initialize
+	first := e.Eval(args[0])
+	if first.IsError() {
+		return first
+	}
+	maxVal := first.Number
+
+	for i := 1; i < len(args); i++ {
+		v := e.Eval(args[i])
+		if v.IsError() {
+			return v
+		}
+		if v.Number > maxVal {
+			maxVal = v.Number
+		}
+	}
+
+	return NewNumber(maxVal)
 }
 
 func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {

@@ -150,6 +150,50 @@ func TestTimeDifference(t *testing.T) {
 	}
 }
 
+// New tests: timezone queries on the right-hand side of assignments
+func TestTimezoneQueriesInAssignments(t *testing.T) {
+	env := NewEnvironment()
+	e := New(env)
+
+	// Assign current time in London to a variable
+	{
+		input := "uk_now = time in London"
+		l := lexer.New(input)
+		tokens := l.AllTokens()
+		p := parser.New(tokens)
+		expr, err := p.Parse()
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		v := e.Eval(expr)
+		if v.IsError() {
+			t.Fatalf("Eval error: %v", v.Error)
+		}
+		if v.Type != ValueDate {
+			t.Fatalf("expected ValueDate, got %v", v.Type)
+		}
+	}
+
+	// Assign time difference to a variable
+	{
+		input := "gap = time difference between London and Sydney in hours"
+		l := lexer.New(input)
+		tokens := l.AllTokens()
+		p := parser.New(tokens)
+		expr, err := p.Parse()
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		v := e.Eval(expr)
+		if v.IsError() {
+			t.Fatalf("Eval error: %v", v.Error)
+		}
+		if v.Type != ValueUnit || v.Unit != "hours" {
+			t.Fatalf("expected hours unit, got type=%v unit=%q", v.Type, v.Unit)
+		}
+	}
+}
+
 func TestTimeDifferenceWithUnitConversion(t *testing.T) {
 	tests := []struct {
 		name       string

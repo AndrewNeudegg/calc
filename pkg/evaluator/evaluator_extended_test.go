@@ -375,6 +375,12 @@ func TestExtendedFunctions(t *testing.T) {
 		{"average(10, 20, 30)", 20},
 		{"mean(5, 10, 15)", 10},
 		{"total(100, 200, 300)", 600},
+		{"min(3, 7, 2, 9)", 2},
+		{"max(3, 7, 2, 9)", 9},
+		{"min(10-3, 2*5, 18/3)", 6},
+		{"max(10-3, 2*5, 18/3)", 10},
+		{"min(-5, -2, -10)", -10},
+		{"max(-5, -2, -10)", -2},
 	}
 
 	for _, tt := range tests {
@@ -672,6 +678,8 @@ func TestFunctionCallsEdgeCases(t *testing.T) {
 		{"sum()", false},      // Empty sum should work
 		{"average()", true},   // Empty average should error
 		{"unknown(10)", true}, // Unknown function should error
+		{"min()", true},       // Empty min should error
+		{"max()", true},       // Empty max should error
 	}
 
 	for _, tt := range tests {

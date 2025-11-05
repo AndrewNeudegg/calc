@@ -1,0 +1,84 @@
+// === Kubernetes cluster cost planning (EUR outputs, USD inputs) ===
+// Goal: Start with realistic USD hourly/monthly AWS prices, then convert and roll-up to EUR/month and EUR/year.
+// Sources (check region-specific pricing for your workload):
+// - EKS control plane: $0.10 per cluster-hour (standard support)
+//   https://aws.amazon.com/eks/pricing/
+// - NAT Gateway: $0.045 per hour + $0.045 per GB processed (example region)
+//   https://aws.amazon.com/vpc/pricing/
+// - Application Load Balancer: $0.0225 per hour + $0.008 per LCU-hour (example region)
+//   https://aws.amazon.com/elasticloadbalancing/pricing/
+// - EBS gp3 storage: $0.08 per GB-month (example)
+//   https://aws.amazon.com/ebs/pricing/
+// - Data egress: use a working estimate (e.g., $0.09/GB for first 10 TB). Verify for your region/tier.
+//   https://aws.amazon.com/ec2/pricing/on-demand/#Data_Transfer
+// - Worker nodes: set your EC2 on-demand hourly (e.g., m6a.large ~ $0.086/hr in some regions). Verify your region.
+//   https://aws.amazon.com/ec2/pricing/on-demand/
+
+:set precision 2 // tidy currency output
+
+// --- Assumptions & inputs (edit for your cluster) ---
+// Region: eu-west-1 (Ireland) – using USD list prices and converting to EUR
+// AZs: 3; Nodes: 2 per AZ
+
+// Worker nodes
+worker_nodes = 6                               // 3 AZs x 2 nodes each
+// Instance example: m6a.large (2 vCPU, 8 GiB) on-demand ~ $0.086/hr in some regions (verify yours)
+node_hourly = 0.086 usd per hour               // per-node on-demand hourly (Linux)
+node_monthly = node_hourly in eur per month    // convert currency and time period
+compute = worker_nodes * node_monthly          // total monthly worker compute (EUR)
+
+// EKS control plane
+eks_control_plane_hourly = 0.10 usd per hour   // standard support price
+control_plane = eks_control_plane_hourly in eur per month
+
+// Load balancers (mix of ALB/NLB)
+alb_count = 2
+alb_hourly = 0.0225 usd per hour               // ALB fixed hourly
+alb_lcu_hourly = 0.008 usd per hour            // per LCU-hour
+alb_assumed_lcus_per_lb = 1.5                  // estimated average LCU usage
+alb_total = (alb_count * (alb_hourly + alb_lcu_hourly * alb_assumed_lcus_per_lb)) in eur per month
+
+nlb_count = 1
+nlb_hourly = 0.0225 usd per hour               // NLB fixed hourly
+// Note: NLB also bills per NLCU-hour. If you need it, set an estimate here (commonly ~$0.006/NLCU-hr in some regions)
+nlb_nlcu_hourly = 0.006 usd per hour
+nlb_assumed_nlcus_per_lb = 1.0
+nlb_total = (nlb_count * (nlb_hourly + nlb_nlcu_hourly * nlb_assumed_nlcus_per_lb)) in eur per month
+
+// Storage (EBS gp3)
+storage_gb = 2000                              // provisioned block storage (GiB)
+storage_usd = storage_gb * 0.08 usd            // $0.08 per GB-month (example region)
+storage_cost = storage_usd in eur              // monthly in EUR
+
+// NAT Gateway (1 gateway, hourly + data processing)
+nat_count = 1
+nat_hourly = 0.045 usd per hour
+nat_monthly = (nat_count * nat_hourly) in eur per month
+nat_gb_processed = 2000                        // GB through NAT per month (to S3/Internet/etc)
+nat_processing_usd = nat_gb_processed * 0.045 usd
+nat_processing = nat_processing_usd in eur
+nat_total = nat_monthly + nat_processing
+
+// Egress (EC2/S3 to Internet)
+egress_gb = 1500                               // expected monthly egress
+egress_rate_usd_per_gb = 0.09 usd              // first 10 TB tier (example)
+egress_cost = (egress_gb * egress_rate_usd_per_gb) in eur
+
+// --- Subtotal and contingency ---
+cluster_subtotal = compute + control_plane + alb_total + nlb_total + storage_cost + nat_total + egress_cost
+cluster_total = increase cluster_subtotal by 15% // support/overhead contingency
+
+// --- Annualised and alternative currency views ---
+annual = cluster_total * 12
+cluster_total_gbp = cluster_total in gbp
+annual_usd = annual in usd
+
+// Optional, nice-to-know figures and shares:
+// per_node_per_month = node_monthly
+// per_node_per_day = node_hourly in eur per day
+// alb_share = (alb_total / cluster_total) * 100%
+// nlb_share = (nlb_total / cluster_total) * 100%
+// storage_share = (storage_cost / cluster_total) * 100%
+// egress_share  = (egress_cost  / cluster_total) * 100%
+// nat_share     = (nat_total     / cluster_total) * 100%
+

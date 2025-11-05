@@ -230,6 +230,8 @@ func TestParseFunctions(t *testing.T) {
 	}{
 		{"sum(1, 2, 3)", "sum", 3},
 		{"average(10, 20)", "average", 2},
+		{"min(3, 1, 2)", "min", 3},
+		{"max(3, 1, 2)", "max", 3},
 	}
 
 	for _, tt := range tests {

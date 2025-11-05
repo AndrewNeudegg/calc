@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 
 	"github.com/andrewneudegg/calc/pkg/display"
 	"github.com/andrewneudegg/calc/pkg/evaluator"
@@ -19,19 +21,22 @@ A local-only, dependency-free terminal calculator inspired by Soulver.
 Mix arithmetic, units, dates, currencies, and variables with natural language.
 
 USAGE:
-  calc              Start interactive REPL mode
-  calc -c "expr"    Execute a single calculation and exit
+	calc                Start interactive REPL mode
+	calc -c "expr"      Execute a single calculation and exit
+	calc -f file.calc    Execute all lines from a file and print results
 
 OPTIONS:
-  -c string         Execute calculation and exit
-  -h, --help        Show this help message
+	-c string           Execute calculation and exit
+	-f string           Execute a .calc file and print results
+	-h, --help          Show this help message
 
 EXAMPLES:
-  calc -c "half of 40"
-  calc -c "10 m in cm"
-  calc -c "11:00 - 09:00"
-  calc -c "20% of 100"
-  calc -c "£100 + £50"
+	calc -c "half of 40"
+	calc -c "10 m in cm"
+	calc -c "11:00 - 09:00"
+	calc -c "20% of 100"
+	calc -c "£100 + £50"
+	calc -f examples/k8s-cluster.calc
 
 FEATURES:
   • Arithmetic with operator precedence and parentheses
@@ -63,6 +68,7 @@ func main() {
 
 	// Define flags
 	calcExpr := flag.String("c", "", "Execute a single calculation and exit")
+	filePath := flag.String("f", "", "Execute a .calc file and print results")
 	showHelp := flag.Bool("help", false, "Show help message")
 	flag.BoolVar(showHelp, "h", false, "Show help message")
 	flag.Parse()
@@ -71,6 +77,15 @@ func main() {
 	if *showHelp {
 		fmt.Print(helpText)
 		os.Exit(0)
+	}
+
+	// If -f flag is provided, execute file and exit
+	if *filePath != "" {
+		if err := executeFile(*filePath); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	// If -c flag is provided, execute and exit
@@ -82,6 +97,49 @@ func main() {
 	// Otherwise, start the REPL
 	repl := display.NewREPL()
 	repl.Run()
+}
+
+// executeFile runs a .calc script file line-by-line, printing results to stdout.
+// Commands (lines starting with :) are executed and their messages printed; comment-only lines are ignored.
+func executeFile(path string) error {
+	var b []byte
+	var err error
+
+	if path == "-" {
+		// Read from stdin
+		b, err = io.ReadAll(os.Stdin)
+	} else {
+		b, err = os.ReadFile(path)
+	}
+	if err != nil {
+		return err
+	}
+
+	repl := display.NewREPL()
+	repl.SetSilent(true)
+
+	// Iterate over lines to preserve REPL semantics (variables, settings, commands)
+	lines := strings.Split(string(b), "\n")
+	for _, ln := range lines {
+		input := strings.TrimSpace(ln)
+		if input == "" || strings.HasPrefix(input, "#") {
+			continue
+		}
+		v := repl.EvaluateLine(input)
+		// Skip sentinel no-op (commands or comment-only handled by EvaluateLine)
+		if v.IsError() {
+			if v.Error == "" {
+				continue
+			}
+			// Print errors to stderr to mimic typical CLI behavior
+			fmt.Fprintln(os.Stderr, repl.Formatter().Format(v))
+			continue
+		}
+		// Print formatted value to stdout
+		fmt.Println(repl.Formatter().Format(v))
+	}
+
+	return nil
 }
 
 func executeAndExit(input string) {

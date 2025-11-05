@@ -14,8 +14,9 @@ type Handler struct {
 	settings *settings.Settings
 	timezone *timezone.System
 	// Optional workspace operations provided by the REPL
-	SaveWorkspace func(filename string) error
-	LoadWorkspace func(filename string) error
+	SaveWorkspace  func(filename string) error
+	LoadWorkspace  func(filename string) error
+	ClearWorkspace func() error
 }
 
 // New creates a new command handler.
@@ -41,6 +42,8 @@ func (h *Handler) Execute(command string, args []string) string {
 		return h.timezone_cmd(args)
 	case "help":
 		return h.help()
+	case "clear", "cls":
+		return h.clear()
 	case "quit", "exit", "q":
 		os.Exit(0)
 		return ""
@@ -107,6 +110,7 @@ func (h *Handler) help() string {
   :save <file>       Save current workspace
   :open <file>       Open a workspace file
   :set <key> <val>   Set a preference
+	:clear             Clear screen and reset current session
   :help              Show this help
   :quit / :exit / :q Exit the program
 
@@ -116,6 +120,18 @@ Available settings:
   currency <code>    Default currency code (default: GBP)
   locale <locale>    Locale for formatting (default: en_GB)
   fuzzy <on|off>     Enable fuzzy phrase parsing (default: on)`
+}
+
+func (h *Handler) clear() string {
+	// Reset workspace/session state if provided by REPL
+	if h.ClearWorkspace != nil {
+		if err := h.ClearWorkspace(); err != nil {
+			return fmt.Sprintf("error clearing session: %s", err)
+		}
+	}
+	// Return ANSI clear-screen sequence and home cursor
+	// This will be printed directly by the REPL handler
+	return "\x1b[2J\x1b[H"
 }
 
 func (h *Handler) timezone_cmd(args []string) string {
