@@ -559,3 +559,7 @@ Binaries are built automatically for:
 - macOS (amd64, arm64)
 
 The install script downloads the appropriate binary for your platform.
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
