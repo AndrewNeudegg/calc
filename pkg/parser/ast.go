@@ -90,6 +90,11 @@ type FunctionCallExpr struct {
 	Args []Expr
 }
 
+// StringExpr represents a string literal.
+type StringExpr struct {
+	Value string
+}
+
 // DateExpr represents a date value.
 type DateExpr struct {
 	Date time.Time
@@ -172,6 +177,7 @@ func (*PercentOfExpr) node()      {}
 func (*PercentChangeExpr) node()  {}
 func (*WhatPercentExpr) node()    {}
 func (*FunctionCallExpr) node()   {}
+func (*StringExpr) node()         {}
 func (*DateExpr) node()           {}
 func (*TimeExpr) node()           {}
 func (*DateArithmeticExpr) node() {}
@@ -198,6 +204,7 @@ func (*PercentOfExpr) expr()      {}
 func (*PercentChangeExpr) expr()  {}
 func (*WhatPercentExpr) expr()    {}
 func (*FunctionCallExpr) expr()   {}
+func (*StringExpr) expr()         {}
 func (*DateExpr) expr()           {}
 func (*TimeExpr) expr()           {}
 func (*DateArithmeticExpr) expr() {}

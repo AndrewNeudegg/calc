@@ -86,6 +86,8 @@ func (l *Lexer) NextToken() Token {
 
 	// Single-character tokens
 	switch ch {
+	case '"':
+		return l.scanString()
 	case '+':
 		return l.advance(TokenPlus)
 	case '-':
@@ -138,6 +140,57 @@ func (l *Lexer) NextToken() Token {
 
 	// Unknown character
 	return l.advance(TokenError)
+}
+
+// scanString scans a double-quoted string literal, supporting simple escapes (\" and \\ and \n).
+func (l *Lexer) scanString() Token {
+	// Consume opening quote
+	startCol := l.column
+	l.pos++
+	l.column++
+	var buf []rune
+	for l.pos < len(l.input) {
+		ch := rune(l.input[l.pos])
+		if ch == '\n' {
+			// Strings cannot span lines for now
+			break
+		}
+		if ch == '"' {
+			// Closing quote
+			l.pos++
+			l.column++
+			return Token{Type: TokenString, Literal: string(buf), Line: l.line, Column: startCol}
+		}
+		if ch == '\\' {
+			// Escape sequence
+			if l.pos+1 < len(l.input) {
+				next := rune(l.input[l.pos+1])
+				switch next {
+				case 'n':
+					buf = append(buf, '\n')
+					l.pos += 2
+					l.column += 2
+					continue
+				case '"':
+					buf = append(buf, '"')
+					l.pos += 2
+					l.column += 2
+					continue
+				case '\\':
+					buf = append(buf, '\\')
+					l.pos += 2
+					l.column += 2
+					continue
+				}
+			}
+		}
+		// Regular character
+		buf = append(buf, ch)
+		l.pos++
+		l.column++
+	}
+	// Unterminated string
+	return Token{Type: TokenError, Literal: "unterminated string", Line: l.line, Column: startCol}
 }
 
 func (l *Lexer) advance(typ TokenType) Token {

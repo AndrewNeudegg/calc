@@ -86,6 +86,9 @@ func (e *Evaluator) Eval(expr parser.Expr) Value {
 	case *parser.FunctionCallExpr:
 		return e.evalFunctionCall(node)
 
+	case *parser.StringExpr:
+		return NewString(node.Value)
+
 	case *parser.DateExpr:
 		return NewDate(node.Date)
 
@@ -442,9 +445,61 @@ func (e *Evaluator) evalFunctionCall(node *parser.FunctionCallExpr) Value {
 		return e.evalMin(node.Args)
 	case "max":
 		return e.evalMax(node.Args)
+	case "print":
+		return e.evalPrint(node.Args)
 	default:
 		return NewError(fmt.Sprintf("unknown function: %s", node.Name))
 	}
+}
+
+// evalPrint returns a string after interpolating {var} placeholders using current variables.
+// It does not produce side effects; the REPL will print the returned string value.
+func (e *Evaluator) evalPrint(args []parser.Expr) Value {
+	if len(args) != 1 {
+		return NewError("print requires exactly one argument")
+	}
+	val := e.Eval(args[0])
+	if val.IsError() {
+		return val
+	}
+	if val.Type != ValueString {
+		return NewError("print expects a string literal")
+	}
+	s := val.Text
+	// Find {identifier} placeholders and replace
+	// Simple single-pass replacement; does not support nested braces
+	var out strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] == '{' {
+			// find closing brace
+			j := i + 1
+			for j < len(s) && s[j] != '}' {
+				j++
+			}
+			if j >= len(s) {
+				// unmatched '{' - leave as-is
+				out.WriteString(s[i:])
+				break
+			}
+			name := strings.TrimSpace(s[i+1 : j])
+			if name == "" {
+				out.WriteString(s[i : j+1])
+				i = j + 1
+				continue
+			}
+			// Look up variable
+			v, ok := e.env.variables[name]
+			if !ok {
+				return NewError(fmt.Sprintf("undefined variable: %s", name))
+			}
+			out.WriteString(v.String())
+			i = j + 1
+		} else {
+			out.WriteByte(s[i])
+			i++
+		}
+	}
+	return NewString(out.String())
 }
 
 func (e *Evaluator) evalSum(args []parser.Expr) Value {

@@ -41,6 +41,9 @@ func (f *Formatter) Format(val evaluator.Value) string {
 		return fmt.Sprintf("%s%%", f.formatNumber(val.Number))
 	case evaluator.ValueDate:
 		return f.formatDate(val.Date)
+	case evaluator.ValueString:
+		// Return the string as-is
+		return val.Text
 	default:
 		return "unknown"
 	}

@@ -14,6 +14,7 @@ const (
 	ValueCurrency
 	ValuePercent
 	ValueDate
+	ValueString
 	ValueError
 )
 
@@ -24,6 +25,7 @@ type Value struct {
 	Unit     string
 	Currency string
 	Date     time.Time
+	Text     string
 	Error    string
 }
 
@@ -52,6 +54,11 @@ func NewDate(d time.Time) Value {
 	return Value{Type: ValueDate, Date: d}
 }
 
+// NewString creates a new string value.
+func NewString(s string) Value {
+	return Value{Type: ValueString, Text: s}
+}
+
 // NewError creates a new error value.
 func NewError(msg string) Value {
 	return Value{Type: ValueError, Error: msg}
@@ -74,7 +81,13 @@ func (v Value) String() string {
 	case ValuePercent:
 		return fmt.Sprintf("%.2f%%", v.Number)
 	case ValueDate:
+		// If time-of-day is non-zero, include time and timezone like formatter.formatDate
+		if v.Date.Hour() != 0 || v.Date.Minute() != 0 || v.Date.Second() != 0 {
+			return v.Date.Format("2 Jan 2006 15:04:05 MST")
+		}
 		return v.Date.Format("2 Jan 2006")
+	case ValueString:
+		return v.Text
 	case ValueError:
 		return fmt.Sprintf("Error: %s", v.Error)
 	default:

@@ -749,6 +749,12 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		p.advance()
 		return &NumberExpr{Value: val}, nil
 
+	case lexer.TokenString:
+		// String literal
+		val := tok.Literal
+		p.advance()
+		return &StringExpr{Value: val}, nil
+
 	case lexer.TokenCurrency:
 		currency := tok.Literal
 		p.advance()

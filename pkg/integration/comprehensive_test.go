@@ -1134,6 +1134,7 @@ func TestComprehensiveExamples(t *testing.T) {
 		"Functions",
 		"Number Words",
 		"Complex Expressions",
+		"Strings and Print",
 	}
 
 	passCount := 0

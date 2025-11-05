@@ -117,6 +117,7 @@ Times in `HH:MM` format are recognized automatically:
 | `mean(...)` | Alias for average | `mean(5, 10, 15)` → `10.00` |
 | `min(...)` | Minimum of arguments | `min(3, 7, 2, 9)` → `2.00` |
 | `max(...)` | Maximum of arguments | `max(3, 7, 2, 9)` → `9.00` |
+| `print("...")` | Interpolate `{var}` placeholders and return the string | `tt = 55` then `print("foo: {tt}")` → `foo: 55` |
 
 Notes:
 - Function arguments can be expressions.
@@ -124,6 +125,23 @@ Notes:
 - `average()` requires at least one argument; calling it with none is an error.
 - `min()`/`max()` require at least one argument; calling either with none is an error.
 - Functions return plain numbers. If you need to preserve units or currency, convert to a common unit first or use explicit operators (e.g., `a + b` instead of `sum(a, b)`).
+
+### Strings and Print
+
+- String literals are written with double quotes: `"hello world"`.
+- Use `print("...")` to interpolate variables inside `{}` and produce a string result that is printed by the REPL/CLI:
+
+```
+1> tt = 55
+   = 55.00
+2> print("foo bar: {tt}, foo bar")
+   = foo bar: 55, foo bar
+```
+
+Notes:
+- Placeholders must be simple variable names, e.g., `{rate}`, `{total_cost}`.
+- If a placeholder variable is undefined, `print` returns an error.
+- Interpolated values use sensible defaults for formatting; date/time values render in a readable form.
 
 ### Date Keywords
 

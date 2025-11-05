@@ -1,22 +1,71 @@
-// === Global stand-up planner: align UK, US, and APAC teams ===
-// We’ll check current times across locations, compute offsets, pick a sane window,
-// and show when a UK-hosted meeting lands for colleagues in New York and Sydney.
+// === Global stand-up planner: UK (London), US (New York), APAC (Sydney) ===
+// Goal: propose a couple of “least-bad” meeting slots from now, show exactly
+// what they are locally for each team, and estimate the weekly time budget.
 
-:set precision 2 // clean display for numeric results
-:tz list         // quick scan of supported timezone locations
+// Display preferences for clean outputs
+:set precision 0
+:set dateformat Mon 2 Jan 2006 // date-only when there’s no time-of-day
 
-// Timezone sanity checks
-london_to_sydney = time difference between London and Sydney in hours // typical: ~10–11 hours
-ny_to_london     = time difference between New York and London in hours // typical: ~5 hours
+// 1) Where are we right now? (live clocks)
+uk_now   = time in London
+ny_now   = time in New York
+syd_now  = time in Sydney
+print("Now - UK: {uk_now}, NY: {ny_now}, SYD: {syd_now}")
 
-// If the UK host starts in three hours...
-uk_now = time in London
-apac_in_3h = time in London plus 3 hours in Sydney   // Sydney local time when UK starts +3h
-us_in_3h   = time in London plus 3 hours in New York // New York local time for the same slot
+// 2) How far apart are we? (useful for gut-checking feasibility)
+gap_uk_ny  = time difference between London and New York in hours     // typically ~5
+gap_uk_syd = time difference between London and Sydney in hours       // typically ~10–11
+print("Gaps - UK<->NY: {gap_uk_ny}, UK<->SYD: {gap_uk_syd}")
 
-// Find a safe meeting window: keep under 2h, and never exceed (London↔Sydney offset - 8)
-window_hours = min(2, london_to_sydney - 8)
+// 3) Keep meetings short: default to 45 minutes
+mtg_len = 45 minutes
 
-// Sprint planning helpers
-days_until_next_monday = next monday - today // plan from the next Monday
-days_in_feb = February                        // days in February this year
+// 4) Candidate slots from “now” – pick a few offsets and see how they land
+//    These aim to sample: UK-late (helps APAC), UK-mid (balances), UK-early (helps US).
+
+// Candidate A: Now + 2 hours (often friendlier to US morning)
+a_uk   = time in London plus 2 hours in London
+a_ny   = time in London plus 2 hours in New York
+a_syd  = time in London plus 2 hours in Sydney
+// End times (to see where a 45min stand-up finishes locally)
+a_uk_end   = a_uk + mtg_len
+a_ny_end   = a_ny + mtg_len
+a_syd_end  = a_syd + mtg_len
+print("Candidate A (+2h): UK {a_uk} to {a_uk_end}, NY {a_ny} to {a_ny_end}, SYD {a_syd} to {a_syd_end}")
+
+// Candidate B: Now + 6 hours (middle-of-day UK; often late US / very early APAC)
+b_uk   = time in London plus 6 hours in London
+b_ny   = time in London plus 6 hours in New York
+b_syd  = time in London plus 6 hours in Sydney
+b_uk_end   = b_uk + mtg_len
+b_ny_end   = b_ny + mtg_len
+b_syd_end  = b_syd + mtg_len
+print("Candidate B (+6h): UK {b_uk} to {b_uk_end}, NY {b_ny} to {b_ny_end}, SYD {b_syd} to {b_syd_end}")
+
+// Candidate C: Now + 9 hours (skews toward APAC evening/next-morning, US afternoon)
+c_uk   = time in London plus 9 hours in London
+c_ny   = time in London plus 9 hours in New York
+c_syd  = time in London plus 9 hours in Sydney
+c_uk_end   = c_uk + mtg_len
+c_ny_end   = c_ny + mtg_len
+c_syd_end  = c_syd + mtg_len
+print("Candidate C (+9h): UK {c_uk} to {c_uk_end}, NY {c_ny} to {c_ny_end}, SYD {c_syd} to {c_syd_end}")
+
+// 5) Weekly cadence and budget
+//    5 stand-ups/week * 45 minutes = 225 minutes ≈ 3.75 hours
+weekly_standup_minutes = 5 * 45 minutes in minutes
+weekly_standup_hours   = weekly_standup_minutes in hours
+print("Weekly stand-up time: {weekly_standup_minutes} (~{weekly_standup_hours})")
+
+// 6) Plan the kickoff: next Monday, same local clock offset from now (informal but practical)
+days_until_next_monday = next monday - today
+kickoff_uk   = time in London + days_until_next_monday
+days_until_next_monday_hours = days_until_next_monday in hours
+kickoff_ny   = time in London plus days_until_next_monday_hours hours in New York
+kickoff_syd  = time in London plus days_until_next_monday_hours hours in Sydney
+print("Kickoff (next Monday) - UK {kickoff_uk}, NY {kickoff_ny}, SYD {kickoff_syd}")
+
+// Notes:
+// - Use A/B/C to compare trade-offs live. You can tweak +2/+6/+9 to fit the season (DST).
+// - If a region regularly lands outside 09:00–17:00 local, rotate which candidate you use.
+// - For longer sessions (planning/review), cap to 90 minutes and shift toward the primary audience.

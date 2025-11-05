@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -971,6 +972,67 @@ func TestScalarMultiplicationOfSpeedUnits(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestPrintInterpolation covers print() with different value types and errors
+func TestPrintInterpolation(t *testing.T) {
+	// Build a small script with various assignments and a print
+	script := strings.Join([]string{
+		"x = 42",
+		"len = 10 m",
+		"money = £12",
+		"now_uk = time in London",
+		"print(\"X:{x} LEN:{len} MONEY:{money} NOW:{now_uk}\")",
+	}, "\n")
+
+	env := NewEnvironment()
+	e := New(env)
+	var v Value
+	for _, line := range strings.Split(script, "\n") {
+		l := lexer.New(line)
+		tokens := l.AllTokens()
+		p := parser.New(tokens)
+		expr, err := p.Parse()
+		if err != nil {
+			t.Fatalf("parse error on line %q: %v", line, err)
+		}
+		v = e.Eval(expr)
+	}
+	if v.IsError() {
+		t.Fatalf("print returned error: %s", v.Error)
+	}
+	if v.Type != ValueString {
+		t.Fatalf("expected ValueString, got %v", v.Type)
+	}
+	if !strings.Contains(v.Text, "X:42.00") {
+		t.Errorf("expected interpolated number, got %q", v.Text)
+	}
+	if !strings.Contains(v.Text, "LEN:10.00 m") {
+		t.Errorf("expected interpolated unit, got %q", v.Text)
+	}
+	if !strings.Contains(v.Text, "MONEY:£12.00") {
+		t.Errorf("expected interpolated currency, got %q", v.Text)
+	}
+	if !strings.Contains(v.Text, "NOW:") {
+		t.Errorf("expected interpolated date/time, got %q", v.Text)
+	}
+}
+
+func TestPrintUndefinedVariableError(t *testing.T) {
+	input := "print(\"missing {nope}\")"
+	l := lexer.New(input)
+	tokens := l.AllTokens()
+	p := parser.New(tokens)
+	expr, err := p.Parse()
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	env := NewEnvironment()
+	e := New(env)
+	v := e.Eval(expr)
+	if !v.IsError() {
+		t.Fatalf("expected error for undefined variable, got: %+v", v)
 	}
 }
 
