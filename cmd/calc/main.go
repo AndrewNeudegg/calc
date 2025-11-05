@@ -53,6 +53,7 @@ REPL COMMANDS:
   :help              Show available commands
   :set precision N   Set decimal precision
   :set currency C    Set default currency (GBP, USD, EUR, JPY)
+	:quiet [on|off]    Toggle or set quiet mode (suppress assignment output)
   :save file.txt     Save workspace to file
   :open file.txt     Load workspace from file
   :quit              Exit calculator

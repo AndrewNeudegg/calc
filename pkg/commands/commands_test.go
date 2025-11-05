@@ -186,3 +186,37 @@ func TestExecuteClearInvokesCallbackAndReturnsAnsi(t *testing.T) {
 		t.Fatalf("expected ANSI clear sequence in output, got: %q", out)
 	}
 }
+
+func TestExecuteQuietTogglesAndSets(t *testing.T) {
+	s := settings.Default()
+	h := New(s)
+
+	state := false
+	h.GetQuiet = func() bool { return state }
+	h.SetQuiet = func(b bool) { state = b }
+	h.ToggleQuiet = func() bool { state = !state; return state }
+
+	// Toggle with no args
+	out := h.Execute("quiet", nil)
+	if !state || !strings.Contains(out, "quiet: on") {
+		t.Fatalf(":quiet should toggle on, got state=%v, out=%q", state, out)
+	}
+
+	// Explicit off
+	out = h.Execute("quiet", []string{"off"})
+	if state || !strings.Contains(out, "quiet: off") {
+		t.Fatalf(":quiet off should set off, got state=%v, out=%q", state, out)
+	}
+
+	// Explicit on
+	out = h.Execute("quiet", []string{"on"})
+	if !state || !strings.Contains(out, "quiet: on") {
+		t.Fatalf(":quiet on should set on, got state=%v, out=%q", state, out)
+	}
+
+	// Bad arg
+	out = h.Execute("quiet", []string{"maybe"})
+	if !strings.Contains(out, "usage") {
+		t.Fatalf(":quiet with bad arg should show usage, got %q", out)
+	}
+}

@@ -5,6 +5,7 @@
 // Display preferences for clean outputs
 :set precision 0
 :set dateformat Mon 2 Jan 2006 // date-only when there’s no time-of-day
+:quiet on
 
 // 1) Where are we right now? (live clocks)
 uk_now   = time in London

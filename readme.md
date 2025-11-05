@@ -168,6 +168,7 @@ Also supported in date arithmetic: smaller units including hours, minutes, and s
 | `:clear` | Clear screen and reset current session |
 | `:quit` / `:exit` / `:q` | Exit |
 | `:tz list` | List available timezones |
+| `:quiet [on|off]` | Toggle or set quiet mode (suppress assignment output) |
 
 Settings keys for `:set`:
 - `precision <n>` – Number of decimal places (default: 2)
@@ -184,6 +185,18 @@ Tips:
 Notes on saving:
 - `:save <file>` writes a plain-text workspace file in your current working directory. Only expressions are saved (commands are skipped).
 - Preferences are stored separately at `~/.config/calc/settings.json` and are also saved when you run `:save`.
+
+### Quiet mode
+
+Use `:quiet on` to suppress automatic printing of assignment results. This is handy in scripts so only your `print("...")` lines appear in the output.
+
+Example at the top of a script:
+
+```
+:set precision 0
+:set dateformat Mon 2 Jan 2006
+:quiet on
+```
 
 ### Comments
 

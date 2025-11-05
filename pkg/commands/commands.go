@@ -17,6 +17,10 @@ type Handler struct {
 	SaveWorkspace  func(filename string) error
 	LoadWorkspace  func(filename string) error
 	ClearWorkspace func() error
+	// Quiet mode controls provided by the REPL
+	SetQuiet    func(enabled bool)
+	ToggleQuiet func() bool
+	GetQuiet    func() bool
 }
 
 // New creates a new command handler.
@@ -44,6 +48,8 @@ func (h *Handler) Execute(command string, args []string) string {
 		return h.help()
 	case "clear", "cls":
 		return h.clear()
+	case "quiet":
+		return h.quiet(args)
 	case "quit", "exit", "q":
 		os.Exit(0)
 		return ""
@@ -111,6 +117,7 @@ func (h *Handler) help() string {
   :open <file>       Open a workspace file
   :set <key> <val>   Set a preference
 	:clear             Clear screen and reset current session
+	:quiet [on|off]    Toggle or set quiet mode (suppress assignment output)
   :help              Show this help
   :quit / :exit / :q Exit the program
 
@@ -151,5 +158,46 @@ func (h *Handler) timezone_cmd(args []string) string {
 		return result
 	default:
 		return fmt.Sprintf("unknown timezone command: %s (use :tz list)", subcmd)
+	}
+}
+
+func (h *Handler) quiet(args []string) string {
+	// Require REPL to wire quiet controls
+	if h.SetQuiet == nil && h.ToggleQuiet == nil && h.GetQuiet == nil {
+		return "quiet mode not supported in this context"
+	}
+
+	// No args: toggle
+	if len(args) == 0 {
+		var on bool
+		if h.ToggleQuiet != nil {
+			on = h.ToggleQuiet()
+		} else if h.GetQuiet != nil && h.SetQuiet != nil {
+			// Fallback toggle via get/set
+			cur := h.GetQuiet()
+			on = !cur
+			h.SetQuiet(on)
+		}
+		if on {
+			return "quiet: on"
+		}
+		return "quiet: off"
+	}
+
+	// With arg: on/off
+	v := strings.ToLower(args[0])
+	switch v {
+	case "on", "true", "1", "yes", "y":
+		if h.SetQuiet != nil {
+			h.SetQuiet(true)
+		}
+		return "quiet: on"
+	case "off", "false", "0", "no", "n":
+		if h.SetQuiet != nil {
+			h.SetQuiet(false)
+		}
+		return "quiet: off"
+	default:
+		return "usage: :quiet [on|off]"
 	}
 }

@@ -36,6 +36,7 @@ type REPL struct {
 	depGraph  *graph.Graph
 	theme     *Theme
 	silent    bool
+	quiet     bool
 }
 
 // NewREPL creates a new REPL instance.
@@ -68,6 +69,10 @@ func NewREPL() *REPL {
 	r.commands.LoadWorkspace = r.loadWorkspace
 	// Wire clear handler for :clear
 	r.commands.ClearWorkspace = r.clearWorkspace
+	// Wire quiet controls
+	r.commands.SetQuiet = r.SetQuiet
+	r.commands.ToggleQuiet = r.ToggleQuiet
+	r.commands.GetQuiet = r.IsQuiet
 	return r
 }
 
@@ -205,6 +210,13 @@ func (r *REPL) EvaluateLine(input string) evaluator.Value {
 		Expr:   expr,
 	}
 
+	// Quiet mode: suppress printing for assignment lines
+	if r.quiet {
+		if _, isAssign := expr.(*parser.AssignExpr); isAssign {
+			return evaluator.NewError("")
+		}
+	}
+
 	return result
 }
 
@@ -326,4 +338,20 @@ func (r *REPL) Formatter() *formatter.Formatter {
 // SetSilent toggles printing of command outputs during EvaluateLine. Useful for batch/script mode.
 func (r *REPL) SetSilent(s bool) {
 	r.silent = s
+}
+
+// SetQuiet enables or disables quiet mode (suppresses assignment output).
+func (r *REPL) SetQuiet(q bool) {
+	r.quiet = q
+}
+
+// ToggleQuiet flips quiet mode and returns the new state.
+func (r *REPL) ToggleQuiet() bool {
+	r.quiet = !r.quiet
+	return r.quiet
+}
+
+// IsQuiet reports whether quiet mode is enabled.
+func (r *REPL) IsQuiet() bool {
+	return r.quiet
 }
