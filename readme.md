@@ -192,7 +192,7 @@ Also supported in date arithmetic: smaller units including hours, minutes, and s
 | `:clear` | Clear screen and reset current session |
 | `:quit` / `:exit` / `:q` | Exit |
 | `:tz list` | List available timezones |
-| `:quiet [on|off]` | Toggle or set quiet mode (suppress assignment output) |
+| `:quiet [on/off]` | Toggle or set quiet mode (suppress assignment output) |
 
 Settings keys for `:set`:
 - `precision <n>` – Number of decimal places (default: 2)
