@@ -67,6 +67,7 @@ func NewREPL() *REPL {
 	
 	// Set up history function for prev support
 	env.SetHistoryFunc(r.getHistoryValue)
+	env.SetAbsoluteHistoryFunc(r.getAbsoluteHistoryValue)
 	
 	// Wire workspace handlers for :save and :open
 	r.commands.SaveWorkspace = r.saveWorkspace
@@ -236,6 +237,7 @@ func (r *REPL) clearWorkspace() error {
 	
 	// Re-wire history function
 	r.env.SetHistoryFunc(r.getHistoryValue)
+	r.env.SetAbsoluteHistoryFunc(r.getAbsoluteHistoryValue)
 
 	// Reset dependency graph
 	r.depGraph = graph.NewGraph()
@@ -279,6 +281,7 @@ func (r *REPL) loadWorkspace(filename string) error {
 	
 	// Re-wire history function
 	r.env.SetHistoryFunc(r.getHistoryValue)
+	r.env.SetAbsoluteHistoryFunc(r.getAbsoluteHistoryValue)
 
 	lines := strings.Split(string(b), "\n")
 	for _, ln := range lines {
@@ -380,6 +383,22 @@ func (r *REPL) getHistoryValue(offset int) (evaluator.Value, error) {
 	line, ok := r.lines[targetID]
 	if !ok {
 		return evaluator.Value{}, fmt.Errorf("no result found for prev~%d", offset)
+	}
+	
+	// Return the result of that line
+	return line.Result, nil
+}
+
+// getAbsoluteHistoryValue retrieves a result by absolute line ID.
+// lineID is the actual line number (e.g., 15 for prev#15).
+func (r *REPL) getAbsoluteHistoryValue(lineID int) (evaluator.Value, error) {
+	if lineID < 1 {
+		return evaluator.Value{}, fmt.Errorf("line number must be positive, got %d", lineID)
+	}
+	
+	line, ok := r.lines[lineID]
+	if !ok {
+		return evaluator.Value{}, fmt.Errorf("no result found for line %d", lineID)
 	}
 	
 	// Return the result of that line

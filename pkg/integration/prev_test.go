@@ -209,3 +209,168 @@ func TestREPL_PrevErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestREPL_PrevAbsoluteFeature(t *testing.T) {
+	tests := []struct {
+		name     string
+		inputs   []string
+		expected []string
+	}{
+		{
+			name: "basic prev#N usage",
+			inputs: []string{
+				"10",
+				"20",
+				"30",
+				"prev#1",
+			},
+			expected: []string{
+				"10.00",
+				"20.00",
+				"30.00",
+				"10.00",
+			},
+		},
+		{
+			name: "prev#15 from issue example",
+			inputs: []string{
+				"10", // line 1
+				"11", // line 2
+				"12", // line 3
+				"13", // line 4
+				"prev~3",     // line 5: should be 10
+				"prev~4 + 10", // line 6: should be 20
+				"prev~4 * 10", // line 7: should be 110
+				"prev#7 * 42", // line 8: should be 4620 (110 * 42)
+			},
+			expected: []string{
+				"10.00",
+				"11.00",
+				"12.00",
+				"13.00",
+				"10.00",
+				"20.00",
+				"110.00",
+				"4,620.00",
+			},
+		},
+		{
+			name: "prev#N with currency",
+			inputs: []string{
+				"$100",
+				"$200",
+				"prev#1 * 2",
+			},
+			expected: []string{
+				"$100.00",
+				"$200.00",
+				"$200.00",
+			},
+		},
+		{
+			name: "prev#N with units",
+			inputs: []string{
+				"10 m",
+				"20 m",
+				"prev#1 + prev#2",
+			},
+			expected: []string{
+				"10.00 m",
+				"20.00 m",
+				"30.00 m",
+			},
+		},
+		{
+			name: "mixing relative and absolute prev",
+			inputs: []string{
+				"5",
+				"10",
+				"15",
+				"prev#1 + prev~1", // 5 + 10 = 15
+			},
+			expected: []string{
+				"5.00",
+				"10.00",
+				"15.00",
+				"15.00",
+			},
+		},
+		{
+			name: "prev#N in complex expression",
+			inputs: []string{
+				"5",
+				"10",
+				"(prev#1 + prev#2) * 2", // (5 + 10) * 2 = 30
+			},
+			expected: []string{
+				"5.00",
+				"10.00",
+				"30.00",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repl := display.NewREPL()
+			repl.SetSilent(true)
+
+			for i, input := range tt.inputs {
+				result := repl.EvaluateLine(input)
+				if result.IsError() && result.Error != "" {
+					t.Fatalf("Line %d error: %v", i+1, result.Error)
+				}
+
+				formatted := repl.Formatter().Format(result)
+				if formatted != tt.expected[i] {
+					t.Errorf("Line %d: expected %q, got %q", i+1, tt.expected[i], formatted)
+				}
+			}
+		})
+	}
+}
+
+func TestREPL_PrevAbsoluteErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputs      []string
+		expectError int // 0-indexed line that should error
+	}{
+		{
+			name: "prev#100 out of range",
+			inputs: []string{
+				"10",
+				"20",
+				"prev#100",
+			},
+			expectError: 2,
+		},
+		{
+			name: "prev#1 on first line (before it exists)",
+			inputs: []string{
+				"prev#1",
+			},
+			expectError: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repl := display.NewREPL()
+			repl.SetSilent(true)
+
+			for i, input := range tt.inputs {
+				result := repl.EvaluateLine(input)
+				if i == tt.expectError {
+					if !result.IsError() || result.Error == "" {
+						t.Errorf("Line %d: expected error, got success", i+1)
+					}
+				} else {
+					if result.IsError() && result.Error != "" {
+						t.Errorf("Line %d: unexpected error: %v", i+1, result.Error)
+					}
+				}
+			}
+		})
+	}
+}

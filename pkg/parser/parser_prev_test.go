@@ -8,40 +8,67 @@ import (
 
 func TestParser_Prev(t *testing.T) {
 	tests := []struct {
-		name         string
-		input        string
-		expectedType interface{}
-		expectedVal  interface{}
+		name           string
+		input          string
+		expectedType   interface{}
+		expectedOffset int
+		expectedAbs    bool
 	}{
 		{
-			name:         "prev keyword",
-			input:        "prev",
-			expectedType: &PrevExpr{},
-			expectedVal:  0,
+			name:           "prev keyword",
+			input:          "prev",
+			expectedType:   &PrevExpr{},
+			expectedOffset: 0,
+			expectedAbs:    false,
 		},
 		{
-			name:         "prev~",
-			input:        "prev~",
-			expectedType: &PrevExpr{},
-			expectedVal:  1,
+			name:           "prev~",
+			input:          "prev~",
+			expectedType:   &PrevExpr{},
+			expectedOffset: 1,
+			expectedAbs:    false,
 		},
 		{
-			name:         "prev~1",
-			input:        "prev~1",
-			expectedType: &PrevExpr{},
-			expectedVal:  1,
+			name:           "prev~1",
+			input:          "prev~1",
+			expectedType:   &PrevExpr{},
+			expectedOffset: 1,
+			expectedAbs:    false,
 		},
 		{
-			name:         "prev~5",
-			input:        "prev~5",
-			expectedType: &PrevExpr{},
-			expectedVal:  5,
+			name:           "prev~5",
+			input:          "prev~5",
+			expectedType:   &PrevExpr{},
+			expectedOffset: 5,
+			expectedAbs:    false,
 		},
 		{
-			name:         "prev~10",
-			input:        "prev~10",
-			expectedType: &PrevExpr{},
-			expectedVal:  10,
+			name:           "prev~10",
+			input:          "prev~10",
+			expectedType:   &PrevExpr{},
+			expectedOffset: 10,
+			expectedAbs:    false,
+		},
+		{
+			name:           "prev#1 (absolute)",
+			input:          "prev#1",
+			expectedType:   &PrevExpr{},
+			expectedOffset: 1,
+			expectedAbs:    true,
+		},
+		{
+			name:           "prev#15 (absolute)",
+			input:          "prev#15",
+			expectedType:   &PrevExpr{},
+			expectedOffset: 15,
+			expectedAbs:    true,
+		},
+		{
+			name:           "prev#100 (absolute)",
+			input:          "prev#100",
+			expectedType:   &PrevExpr{},
+			expectedOffset: 100,
+			expectedAbs:    true,
 		},
 	}
 
@@ -65,8 +92,12 @@ func TestParser_Prev(t *testing.T) {
 				t.Fatalf("Expected *PrevExpr, got %T", expr)
 			}
 
-			if prevExpr.Offset != tt.expectedVal {
-				t.Errorf("Expected offset %d, got %d", tt.expectedVal, prevExpr.Offset)
+			if prevExpr.Offset != tt.expectedOffset {
+				t.Errorf("Expected offset %d, got %d", tt.expectedOffset, prevExpr.Offset)
+			}
+
+			if prevExpr.Absolute != tt.expectedAbs {
+				t.Errorf("Expected absolute %v, got %v", tt.expectedAbs, prevExpr.Absolute)
 			}
 		})
 	}
@@ -96,6 +127,22 @@ func TestParser_PrevInExpressions(t *testing.T) {
 		{
 			name:  "complex expression",
 			input: "(prev + 10) * prev~1",
+		},
+		{
+			name:  "addition with prev#15",
+			input: "10 + prev#15",
+		},
+		{
+			name:  "multiplication with prev#10",
+			input: "prev#10 * 42",
+		},
+		{
+			name:  "mixing relative and absolute",
+			input: "prev#15 + prev~2",
+		},
+		{
+			name:  "assignment with absolute prev",
+			input: "x = prev#5",
 		},
 	}
 
@@ -132,6 +179,21 @@ func TestParser_PrevValidation(t *testing.T) {
 			name:        "prev~100 is valid",
 			input:       "prev~100",
 			expectError: false,
+		},
+		{
+			name:        "prev#1 is valid",
+			input:       "prev#1",
+			expectError: false,
+		},
+		{
+			name:        "prev#100 is valid",
+			input:       "prev#100",
+			expectError: false,
+		},
+		{
+			name:        "prev# without number is invalid",
+			input:       "prev#",
+			expectError: true,
 		},
 	}
 

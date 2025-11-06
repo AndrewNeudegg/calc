@@ -997,14 +997,15 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		return &DateExpr{Date: parsedDate}, nil
 
 	case lexer.TokenPrev:
-		// Parse prev, prev~, prev~1, prev~5, etc.
+		// Parse prev, prev~, prev~1, prev~5, prev#15, etc.
 		literal := tok.Literal
 		p.advance()
 		
-		// Default offset is 0 (just "prev")
+		// Default offset is 0 (just "prev"), relative mode
 		offset := 0
+		absolute := false
 		
-		// Check if the literal contains '~'
+		// Check if the literal contains '~' (relative offset)
 		if strings.Contains(literal, "~") {
 			parts := strings.Split(literal, "~")
 			if len(parts) != 2 {
@@ -1024,9 +1025,29 @@ func (p *Parser) parsePrimary() (Expr, error) {
 				}
 				offset = val
 			}
+		} else if strings.Contains(literal, "#") {
+			// Check if the literal contains '#' (absolute position)
+			parts := strings.Split(literal, "#")
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid prev syntax: %s (expected 'prev#N')", literal)
+			}
+			if parts[1] == "" {
+				// "prev#" without a number is an error
+				return nil, fmt.Errorf("prev# requires a line number (e.g., 'prev#15')")
+			}
+			// "prev#N" means absolute line number N
+			val, err := strconv.Atoi(parts[1])
+			if err != nil {
+				return nil, fmt.Errorf("invalid prev line number: %s", parts[1])
+			}
+			if val < 1 {
+				return nil, fmt.Errorf("prev line number must be positive, got: %d", val)
+			}
+			offset = val
+			absolute = true
 		}
 		
-		return &PrevExpr{Offset: offset}, nil
+		return &PrevExpr{Offset: offset, Absolute: absolute}, nil
 
 	default:
 		return nil, fmt.Errorf("unexpected token: %s", tok.Type)

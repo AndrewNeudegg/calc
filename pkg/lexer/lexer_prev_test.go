@@ -80,6 +80,50 @@ func TestLexer_Prev(t *testing.T) {
 				{Type: TokenEOF, Literal: ""},
 			},
 		},
+		{
+			name:  "prev with hash (absolute)",
+			input: "prev#",
+			expected: []Token{
+				{Type: TokenPrev, Literal: "prev#"},
+				{Type: TokenEOF, Literal: ""},
+			},
+		},
+		{
+			name:  "prev#1 (absolute position)",
+			input: "prev#1",
+			expected: []Token{
+				{Type: TokenPrev, Literal: "prev#1"},
+				{Type: TokenEOF, Literal: ""},
+			},
+		},
+		{
+			name:  "prev#15 (absolute position)",
+			input: "prev#15",
+			expected: []Token{
+				{Type: TokenPrev, Literal: "prev#15"},
+				{Type: TokenEOF, Literal: ""},
+			},
+		},
+		{
+			name:  "expression with prev#10",
+			input: "prev#10 * 2",
+			expected: []Token{
+				{Type: TokenPrev, Literal: "prev#10"},
+				{Type: TokenMultiply, Literal: "*"},
+				{Type: TokenNumber, Literal: "2"},
+				{Type: TokenEOF, Literal: ""},
+			},
+		},
+		{
+			name:  "mixing relative and absolute prev",
+			input: "prev#15 + prev~2",
+			expected: []Token{
+				{Type: TokenPrev, Literal: "prev#15"},
+				{Type: TokenPlus, Literal: "+"},
+				{Type: TokenPrev, Literal: "prev~2"},
+				{Type: TokenEOF, Literal: ""},
+			},
+		},
 	}
 
 	for _, tt := range tests {
