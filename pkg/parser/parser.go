@@ -255,24 +255,8 @@ func (p *Parser) parseArgDirective() (Expr, error) {
 // isKeywordToken checks if a token type is a keyword that can be used as a variable name or identifier.
 // Not all keywords are included—only those allowed in this context.
 func (p *Parser) isKeywordToken(t lexer.TokenType) bool {
-	switch t {
-	case lexer.TokenIn, lexer.TokenOf, lexer.TokenPer, lexer.TokenBy,
-		lexer.TokenWhat, lexer.TokenIs, lexer.TokenIncrease, lexer.TokenDecrease,
-		lexer.TokenSum, lexer.TokenAverage, lexer.TokenMean, lexer.TokenTotal,
-		lexer.TokenHalf, lexer.TokenDouble, lexer.TokenTwice, lexer.TokenQuarters,
-		lexer.TokenThree, lexer.TokenArg, lexer.TokenAfter, lexer.TokenBefore,
-		lexer.TokenFrom, lexer.TokenAgo, lexer.TokenNow, lexer.TokenToday,
-		lexer.TokenTomorrow, lexer.TokenYesterday, lexer.TokenNext, lexer.TokenLast,
-		lexer.TokenPrev, lexer.TokenTime, lexer.TokenMonday, lexer.TokenTuesday,
-		lexer.TokenWednesday, lexer.TokenThursday, lexer.TokenFriday, lexer.TokenSaturday,
-		lexer.TokenSunday, lexer.TokenJanuary, lexer.TokenFebruary, lexer.TokenMarch,
-		lexer.TokenApril, lexer.TokenMay, lexer.TokenJune, lexer.TokenJuly,
-		lexer.TokenAugust, lexer.TokenSeptember, lexer.TokenOctober, lexer.TokenNovember,
-		lexer.TokenDecember:
-		return true
-	default:
-		return false
-	}
+	_, ok := lexer.KeywordTokens[t]
+	return ok
 }
 
 // utf8DecLastRune returns the last rune written in a strings.Builder and a bool indicating success.
