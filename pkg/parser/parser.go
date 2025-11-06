@@ -152,8 +152,9 @@ func (p *Parser) parseExpression() (Expr, error) {
 		return p.parseCommand()
 	}
 
-	// Check for assignment
-	if p.current().Type == lexer.TokenIdent && p.peek(1).Type == lexer.TokenEquals {
+	// Check for assignment (allow keywords as variable names)
+	if (p.current().Type == lexer.TokenIdent || p.isKeywordToken(p.current().Type)) && 
+		p.peek(1).Type == lexer.TokenEquals {
 		return p.parseAssignment()
 	}
 
