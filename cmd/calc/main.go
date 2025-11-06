@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -15,6 +16,22 @@ import (
 	"github.com/andrewneudegg/calc/pkg/settings"
 )
 
+// argsMap is a custom flag type for repeated --arg flags
+type argsMap map[string]string
+
+func (a argsMap) String() string {
+	return fmt.Sprintf("%v", map[string]string(a))
+}
+
+func (a argsMap) Set(value string) error {
+	parts := strings.SplitN(value, "=", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("argument must be in format name=value")
+	}
+	a[parts[0]] = parts[1]
+	return nil
+}
+
 const helpText = `Calc - Terminal Notepad Calculator
 
 A local-only terminal calculator.
@@ -28,6 +45,8 @@ USAGE:
 OPTIONS:
 	-c string           Execute calculation and exit
 	-f string           Execute a .calc file and print results
+	-a, --arg name=value  Pass argument to script (can be repeated)
+	--arg-file path     Read arguments from a file (key=value format)
 	-h, --help          Show this help message
 
 EXAMPLES:
@@ -37,6 +56,8 @@ EXAMPLES:
 	calc -c "20% of 100"
 	calc -c "£100 + £50"
 	calc -f examples/k8s-cluster.calc
+	calc -f script.calc --arg count=5 --arg rate=10
+	calc -f script.calc --arg-file args.env
 
 FEATURES:
   • Arithmetic with operator precedence and parentheses
@@ -48,6 +69,7 @@ FEATURES:
   • Fuzzy phrases (half of X, double Y, three quarters of Z)
   • Date arithmetic (today + 3 weeks, tomorrow - 2 days)
   • Functions (sum(1,2,3), average(10,20,30))
+  • Script arguments (:arg directive with --arg flags)
 
 REPL COMMANDS:
   :help              Show available commands
@@ -70,8 +92,15 @@ func main() {
 	// Define flags
 	calcExpr := flag.String("c", "", "Execute a single calculation and exit")
 	filePath := flag.String("f", "", "Execute a .calc file and print results")
+	argFile := flag.String("arg-file", "", "Read arguments from a file")
 	showHelp := flag.Bool("help", false, "Show help message")
 	flag.BoolVar(showHelp, "h", false, "Show help message")
+	
+	// Custom argsMap for repeated --arg flags
+	args := make(argsMap)
+	flag.Var(&args, "arg", "Pass argument to script (name=value)")
+	flag.Var(&args, "a", "Pass argument to script (name=value)")
+	
 	flag.Parse()
 
 	// Show help if requested
@@ -80,9 +109,24 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Load arguments from file if specified
+	if *argFile != "" {
+		fileArgs, err := loadArgsFromFile(*argFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading arg file: %v\n", err)
+			os.Exit(1)
+		}
+		// Merge file args with CLI args (CLI args override file args)
+		for k, v := range fileArgs {
+			if _, exists := args[k]; !exists {
+				args[k] = v
+			}
+		}
+	}
+
 	// If -f flag is provided, execute file and exit
 	if *filePath != "" {
-		if err := executeFile(*filePath); err != nil {
+		if err := executeFile(*filePath, args); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -100,9 +144,50 @@ func main() {
 	repl.Run()
 }
 
+// loadArgsFromFile reads arguments from a .env-style file
+func loadArgsFromFile(path string) (map[string]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	args := make(map[string]string)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			args[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return args, nil
+}
+
+// parseLineToExpr parses a line of input into an AST expression
+func parseLineToExpr(input string) (parser.Expr, error) {
+	lex := lexer.New(input)
+	tokens := lex.AllTokens()
+	if len(tokens) > 0 && tokens[len(tokens)-1].Type == lexer.TokenEOF {
+		tokens = tokens[:len(tokens)-1]
+	}
+	if len(tokens) == 0 {
+		return nil, nil
+	}
+	p := parser.New(tokens)
+	return p.Parse()
+}
+
 // executeFile runs a .calc script file line-by-line, printing results to stdout.
 // Commands (lines starting with :) are executed and their messages printed; comment-only lines are ignored.
-func executeFile(path string) error {
+func executeFile(path string, providedArgs map[string]string) error {
 	var b []byte
 	var err error
 
@@ -119,13 +204,71 @@ func executeFile(path string) error {
 	repl := display.NewREPL()
 	repl.SetSilent(true)
 
-	// Iterate over lines to preserve REPL semantics (variables, settings, commands)
+	// First pass: collect all :arg directives
+	requiredArgs := make(map[string]string) // name -> prompt
 	lines := strings.Split(string(b), "\n")
+	
 	for _, ln := range lines {
 		input := strings.TrimSpace(ln)
 		if input == "" || strings.HasPrefix(input, "#") {
 			continue
 		}
+		
+		// Parse to check if it's an :arg directive
+		expr, parseErr := parseLineToExpr(input)
+		if parseErr != nil || expr == nil {
+			continue
+		}
+		
+		if argDir, ok := expr.(*parser.ArgDirectiveExpr); ok {
+			requiredArgs[argDir.Name] = argDir.Prompt
+		}
+	}
+
+	// Process arguments: use provided args or prompt for missing ones
+	for name, prompt := range requiredArgs {
+		if val, exists := providedArgs[name]; exists {
+			// Parse the provided value through lexer/parser for rich input
+			if err := setArgVariable(repl, name, val); err != nil {
+				return fmt.Errorf("error setting argument %s: %v", name, err)
+			}
+		} else {
+			// Prompt user for the argument
+			if prompt == "" {
+				prompt = fmt.Sprintf("Enter value for %s:", name)
+			}
+			fmt.Printf("%s ", prompt)
+			
+			reader := bufio.NewReader(os.Stdin)
+			response, err := reader.ReadString('\n')
+			if err != nil {
+				return fmt.Errorf("error reading argument %s: %v", name, err)
+			}
+			response = strings.TrimSpace(response)
+			
+			// Parse the response through lexer/parser for rich input
+			if err := setArgVariable(repl, name, response); err != nil {
+				return fmt.Errorf("error setting argument %s: %v", name, err)
+			}
+		}
+	}
+
+	// Second pass: execute the script
+	for _, ln := range lines {
+		input := strings.TrimSpace(ln)
+		if input == "" || strings.HasPrefix(input, "#") {
+			continue
+		}
+		
+		// Parse to check if it's an :arg directive (skip execution)
+		expr, parseErr := parseLineToExpr(input)
+		if parseErr == nil && expr != nil {
+			if _, ok := expr.(*parser.ArgDirectiveExpr); ok {
+				// Skip :arg directives in execution phase
+				continue
+			}
+		}
+		
 		v := repl.EvaluateLine(input)
 		// Skip sentinel no-op (commands or comment-only handled by EvaluateLine)
 		if v.IsError() {
@@ -140,6 +283,28 @@ func executeFile(path string) error {
 		fmt.Println(repl.Formatter().Format(v))
 	}
 
+	return nil
+}
+
+// setArgVariable parses a string value and sets it as a variable in the REPL environment
+func setArgVariable(repl *display.REPL, name, value string) error {
+	// Parse the value through lexer/parser to support units, currency, expressions, etc.
+	expr, err := parseLineToExpr(value)
+	if err != nil {
+		return err
+	}
+	if expr == nil {
+		return fmt.Errorf("empty expression")
+	}
+	
+	// Evaluate the expression
+	result := repl.Env().Eval(expr)
+	if result.IsError() {
+		return fmt.Errorf("%s", result.Error)
+	}
+	
+	// Set the variable
+	repl.Env().SetVariable(name, result)
 	return nil
 }
 

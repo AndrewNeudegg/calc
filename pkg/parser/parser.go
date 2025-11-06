@@ -152,8 +152,11 @@ func (p *Parser) parseExpression() (Expr, error) {
 		return p.parseCommand()
 	}
 
-	// Check for assignment
-	if p.current().Type == lexer.TokenIdent && p.peek(1).Type == lexer.TokenEquals {
+	// Check for assignment (allow keywords and units as variable names)
+	if (p.current().Type == lexer.TokenIdent || 
+		p.isKeywordToken(p.current().Type) || 
+		p.current().Type == lexer.TokenUnit) && 
+		p.peek(1).Type == lexer.TokenEquals {
 		return p.parseAssignment()
 	}
 
@@ -174,12 +177,17 @@ func (p *Parser) parseExpression() (Expr, error) {
 func (p *Parser) parseCommand() (Expr, error) {
 	p.advance() // skip ':'
 
-	if p.current().Type != lexer.TokenIdent {
+	if p.current().Type != lexer.TokenIdent && p.current().Type != lexer.TokenArg {
 		return nil, fmt.Errorf("expected command name")
 	}
 
 	command := p.current().Literal
 	p.advance()
+
+	// Special handling for :arg directive
+	if command == "arg" {
+		return p.parseArgDirective()
+	}
 
 	// Reconstruct the remainder of the line into a raw tail string while
 	// preserving filename/path punctuation like '.', '/', and '-' by gluing
@@ -217,6 +225,38 @@ func (p *Parser) parseCommand() (Expr, error) {
 		Command: command,
 		Args:    args,
 	}, nil
+}
+
+// parseArgDirective parses ":arg var_name "prompt text"" directives.
+func (p *Parser) parseArgDirective() (Expr, error) {
+	// Expect variable name (can be an identifier, a keyword, or a unit token used as variable name)
+	if p.current().Type != lexer.TokenIdent && 
+		!p.isKeywordToken(p.current().Type) && 
+		p.current().Type != lexer.TokenUnit {
+		return nil, fmt.Errorf("expected variable name after :arg")
+	}
+	
+	varName := p.current().Literal
+	p.advance()
+
+	// Optional prompt string
+	var prompt string
+	if p.current().Type == lexer.TokenString {
+		prompt = p.current().Literal
+		p.advance()
+	}
+
+	return &ArgDirectiveExpr{
+		Name:   varName,
+		Prompt: prompt,
+	}, nil
+}
+
+// isKeywordToken checks if a token type is a keyword that can be used as a variable name or identifier.
+// Not all keywords are included—only those allowed in this context.
+func (p *Parser) isKeywordToken(t lexer.TokenType) bool {
+	_, ok := lexer.KeywordTokens[t]
+	return ok
 }
 
 // utf8DecLastRune returns the last rune written in a strings.Builder and a bool indicating success.
@@ -859,12 +899,14 @@ func (p *Parser) parsePrimary() (Expr, error) {
 
 	case lexer.TokenUnit:
 		// Allow function names that collide with unit tokens, e.g., "min(...)"
+		// Also allow unit tokens to be used as variable names
 		name := tok.Literal
 		p.advance()
 		if p.current().Type == lexer.TokenLParen {
 			return p.parseFunctionCall(name)
 		}
-		return nil, fmt.Errorf("unexpected token: %s", tok.Type)
+		// Treat as a variable reference
+		return &IdentExpr{Name: name}, nil
 
 	case lexer.TokenThree:
 		// Could be "three quarters" or just "three" as a number
@@ -1050,6 +1092,16 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		return &PrevExpr{Offset: offset, Absolute: absolute}, nil
 
 	default:
+		// If it's a keyword token being used as a variable name, treat it as an identifier
+		if p.isKeywordToken(tok.Type) {
+			name := tok.Literal
+			p.advance()
+			// Check for function call
+			if p.current().Type == lexer.TokenLParen {
+				return p.parseFunctionCall(name)
+			}
+			return &IdentExpr{Name: name}, nil
+		}
 		return nil, fmt.Errorf("unexpected token: %s", tok.Type)
 	}
 }

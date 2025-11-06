@@ -39,6 +39,7 @@ func New(input string) *Lexer {
 			"twice":     TokenTwice,
 			"quarters":  TokenQuarters,
 			"three":     TokenThree,
+			"arg":       TokenArg,
 			"after":     TokenAfter,
 			"before":    TokenBefore,
 			"from":      TokenFrom,

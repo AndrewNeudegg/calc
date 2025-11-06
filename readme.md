@@ -16,6 +16,7 @@ Terminal calculator with units, currency conversion, and natural language expres
 - Reference previous results with `prev`, `prev~N` (relative), and `prev#N` (absolute line number) keywords
 - Line comments with // (ignored by the lexer)
 - Save/load workspace files from the REPL
+- **Script arguments**: Pass parameters to calc scripts with `:arg` directives and `--arg` flags
 
 ## Installation
 
@@ -51,6 +52,16 @@ Execute a script file:
 ./calc -f examples/k8s-cluster.calc
 ```
 
+Execute a script with arguments:
+```bash
+./calc -f examples/shopping-list.calc --arg family_members=4 --arg nights=7 --arg price_per_meal=8.50
+```
+
+Read arguments from a file:
+```bash
+./calc -f examples/shopping-list.calc --arg-file args.env
+```
+
 Read from stdin (use '-' as the file):
 ```bash
 cat examples/k8s-cluster.calc | ./calc -f -
@@ -68,6 +79,7 @@ Jump in with a few ready-made scripts (open the files to see how they’re built
 - Trip budget planner: `examples/trip.calc`
 - Global stand-up planner: `examples/global-standup.calc`
 - Kubernetes cluster cost model: `examples/k8s-cluster.calc`
+- Shopping list calculator (with arguments): `examples/shopping-list.calc`
 
 Run them from the CLI:
 
@@ -75,6 +87,7 @@ Run them from the CLI:
 ./calc -f examples/trip.calc
 ./calc -f examples/global-standup.calc
 ./calc -f examples/k8s-cluster.calc
+./calc -f examples/shopping-list.calc --arg family_members=4 --arg nights=7 --arg price_per_meal=8.50
 ```
 
 Trip example (screenshot):
@@ -329,6 +342,95 @@ Use `//` for line comments. Everything after `//` on a line is ignored:
 ```
 x = 10 // hourly rate
 rate = 2.5 // per hour
+```
+
+### Script Arguments
+
+Calc scripts support parameterization through the `:arg` directive, allowing you to create reusable calculations that accept input values.
+
+#### Declaring Arguments
+
+Use the `:arg` directive in your script to declare parameters:
+
+```
+:arg var_name "Prompt text (optional)"
+```
+
+Examples:
+```
+:arg count
+:arg price "What is the price per item?"
+:arg distance "Enter distance:"
+```
+
+#### Passing Arguments
+
+Pass arguments via the command line using `--arg` or `-a`:
+
+```bash
+./calc -f script.calc --arg count=5 --arg price=10.50
+./calc -f script.calc -a count=5 -a price=10.50
+```
+
+#### Rich Input Support
+
+Argument values support the full calc expression syntax, including:
+- Numbers: `--arg count=5`
+- Units: `--arg distance="100 km"`
+- Currency: `--arg price="50 usd"`
+- Expressions: `--arg value="5*3"`
+
+#### Argument Files
+
+For multiple arguments, use an argument file (`.env` style):
+
+```bash
+# args.env
+family_members=4
+nights=7
+price_per_meal=8.50
+```
+
+Then reference it with `--arg-file`:
+
+```bash
+./calc -f script.calc --arg-file args.env
+```
+
+CLI arguments override file arguments:
+```bash
+./calc -f script.calc --arg-file args.env --arg nights=10
+```
+
+#### Interactive Prompts
+
+When an argument is declared but not provided, calc prompts for it interactively:
+
+```bash
+$ ./calc -f script.calc
+How many family members? 4
+How many nights? 7
+...
+```
+
+#### Example Script
+
+See `examples/shopping-list.calc` for a complete example:
+
+```
+:arg family_members "How many family members?"
+:arg nights "How many nights are you cooking dinner?"
+:arg price_per_meal "What's the average cost per meal per person (in dollars)?"
+
+total_meals = family_members * nights
+total_cost = total_meals * price_per_meal usd
+
+print("Total cost: {total_cost}")
+```
+
+Run with:
+```bash
+./calc -f examples/shopping-list.calc --arg family_members=4 --arg nights=7 --arg price_per_meal=8.50
 ```
 
 ## Supported Units

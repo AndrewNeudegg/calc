@@ -42,6 +42,17 @@ func (e *Environment) SetAbsoluteHistoryFunc(f func(lineID int) (Value, error)) 
 	e.absoluteHistoryFunc = f
 }
 
+// SetVariable sets a variable in the environment.
+func (e *Environment) SetVariable(name string, value Value) {
+	e.variables[name] = value
+}
+
+// Eval evaluates an expression using this environment.
+func (e *Environment) Eval(expr parser.Expr) Value {
+	evaluator := New(e)
+	return evaluator.Eval(expr)
+}
+
 // Evaluator evaluates expressions.
 type Evaluator struct {
 	env *Environment
