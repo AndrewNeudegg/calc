@@ -49,6 +49,7 @@ func New(input string) *Lexer {
 			"yesterday": TokenYesterday,
 			"next":      TokenNext,
 			"last":      TokenLast,
+			"prev":      TokenPrev,
 			"time":      TokenTime,
 			"monday":    TokenMonday,
 			"tuesday":   TokenTuesday,
@@ -398,6 +399,28 @@ func (l *Lexer) scanIdentifier() Token {
 
 	literal := l.input[start:l.pos]
 	lowerLiteral := strings.ToLower(literal)
+
+	// Special handling for 'prev' - check if followed by '~' and optional number
+	if lowerLiteral == "prev" && l.pos < len(l.input) && l.input[l.pos] == '~' {
+		// Include the ~ in the literal
+		l.pos++
+		l.column++
+		
+		// Check if followed by a number
+		for l.pos < len(l.input) && unicode.IsDigit(rune(l.input[l.pos])) {
+			l.pos++
+			l.column++
+		}
+		
+		// Include the number if present
+		literal = l.input[start:l.pos]
+		return Token{
+			Type:    TokenPrev,
+			Literal: literal,
+			Line:    l.line,
+			Column:  startCol,
+		}
+	}
 
 	// Check if it's a keyword
 	if typ, ok := l.keywords[lowerLiteral]; ok {

@@ -64,6 +64,10 @@ func NewREPL() *REPL {
 		depGraph:  graph.NewGraph(),
 		theme:     DefaultTheme(),
 	}
+	
+	// Set up history function for prev support
+	env.SetHistoryFunc(r.getHistoryValue)
+	
 	// Wire workspace handlers for :save and :open
 	r.commands.SaveWorkspace = r.saveWorkspace
 	r.commands.LoadWorkspace = r.loadWorkspace
@@ -229,6 +233,9 @@ func (r *REPL) clearWorkspace() error {
 	// Reset evaluation environment and evaluator (clears variables and systems)
 	r.env = evaluator.NewEnvironment()
 	r.eval = evaluator.New(r.env)
+	
+	// Re-wire history function
+	r.env.SetHistoryFunc(r.getHistoryValue)
 
 	// Reset dependency graph
 	r.depGraph = graph.NewGraph()
@@ -269,6 +276,9 @@ func (r *REPL) loadWorkspace(filename string) error {
 	r.nextID = 1
 	r.env = evaluator.NewEnvironment()
 	r.eval = evaluator.New(r.env)
+	
+	// Re-wire history function
+	r.env.SetHistoryFunc(r.getHistoryValue)
 
 	lines := strings.Split(string(b), "\n")
 	for _, ln := range lines {
@@ -354,4 +364,24 @@ func (r *REPL) ToggleQuiet() bool {
 // IsQuiet reports whether quiet mode is enabled.
 func (r *REPL) IsQuiet() bool {
 	return r.quiet
+}
+
+// getHistoryValue retrieves a previous result by offset.
+// offset 0 means the most recent result (previous line),
+// offset 1 means the result before that, etc.
+func (r *REPL) getHistoryValue(offset int) (evaluator.Value, error) {
+	// Calculate the line ID to retrieve
+	targetID := r.nextID - 1 - offset
+	
+	if targetID < 1 {
+		return evaluator.NewError(""), fmt.Errorf("no previous result at offset %d", offset)
+	}
+	
+	line, ok := r.lines[targetID]
+	if !ok {
+		return evaluator.NewError(""), fmt.Errorf("no result found for prev~%d", offset)
+	}
+	
+	// Return the result of that line
+	return line.Result, nil
 }

@@ -996,6 +996,34 @@ func (p *Parser) parsePrimary() (Expr, error) {
 
 		return &DateExpr{Date: parsedDate}, nil
 
+	case lexer.TokenPrev:
+		// Parse prev, prev~, prev~1, prev~5, etc.
+		literal := tok.Literal
+		p.advance()
+		
+		// Default offset is 0 (just "prev")
+		offset := 0
+		
+		// Check if the literal contains '~'
+		if strings.Contains(literal, "~") {
+			parts := strings.Split(literal, "~")
+			if len(parts) == 2 {
+				if parts[1] == "" {
+					// "prev~" means offset 1
+					offset = 1
+				} else {
+					// "prev~N" means offset N
+					val, err := strconv.Atoi(parts[1])
+					if err != nil {
+						return nil, fmt.Errorf("invalid prev offset: %s", parts[1])
+					}
+					offset = val
+				}
+			}
+		}
+		
+		return &PrevExpr{Offset: offset}, nil
+
 	default:
 		return nil, fmt.Errorf("unexpected token: %s", tok.Type)
 	}
