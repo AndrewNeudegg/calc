@@ -56,6 +56,7 @@ const (
 	TokenYesterday
 	TokenNext
 	TokenLast
+	TokenPrev
 	TokenMonday
 	TokenTuesday
 	TokenWednesday
@@ -186,6 +187,8 @@ func (t TokenType) String() string {
 		return "next"
 	case TokenLast:
 		return "last"
+	case TokenPrev:
+		return "prev"
 	case TokenMonday:
 		return "monday"
 	case TokenTuesday:

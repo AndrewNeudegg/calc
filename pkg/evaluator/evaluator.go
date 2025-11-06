@@ -14,10 +14,11 @@ import (
 
 // Environment stores variables and state.
 type Environment struct {
-	variables map[string]Value
-	units     *units.System
-	currency  *currency.System
-	timezone  *timezone.System
+	variables   map[string]Value
+	units       *units.System
+	currency    *currency.System
+	timezone    *timezone.System
+	historyFunc func(offset int) (Value, error) // Function to get previous results
 }
 
 // NewEnvironment creates a new evaluation environment.
@@ -28,6 +29,11 @@ func NewEnvironment() *Environment {
 		currency:  currency.NewSystem(),
 		timezone:  timezone.NewSystem(),
 	}
+}
+
+// SetHistoryFunc sets the function to retrieve previous results.
+func (e *Environment) SetHistoryFunc(f func(offset int) (Value, error)) {
+	e.historyFunc = f
 }
 
 // Evaluator evaluates expressions.
@@ -118,6 +124,9 @@ func (e *Evaluator) Eval(expr parser.Expr) Value {
 
 	case *parser.RateExpr:
 		return e.evalRate(node)
+
+	case *parser.PrevExpr:
+		return e.evalPrev(node)
 
 	default:
 		return NewError(fmt.Sprintf("unknown expression type: %T", expr))
@@ -991,4 +1000,17 @@ func (e *Evaluator) evalRate(node *parser.RateExpr) Value {
 	compoundUnit := num.Unit + "/" + den.Unit
 
 	return NewUnit(rateValue, compoundUnit)
+}
+
+func (e *Evaluator) evalPrev(node *parser.PrevExpr) Value {
+	if e.env.historyFunc == nil {
+		return NewError("prev is only available in REPL mode")
+	}
+	
+	val, err := e.env.historyFunc(node.Offset)
+	if err != nil {
+		return NewError(err.Error())
+	}
+	
+	return val
 }

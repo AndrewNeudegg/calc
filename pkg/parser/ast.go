@@ -163,6 +163,11 @@ type MonthExpr struct {
 	Month string // month name
 }
 
+// PrevExpr represents a reference to a previous REPL result (e.g., "prev", "prev~1", "prev~5").
+type PrevExpr struct {
+	Offset int // 0 for "prev", 1 for "prev~" or "prev~1", 5 for "prev~5", etc.
+}
+
 // Implement node() for all types
 func (*NumberExpr) node()         {}
 func (*BinaryExpr) node()         {}
@@ -189,6 +194,7 @@ func (*TimeInLocationExpr) node() {}
 func (*TimeDifferenceExpr) node() {}
 func (*TimeConversionExpr) node() {}
 func (*MonthExpr) node()          {}
+func (*PrevExpr) node()           {}
 
 // Implement expr() for expression types
 func (*NumberExpr) expr()         {}
@@ -216,3 +222,4 @@ func (*WeekdayExpr) expr()        {}
 func (*TimeInLocationExpr) expr() {}
 func (*TimeDifferenceExpr) expr() {}
 func (*TimeConversionExpr) expr() {}
+func (*PrevExpr) expr()           {}
