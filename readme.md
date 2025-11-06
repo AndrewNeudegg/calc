@@ -433,15 +433,6 @@ Run with:
 ./calc -f examples/shopping-list.calc --arg family_members=4 --arg nights=7 --arg price_per_meal=8.50
 ```
 
-### Comments
-
-Use `//` for line comments. Everything after `//` on a line is ignored:
-
-```
-x = 10 // hourly rate
-rate = 2.5 // per hour
-```
-
 ## Supported Units
 
 ### Length

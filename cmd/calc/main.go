@@ -171,6 +171,20 @@ func loadArgsFromFile(path string) (map[string]string, error) {
 	return args, nil
 }
 
+// parseLineToExpr parses a line of input into an AST expression
+func parseLineToExpr(input string) (parser.Expr, error) {
+	lex := lexer.New(input)
+	tokens := lex.AllTokens()
+	if len(tokens) > 0 && tokens[len(tokens)-1].Type == lexer.TokenEOF {
+		tokens = tokens[:len(tokens)-1]
+	}
+	if len(tokens) == 0 {
+		return nil, nil
+	}
+	p := parser.New(tokens)
+	return p.Parse()
+}
+
 // executeFile runs a .calc script file line-by-line, printing results to stdout.
 // Commands (lines starting with :) are executed and their messages printed; comment-only lines are ignored.
 func executeFile(path string, providedArgs map[string]string) error {
@@ -201,18 +215,8 @@ func executeFile(path string, providedArgs map[string]string) error {
 		}
 		
 		// Parse to check if it's an :arg directive
-		lex := lexer.New(input)
-		tokens := lex.AllTokens()
-		if len(tokens) > 0 && tokens[len(tokens)-1].Type == lexer.TokenEOF {
-			tokens = tokens[:len(tokens)-1]
-		}
-		if len(tokens) == 0 {
-			continue
-		}
-		
-		p := parser.New(tokens)
-		expr, parseErr := p.Parse()
-		if parseErr != nil {
+		expr, parseErr := parseLineToExpr(input)
+		if parseErr != nil || expr == nil {
 			continue
 		}
 		
@@ -257,18 +261,8 @@ func executeFile(path string, providedArgs map[string]string) error {
 		}
 		
 		// Parse to check if it's an :arg directive (skip execution)
-		lex := lexer.New(input)
-		tokens := lex.AllTokens()
-		if len(tokens) > 0 && tokens[len(tokens)-1].Type == lexer.TokenEOF {
-			tokens = tokens[:len(tokens)-1]
-		}
-		if len(tokens) == 0 {
-			continue
-		}
-		
-		p := parser.New(tokens)
-		expr, parseErr := p.Parse()
-		if parseErr == nil {
+		expr, parseErr := parseLineToExpr(input)
+		if parseErr == nil && expr != nil {
 			if _, ok := expr.(*parser.ArgDirectiveExpr); ok {
 				// Skip :arg directives in execution phase
 				continue
@@ -295,16 +289,12 @@ func executeFile(path string, providedArgs map[string]string) error {
 // setArgVariable parses a string value and sets it as a variable in the REPL environment
 func setArgVariable(repl *display.REPL, name, value string) error {
 	// Parse the value through lexer/parser to support units, currency, expressions, etc.
-	lex := lexer.New(value)
-	tokens := lex.AllTokens()
-	if len(tokens) > 0 && tokens[len(tokens)-1].Type == lexer.TokenEOF {
-		tokens = tokens[:len(tokens)-1]
-	}
-	
-	p := parser.New(tokens)
-	expr, err := p.Parse()
+	expr, err := parseLineToExpr(value)
 	if err != nil {
 		return err
+	}
+	if expr == nil {
+		return fmt.Errorf("empty expression")
 	}
 	
 	// Evaluate the expression
