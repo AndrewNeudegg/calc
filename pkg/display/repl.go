@@ -369,6 +369,11 @@ func (r *REPL) IsQuiet() bool {
 	return r.quiet
 }
 
+// Env returns the evaluator environment, allowing access to variables and evaluation.
+func (r *REPL) Env() *evaluator.Environment {
+	return r.env
+}
+
 // getHistoryValue retrieves a previous result by offset.
 // offset 0 means the most recent result (previous line),
 // offset 1 means the result before that, etc.

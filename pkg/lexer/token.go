@@ -46,6 +46,7 @@ const (
 	TokenTwice
 	TokenQuarters
 	TokenThree
+	TokenArg
 	TokenAfter
 	TokenBefore
 	TokenFrom
@@ -167,6 +168,8 @@ func (t TokenType) String() string {
 		return "quarters"
 	case TokenThree:
 		return "three"
+	case TokenArg:
+		return "arg"
 	case TokenAfter:
 		return "after"
 	case TokenBefore:

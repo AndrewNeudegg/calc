@@ -174,12 +174,17 @@ func (p *Parser) parseExpression() (Expr, error) {
 func (p *Parser) parseCommand() (Expr, error) {
 	p.advance() // skip ':'
 
-	if p.current().Type != lexer.TokenIdent {
+	if p.current().Type != lexer.TokenIdent && p.current().Type != lexer.TokenArg {
 		return nil, fmt.Errorf("expected command name")
 	}
 
 	command := p.current().Literal
 	p.advance()
+
+	// Special handling for :arg directive
+	if command == "arg" {
+		return p.parseArgDirective()
+	}
 
 	// Reconstruct the remainder of the line into a raw tail string while
 	// preserving filename/path punctuation like '.', '/', and '-' by gluing
@@ -217,6 +222,51 @@ func (p *Parser) parseCommand() (Expr, error) {
 		Command: command,
 		Args:    args,
 	}, nil
+}
+
+// parseArgDirective parses ":arg var_name "prompt text"" directives.
+func (p *Parser) parseArgDirective() (Expr, error) {
+	// Expect variable name (can be an identifier or a keyword used as variable name)
+	if p.current().Type != lexer.TokenIdent && !p.isKeywordToken(p.current().Type) {
+		return nil, fmt.Errorf("expected variable name after :arg")
+	}
+	
+	varName := p.current().Literal
+	p.advance()
+
+	// Optional prompt string
+	var prompt string
+	if p.current().Type == lexer.TokenString {
+		prompt = p.current().Literal
+		p.advance()
+	}
+
+	return &ArgDirectiveExpr{
+		Name:   varName,
+		Prompt: prompt,
+	}, nil
+}
+
+// isKeywordToken checks if a token type is a keyword
+func (p *Parser) isKeywordToken(t lexer.TokenType) bool {
+	switch t {
+	case lexer.TokenIn, lexer.TokenOf, lexer.TokenPer, lexer.TokenBy,
+		lexer.TokenWhat, lexer.TokenIs, lexer.TokenIncrease, lexer.TokenDecrease,
+		lexer.TokenSum, lexer.TokenAverage, lexer.TokenMean, lexer.TokenTotal,
+		lexer.TokenHalf, lexer.TokenDouble, lexer.TokenTwice, lexer.TokenQuarters,
+		lexer.TokenThree, lexer.TokenArg, lexer.TokenAfter, lexer.TokenBefore,
+		lexer.TokenFrom, lexer.TokenAgo, lexer.TokenNow, lexer.TokenToday,
+		lexer.TokenTomorrow, lexer.TokenYesterday, lexer.TokenNext, lexer.TokenLast,
+		lexer.TokenPrev, lexer.TokenTime, lexer.TokenMonday, lexer.TokenTuesday,
+		lexer.TokenWednesday, lexer.TokenThursday, lexer.TokenFriday, lexer.TokenSaturday,
+		lexer.TokenSunday, lexer.TokenJanuary, lexer.TokenFebruary, lexer.TokenMarch,
+		lexer.TokenApril, lexer.TokenMay, lexer.TokenJune, lexer.TokenJuly,
+		lexer.TokenAugust, lexer.TokenSeptember, lexer.TokenOctober, lexer.TokenNovember,
+		lexer.TokenDecember:
+		return true
+	default:
+		return false
+	}
 }
 
 // utf8DecLastRune returns the last rune written in a strings.Builder and a bool indicating success.

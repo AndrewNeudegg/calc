@@ -1,0 +1,39 @@
+// Shopping List Calculator - Plan your grocery budget for family dinners
+// This script demonstrates the :arg directive for parameterized calculations
+
+:set precision 2
+:quiet on
+
+:arg family_members "How many family members?"
+:arg nights "How many nights are you cooking dinner?"
+:arg price_per_meal "What's the average cost per meal per person (in dollars)?"
+
+// Calculate total cost
+total_meals = family_members * nights
+total_cost_usd = total_meals * price_per_meal usd
+
+// Add 15% for snacks and extras
+with_extras = increase total_cost_usd by 15%
+
+// Convert to different currencies for comparison
+total_gbp = with_extras in gbp
+total_eur = with_extras in eur
+
+// Calculate per-person budget
+per_person = with_extras / family_members
+per_night = with_extras / nights
+
+// Output results
+print("=== Shopping List Budget ===")
+print("Family members: {family_members}")
+print("Nights cooking: {nights}")
+print("Total meals: {total_meals}")
+print("")
+print("Base cost: {total_cost_usd}")
+print("With extras (15%): {with_extras}")
+print("")
+print("In GBP: {total_gbp}")
+print("In EUR: {total_eur}")
+print("")
+print("Per person budget: {per_person}")
+print("Per night budget: {per_night}")

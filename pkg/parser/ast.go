@@ -169,6 +169,12 @@ type PrevExpr struct {
 	Absolute bool // true for "prev#N" (absolute line number), false for "prev~N" (relative offset)
 }
 
+// ArgDirectiveExpr represents an argument directive like ":arg var_name "prompt text"".
+type ArgDirectiveExpr struct {
+	Name   string // variable name
+	Prompt string // prompt text (optional)
+}
+
 // Implement node() for all types
 func (*NumberExpr) node()         {}
 func (*BinaryExpr) node()         {}
@@ -196,6 +202,7 @@ func (*TimeDifferenceExpr) node() {}
 func (*TimeConversionExpr) node() {}
 func (*MonthExpr) node()          {}
 func (*PrevExpr) node()           {}
+func (*ArgDirectiveExpr) node()   {}
 
 // Implement expr() for expression types
 func (*NumberExpr) expr()         {}
@@ -224,3 +231,4 @@ func (*TimeInLocationExpr) expr() {}
 func (*TimeDifferenceExpr) expr() {}
 func (*TimeConversionExpr) expr() {}
 func (*PrevExpr) expr()           {}
+func (*ArgDirectiveExpr) expr()   {}
