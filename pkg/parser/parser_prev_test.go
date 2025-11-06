@@ -116,3 +116,43 @@ func TestParser_PrevInExpressions(t *testing.T) {
 		})
 	}
 }
+
+func TestParser_PrevValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectError bool
+	}{
+		{
+			name:        "prev~0 is valid",
+			input:       "prev~0",
+			expectError: false,
+		},
+		{
+			name:        "prev~100 is valid",
+			input:       "prev~100",
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			tokens := l.AllTokens()
+			// Remove EOF token
+			if len(tokens) > 0 && tokens[len(tokens)-1].Type == lexer.TokenEOF {
+				tokens = tokens[:len(tokens)-1]
+			}
+
+			p := New(tokens)
+			_, err := p.Parse()
+			
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		})
+	}
+}

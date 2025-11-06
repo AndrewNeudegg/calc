@@ -374,12 +374,12 @@ func (r *REPL) getHistoryValue(offset int) (evaluator.Value, error) {
 	targetID := r.nextID - 1 - offset
 	
 	if targetID < 1 {
-		return evaluator.NewError(""), fmt.Errorf("no previous result at offset %d", offset)
+		return evaluator.Value{}, fmt.Errorf("no previous result at offset %d", offset)
 	}
 	
 	line, ok := r.lines[targetID]
 	if !ok {
-		return evaluator.NewError(""), fmt.Errorf("no result found for prev~%d", offset)
+		return evaluator.Value{}, fmt.Errorf("no result found for prev~%d", offset)
 	}
 	
 	// Return the result of that line

@@ -1007,18 +1007,22 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		// Check if the literal contains '~'
 		if strings.Contains(literal, "~") {
 			parts := strings.Split(literal, "~")
-			if len(parts) == 2 {
-				if parts[1] == "" {
-					// "prev~" means offset 1
-					offset = 1
-				} else {
-					// "prev~N" means offset N
-					val, err := strconv.Atoi(parts[1])
-					if err != nil {
-						return nil, fmt.Errorf("invalid prev offset: %s", parts[1])
-					}
-					offset = val
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid prev syntax: %s (expected 'prev~N')", literal)
+			}
+			if parts[1] == "" {
+				// "prev~" means offset 1
+				offset = 1
+			} else {
+				// "prev~N" means offset N
+				val, err := strconv.Atoi(parts[1])
+				if err != nil {
+					return nil, fmt.Errorf("invalid prev offset: %s", parts[1])
 				}
+				if val < 0 {
+					return nil, fmt.Errorf("prev offset must be non-negative, got: %d", val)
+				}
+				offset = val
 			}
 		}
 		
