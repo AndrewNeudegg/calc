@@ -153,9 +153,9 @@ func (p *Parser) parseExpression() (Expr, error) {
 	}
 
 	// Check for assignment (allow keywords and units as variable names)
-	if (p.current().Type == lexer.TokenIdent || 
-		p.isKeywordToken(p.current().Type) || 
-		p.current().Type == lexer.TokenUnit) && 
+	if (p.current().Type == lexer.TokenIdent ||
+		p.isKeywordToken(p.current().Type) ||
+		p.current().Type == lexer.TokenUnit) &&
 		p.peek(1).Type == lexer.TokenEquals {
 		return p.parseAssignment()
 	}
@@ -230,12 +230,12 @@ func (p *Parser) parseCommand() (Expr, error) {
 // parseArgDirective parses ":arg var_name "prompt text"" directives.
 func (p *Parser) parseArgDirective() (Expr, error) {
 	// Expect variable name (can be an identifier, a keyword, or a unit token used as variable name)
-	if p.current().Type != lexer.TokenIdent && 
-		!p.isKeywordToken(p.current().Type) && 
+	if p.current().Type != lexer.TokenIdent &&
+		!p.isKeywordToken(p.current().Type) &&
 		p.current().Type != lexer.TokenUnit {
 		return nil, fmt.Errorf("expected variable name after :arg")
 	}
-	
+
 	varName := p.current().Literal
 	p.advance()
 
@@ -255,8 +255,24 @@ func (p *Parser) parseArgDirective() (Expr, error) {
 // isKeywordToken checks if a token type is a keyword that can be used as a variable name or identifier.
 // Not all keywords are included—only those allowed in this context.
 func (p *Parser) isKeywordToken(t lexer.TokenType) bool {
-	_, ok := lexer.KeywordTokens[t]
-	return ok
+	switch t {
+	case lexer.TokenIn, lexer.TokenOf, lexer.TokenPer, lexer.TokenBy,
+		lexer.TokenWhat, lexer.TokenIs, lexer.TokenIncrease, lexer.TokenDecrease,
+		lexer.TokenSum, lexer.TokenAverage, lexer.TokenMean, lexer.TokenTotal,
+		lexer.TokenHalf, lexer.TokenDouble, lexer.TokenTwice, lexer.TokenQuarters,
+		lexer.TokenThree, lexer.TokenArg, lexer.TokenAfter, lexer.TokenBefore,
+		lexer.TokenFrom, lexer.TokenAgo, lexer.TokenNow, lexer.TokenToday,
+		lexer.TokenTomorrow, lexer.TokenYesterday, lexer.TokenNext, lexer.TokenLast,
+		lexer.TokenPrev, lexer.TokenTime, lexer.TokenMonday, lexer.TokenTuesday,
+		lexer.TokenWednesday, lexer.TokenThursday, lexer.TokenFriday, lexer.TokenSaturday,
+		lexer.TokenSunday, lexer.TokenJanuary, lexer.TokenFebruary, lexer.TokenMarch,
+		lexer.TokenApril, lexer.TokenMay, lexer.TokenJune, lexer.TokenJuly,
+		lexer.TokenAugust, lexer.TokenSeptember, lexer.TokenOctober, lexer.TokenNovember,
+		lexer.TokenDecember:
+		return true
+	default:
+		return false
+	}
 }
 
 // utf8DecLastRune returns the last rune written in a strings.Builder and a bool indicating success.
@@ -1042,11 +1058,11 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		// Parse prev, prev~, prev~1, prev~5, prev#15, etc.
 		literal := tok.Literal
 		p.advance()
-		
+
 		// Default offset is 0 (just "prev"), relative mode
 		offset := 0
 		absolute := false
-		
+
 		// Check if the literal contains '~' (relative offset)
 		if strings.Contains(literal, "~") {
 			parts := strings.Split(literal, "~")
@@ -1088,7 +1104,7 @@ func (p *Parser) parsePrimary() (Expr, error) {
 			offset = val
 			absolute = true
 		}
-		
+
 		return &PrevExpr{Offset: offset, Absolute: absolute}, nil
 
 	default:
