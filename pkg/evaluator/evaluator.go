@@ -14,11 +14,12 @@ import (
 
 // Environment stores variables and state.
 type Environment struct {
-	variables   map[string]Value
-	units       *units.System
-	currency    *currency.System
-	timezone    *timezone.System
-	historyFunc func(offset int) (Value, error) // Function to get previous results
+	variables         map[string]Value
+	units             *units.System
+	currency          *currency.System
+	timezone          *timezone.System
+	historyFunc       func(offset int) (Value, error)       // Function to get previous results by relative offset
+	absoluteHistoryFunc func(lineID int) (Value, error)     // Function to get result by absolute line ID
 }
 
 // NewEnvironment creates a new evaluation environment.
@@ -34,6 +35,11 @@ func NewEnvironment() *Environment {
 // SetHistoryFunc sets the function to retrieve previous results.
 func (e *Environment) SetHistoryFunc(f func(offset int) (Value, error)) {
 	e.historyFunc = f
+}
+
+// SetAbsoluteHistoryFunc sets the function to retrieve results by absolute line ID.
+func (e *Environment) SetAbsoluteHistoryFunc(f func(lineID int) (Value, error)) {
+	e.absoluteHistoryFunc = f
 }
 
 // Evaluator evaluates expressions.
@@ -1003,14 +1009,29 @@ func (e *Evaluator) evalRate(node *parser.RateExpr) Value {
 }
 
 func (e *Evaluator) evalPrev(node *parser.PrevExpr) Value {
-	if e.env.historyFunc == nil {
-		return NewError("prev is only available in REPL mode")
+	if node.Absolute {
+		// Absolute position: prev#N
+		if e.env.absoluteHistoryFunc == nil {
+			return NewError("prev is only available in REPL mode")
+		}
+		
+		val, err := e.env.absoluteHistoryFunc(node.Offset)
+		if err != nil {
+			return NewError(err.Error())
+		}
+		
+		return val
+	} else {
+		// Relative offset: prev, prev~N
+		if e.env.historyFunc == nil {
+			return NewError("prev is only available in REPL mode")
+		}
+		
+		val, err := e.env.historyFunc(node.Offset)
+		if err != nil {
+			return NewError(err.Error())
+		}
+		
+		return val
 	}
-	
-	val, err := e.env.historyFunc(node.Offset)
-	if err != nil {
-		return NewError(err.Error())
-	}
-	
-	return val
 }

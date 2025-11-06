@@ -400,9 +400,9 @@ func (l *Lexer) scanIdentifier() Token {
 	literal := l.input[start:l.pos]
 	lowerLiteral := strings.ToLower(literal)
 
-	// Special handling for 'prev' - check if followed by '~' and optional number
-	if lowerLiteral == "prev" && l.pos < len(l.input) && l.input[l.pos] == '~' {
-		// Include the ~ in the literal
+	// Special handling for 'prev' - check if followed by '~' or '#' and optional number
+	if lowerLiteral == "prev" && l.pos < len(l.input) && (l.input[l.pos] == '~' || l.input[l.pos] == '#') {
+		// Include the ~ or # in the literal
 		l.pos++
 		l.column++
 		

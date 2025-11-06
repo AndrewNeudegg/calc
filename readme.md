@@ -13,7 +13,7 @@ Terminal calculator with units, currency conversion, and natural language expres
 - Natural language phrases ("half of", "double", etc.)
 - Built-in functions (sum, average, mean)
 - REPL with command mode, syntax highlighting, and themes
-- Reference previous results with `prev`, `prev~1`, `prev~N` keywords
+- Reference previous results with `prev`, `prev~N` (relative), and `prev#N` (absolute line number) keywords
 - Line comments with // (ignored by the lexer)
 - Save/load workspace files from the REPL
 
@@ -218,8 +218,9 @@ Reference the output of previous REPL commands using the `prev` keyword:
 | Keyword | Description | Example |
 |---------|-------------|---------|
 | `prev` | Most recent result | `5 * 5` → `25.00`<br>`10 + prev` → `35.00` |
-| `prev~` or `prev~1` | Result before last | `10` → `10.00`<br>`20` → `20.00`<br>`prev~1` → `10.00` |
-| `prev~N` | Result N steps back | `prev~5` references the result 5 commands ago |
+| `prev~` or `prev~1` | Result before last (relative) | `10` → `10.00`<br>`20` → `20.00`<br>`prev~1` → `10.00` |
+| `prev~N` | Result N steps back (relative) | `prev~5` references the result 5 commands ago |
+| `prev#N` | Result at line N (absolute) | `prev#15` references the result at line 15 |
 
 Examples:
 ```
@@ -240,11 +241,43 @@ Examples:
 
 6> prev~2
    = 35.00
+
+7> prev#1
+   = 25.00
+```
+
+Using absolute line references:
+```
+9> 10
+   = 10.00
+
+10> 11
+   = 11.00
+
+11> 12
+   = 12.00
+
+12> 13
+   = 13.00
+
+13> prev~3
+   = 10.00
+
+14> prev~4 + 10
+   = 20.00
+
+15> prev~4 * 10
+   = 110.00
+
+16> prev#15 * 42
+   = 4,620.00
 ```
 
 Notes:
 - `prev` references work with all value types (numbers, currency, units, dates, etc.)
-- You can use multiple `prev` references in a single expression: `prev + prev~1`
+- You can use multiple `prev` references in a single expression: `prev + prev~1` or `prev#15 + prev~2`
+- `prev~N` uses relative offsets (N steps back from current line)
+- `prev#N` uses absolute line numbers (references line N exactly)
 - Attempting to reference a non-existent result (e.g., `prev` on the first line) will produce an error
 - `prev` is only available in REPL mode, not in single-calculation mode (`-c`) or file execution mode (`-f`)
 

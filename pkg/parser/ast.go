@@ -163,9 +163,10 @@ type MonthExpr struct {
 	Month string // month name
 }
 
-// PrevExpr represents a reference to a previous REPL result (e.g., "prev", "prev~1", "prev~5").
+// PrevExpr represents a reference to a previous REPL result (e.g., "prev", "prev~1", "prev~5", "prev#15").
 type PrevExpr struct {
-	Offset int // 0 for "prev", 1 for "prev~" or "prev~1", 5 for "prev~5", etc.
+	Offset   int  // 0 for "prev", 1 for "prev~" or "prev~1", 5 for "prev~5", etc.
+	Absolute bool // true for "prev#N" (absolute line number), false for "prev~N" (relative offset)
 }
 
 // Implement node() for all types
