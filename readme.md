@@ -13,6 +13,7 @@ Terminal calculator with units, currency conversion, and natural language expres
 - Natural language phrases ("half of", "double", etc.)
 - Built-in functions (sum, average, mean)
 - REPL with command mode, syntax highlighting, and themes
+- Reference previous results with `prev`, `prev~1`, `prev~N` keywords
 - Line comments with // (ignored by the lexer)
 - Save/load workspace files from the REPL
 
@@ -209,6 +210,43 @@ Notes:
 | `next month` | Today + 30 days |
 
 Also supported in date arithmetic: smaller units including hours, minutes, and seconds (e.g., `today + 3 days + 2 hours`).
+
+### Previous Result Keywords
+
+Reference the output of previous REPL commands using the `prev` keyword:
+
+| Keyword | Description | Example |
+|---------|-------------|---------|
+| `prev` | Most recent result | `5 * 5` → `25.00`<br>`10 + prev` → `35.00` |
+| `prev~` or `prev~1` | Result before last | `10` → `10.00`<br>`20` → `20.00`<br>`prev~1` → `10.00` |
+| `prev~N` | Result N steps back | `prev~5` references the result 5 commands ago |
+
+Examples:
+```
+1> 5 * 5
+   = 25.00
+
+2> 10 + prev
+   = 35.00
+
+3> T = 30 / 5
+   = 6.00
+
+4> T
+   = 6.00
+
+5> prev
+   = 6.00
+
+6> prev~2
+   = 35.00
+```
+
+Notes:
+- `prev` references work with all value types (numbers, currency, units, dates, etc.)
+- You can use multiple `prev` references in a single expression: `prev + prev~1`
+- Attempting to reference a non-existent result (e.g., `prev` on the first line) will produce an error
+- `prev` is only available in REPL mode, not in single-calculation mode (`-c`) or file execution mode (`-f`)
 
 ### REPL Commands
 
