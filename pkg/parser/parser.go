@@ -106,8 +106,8 @@ func (p *Parser) normalizeNumber(s string) string {
 				// US decimal format (e.g., 100.50)
 				return s
 			} else if digitsAfterPeriod == 3 {
-				// Ambiguous - could be either 100.000 (European) or 100.000 (US with 3 decimals)
-				// Default to European thousands separator for this case
+				// Edge case: 100.000 could be European thousands (100k) or US with 3 decimals
+				// We default to European thousands separator for consistency with common usage
 				return strings.ReplaceAll(s, ".", "")
 			}
 			// US decimal format

@@ -255,7 +255,7 @@ func (l *Lexer) scanNumber() Token {
 	start := l.pos
 	startCol := l.column
 
-	// Scan initial integer part
+	// Scan number including any thousand separators (commas/periods) and decimal points
 	for l.pos < len(l.input) && unicode.IsDigit(rune(l.input[l.pos])) {
 		l.pos++
 		l.column++

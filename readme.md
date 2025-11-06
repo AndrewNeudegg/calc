@@ -139,8 +139,6 @@ Examples:
 
 The calculator automatically detects which format you're using based on the position of commas and periods.
 
-**Note:** "pound" and "pounds" refer to weight (lb). Use "gbp" or "£" for currency.
-
 ### Time Format
 
 Times in `HH:MM` format are recognized automatically:
