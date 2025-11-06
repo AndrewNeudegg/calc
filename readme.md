@@ -110,6 +110,35 @@ Supported: USD ($), GBP (£), EUR (€), JPY (¥), and many more codes including
 
 **Note:** "pound" and "pounds" refer to weight (lb). Use "gbp" or "£" for currency.
 
+### Number Formats
+
+Both US and European number formats are automatically recognized and supported:
+
+| Format | Description | Example Input | Parsed Value |
+|--------|-------------|---------------|--------------|
+| US Format | Comma as thousand separator, period as decimal | `1,234.56` | 1234.56 |
+| European Format | Period as thousand separator, comma as decimal | `1.234,56` | 1234.56 |
+| Large numbers | Multiple thousand separators | `12,345,678.90` | 12345678.90 |
+| Currency with format | Works with all currency symbols | `$55,101.10` | $55,101.10 |
+| European currency | European format with Euro | `€65.342,10` | €65,342.10 |
+
+Examples:
+```
+1> $31,432
+   = $31,432.00
+
+2> half of $31,432
+   = $15,716.00
+
+3> €65.342,10
+   = €65,342.10
+
+4> 1,500,000 + 500,000
+   = 2,000,000.00
+```
+
+The calculator automatically detects which format you're using based on the position of commas and periods.
+
 ### Time Format
 
 Times in `HH:MM` format are recognized automatically:

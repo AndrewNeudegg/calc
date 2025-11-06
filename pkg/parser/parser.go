@@ -80,6 +80,72 @@ func (p *Parser) isCurrencyCode(unit string) bool {
 	}
 }
 
+// normalizeNumber converts a number string with thousand separators to a valid float string.
+// It handles both US format (1,234.56) and European format (1.234,56).
+func (p *Parser) normalizeNumber(s string) string {
+	// If there are no commas or periods, return as-is
+	if !strings.Contains(s, ",") && !strings.Contains(s, ".") {
+		return s
+	}
+
+	// Count commas and periods
+	commaCount := strings.Count(s, ",")
+	periodCount := strings.Count(s, ".")
+
+	// Determine the format based on which separator appears last
+	lastComma := strings.LastIndex(s, ",")
+	lastPeriod := strings.LastIndex(s, ".")
+
+	if commaCount == 0 && periodCount > 0 {
+		// Only periods
+		if periodCount == 1 {
+			// Single period - check if it's a decimal or thousand separator
+			// If period is in the last 3 positions, it's likely a decimal
+			digitsAfterPeriod := len(s) - lastPeriod - 1
+			if digitsAfterPeriod <= 2 && digitsAfterPeriod > 0 {
+				// US decimal format (e.g., 100.50)
+				return s
+			} else if digitsAfterPeriod == 3 {
+				// Edge case: 100.000 could be European thousands (100k) or US with 3 decimals
+				// We default to European thousands separator for consistency with common usage
+				return strings.ReplaceAll(s, ".", "")
+			}
+			// US decimal format
+			return s
+		}
+		// Multiple periods - European thousands separator
+		return strings.ReplaceAll(s, ".", "")
+	}
+
+	if periodCount == 0 && commaCount > 0 {
+		// Only commas
+		if commaCount == 1 {
+			// Single comma - check position
+			digitsAfterComma := len(s) - lastComma - 1
+			if digitsAfterComma <= 2 && digitsAfterComma > 0 {
+				// European decimal (e.g., 1234,56)
+				return strings.ReplaceAll(s, ",", ".")
+			}
+			// US thousands separator (e.g., 1,234)
+			return strings.ReplaceAll(s, ",", "")
+		}
+		// Multiple commas - US thousands separator
+		return strings.ReplaceAll(s, ",", "")
+	}
+
+	// Both commas and periods present
+	if lastComma > lastPeriod {
+		// Comma appears after period - European format (1.234,56)
+		s = strings.ReplaceAll(s, ".", "")  // Remove thousand separators
+		s = strings.ReplaceAll(s, ",", ".") // Convert decimal separator
+		return s
+	}
+
+	// Period appears after comma - US format (1,234.56)
+	s = strings.ReplaceAll(s, ",", "") // Remove thousand separators
+	return s
+}
+
 func (p *Parser) parseExpression() (Expr, error) {
 	// Check for command
 	if p.current().Type == lexer.TokenColon {
@@ -742,7 +808,8 @@ func (p *Parser) parsePrimary() (Expr, error) {
 
 	switch tok.Type {
 	case lexer.TokenNumber:
-		val, err := strconv.ParseFloat(tok.Literal, 64)
+		normalized := p.normalizeNumber(tok.Literal)
+		val, err := strconv.ParseFloat(normalized, 64)
 		if err != nil {
 			return nil, fmt.Errorf("invalid number: %s", tok.Literal)
 		}
@@ -763,7 +830,8 @@ func (p *Parser) parsePrimary() (Expr, error) {
 			return nil, fmt.Errorf("expected number after currency symbol")
 		}
 
-		val, err := strconv.ParseFloat(p.current().Literal, 64)
+		normalized := p.normalizeNumber(p.current().Literal)
+		val, err := strconv.ParseFloat(normalized, 64)
 		if err != nil {
 			return nil, fmt.Errorf("invalid number: %s", p.current().Literal)
 		}

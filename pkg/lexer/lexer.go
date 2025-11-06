@@ -255,7 +255,7 @@ func (l *Lexer) scanNumber() Token {
 	start := l.pos
 	startCol := l.column
 
-	// Scan integer part
+	// Scan number including any thousand separators (commas/periods) and decimal points
 	for l.pos < len(l.input) && unicode.IsDigit(rune(l.input[l.pos])) {
 		l.pos++
 		l.column++
@@ -346,19 +346,33 @@ func (l *Lexer) scanNumber() Token {
 		}
 	}
 
-	// Check for decimal point
-	if l.pos < len(l.input) && l.input[l.pos] == '.' {
-		l.pos++
-		l.column++
-
-		// Scan fractional part
-		for l.pos < len(l.input) && unicode.IsDigit(rune(l.input[l.pos])) {
-			l.pos++
-			l.column++
+	// Scan numbers with thousand separators (commas or periods) and decimal points
+	// We need to handle both US format (1,234.56) and European format (1.234,56)
+	for l.pos < len(l.input) {
+		ch := l.input[l.pos]
+		
+		// Check for comma or period
+		if ch == ',' || ch == '.' {
+			// Look ahead to see if this is followed by digits
+			if l.pos+1 < len(l.input) && unicode.IsDigit(rune(l.input[l.pos+1])) {
+				l.pos++
+				l.column++
+				
+				// Scan the digits after the separator
+				for l.pos < len(l.input) && unicode.IsDigit(rune(l.input[l.pos])) {
+					l.pos++
+					l.column++
+				}
+			} else {
+				// Comma or period not followed by digit, stop scanning
+				break
+			}
+		} else {
+			// Not a digit, comma, or period - stop scanning
+			break
 		}
 	}
 
-	// Check for comma separators (UK/European format)
 	literal := l.input[start:l.pos]
 
 	return Token{
