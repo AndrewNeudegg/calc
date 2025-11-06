@@ -252,7 +252,8 @@ func (p *Parser) parseArgDirective() (Expr, error) {
 	}, nil
 }
 
-// isKeywordToken checks if a token type is a keyword
+// isKeywordToken checks if a token type is a keyword that can be used as a variable name or identifier.
+// Not all keywords are included—only those allowed in this context.
 func (p *Parser) isKeywordToken(t lexer.TokenType) bool {
 	switch t {
 	case lexer.TokenIn, lexer.TokenOf, lexer.TokenPer, lexer.TokenBy,
