@@ -62,7 +62,7 @@ func TestHelpOutputRendering(t *testing.T) {
 		"  :open <file>       Open a workspace file",
 		"  :help              Show this help",
 		"Available settings:",
-		"  precision <n>      Number of decimal places (default: 2)",
+		"  precision <n>         Number of decimal places (default: 2)",
 	}
 	for _, want := range wantPairs {
 		found := false

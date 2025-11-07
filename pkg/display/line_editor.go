@@ -294,14 +294,9 @@ func (e *Editor) render(w io.Writer) {
 		// Move cursor back to the correct position in the buffer
 		fmt.Fprintf(w, "\r")
 		fmt.Fprint(w, e.prompt)
-		// Print buffer content up to cursor position
+		// Print buffer content up to cursor position (without highlighting for simplicity)
 		contentUpToCursor := string(e.buf[:e.cur])
-		if e.hlFn != nil {
-			// Can't use highlighter for partial content, just print raw
-			fmt.Fprint(w, contentUpToCursor)
-		} else {
-			fmt.Fprint(w, contentUpToCursor)
-		}
+		fmt.Fprint(w, contentUpToCursor)
 	}
 }
 

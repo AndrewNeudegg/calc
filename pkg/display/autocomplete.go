@@ -247,20 +247,23 @@ func (ac *AutocompleteEngine) getCurrencies(prefix string) []Suggestion {
 	return suggestions
 }
 
+// isWordDelimiter checks if a rune is a word boundary character.
+func isWordDelimiter(r rune) bool {
+	return r == ' ' || r == '(' || r == ')' || r == ',' || r == '+' || r == '-' || r == '*' || r == '/'
+}
+
 // getLastWord extracts the last word or partial word from the input.
 func getLastWord(input string) string {
 	// If input ends with a delimiter, return empty (starting new word)
 	if len(input) > 0 {
 		lastChar := rune(input[len(input)-1])
-		if lastChar == ' ' || lastChar == '(' || lastChar == ')' || lastChar == ',' || lastChar == '+' || lastChar == '-' || lastChar == '*' || lastChar == '/' {
+		if isWordDelimiter(lastChar) {
 			return ""
 		}
 	}
 	
 	// Find the last word boundary
-	words := strings.FieldsFunc(input, func(r rune) bool {
-		return r == ' ' || r == '(' || r == ')' || r == ',' || r == '+' || r == '-' || r == '*' || r == '/'
-	})
+	words := strings.FieldsFunc(input, isWordDelimiter)
 	if len(words) == 0 {
 		return ""
 	}
