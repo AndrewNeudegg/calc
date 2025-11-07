@@ -14,11 +14,12 @@ type Editor struct {
 	buf            []rune
 	cur            int
 	hist           []string
-	hIndex         int // -1 means new entry (not on history)
+	hIndex         int // -1 means no entry (not on history)
 	hlFn           func(string) string
 	autocompleteFn func(string) []Suggestion
 	suggestions    []Suggestion
-	suggestIndex   int // Current suggestion index (-1 means no active suggestion)
+	suggestIndex   int    // Current suggestion index (-1 means no active suggestion)
+	originalBuf    []rune // Buffer state when suggestions were first generated
 }
 
 // NewEditor creates a new editor instance for a single line entry.
@@ -65,15 +66,19 @@ func (e *Editor) ReadLine(r *bufio.Reader, w io.Writer) (string, bool, bool) {
 				e.cur++
 			}
 		case 0x0b: // Ctrl-K
+			e.clearSuggestions()
 			e.buf = e.buf[:e.cur]
 		case 0x15: // Ctrl-U
+			e.clearSuggestions()
 			e.buf = e.buf[e.cur:]
 			e.cur = 0
 		case 0x17: // Ctrl-W delete word before
+			e.clearSuggestions()
 			start := e.wordLeft()
 			e.buf = append(e.buf[:start], e.buf[e.cur:]...)
 			e.cur = start
 		case 0x7f, 0x08: // Backspace / Ctrl-H
+			e.clearSuggestions()
 			if e.cur > 0 {
 				e.buf = append(e.buf[:e.cur-1], e.buf[e.cur:]...)
 				e.cur--
@@ -82,6 +87,7 @@ func (e *Editor) ReadLine(r *bufio.Reader, w io.Writer) (string, bool, bool) {
 			if len(e.buf) == 0 {
 				return "", false, true
 			}
+			e.clearSuggestions()
 			if e.cur < len(e.buf) {
 				e.buf = append(e.buf[:e.cur], e.buf[e.cur+1:]...)
 			}
@@ -119,6 +125,9 @@ func (e *Editor) ReadLine(r *bufio.Reader, w io.Writer) (string, bool, bool) {
 }
 
 func (e *Editor) insertRune(rn rune) {
+	// Clear suggestions when user types something new
+	e.clearSuggestions()
+	
 	if e.cur == len(e.buf) {
 		e.buf = append(e.buf, rn)
 	} else {
@@ -333,6 +342,10 @@ func (e *Editor) handleTab() {
 
 	// If we don't have active suggestions, get them
 	if e.suggestIndex == -1 {
+		// Save the original buffer state
+		e.originalBuf = make([]rune, len(e.buf))
+		copy(e.originalBuf, e.buf)
+		
 		e.suggestions = e.autocompleteFn(string(e.buf))
 		if len(e.suggestions) == 0 {
 			return
@@ -370,6 +383,13 @@ func (e *Editor) applySuggestion() {
 	}
 
 	suggestion := e.suggestions[e.suggestIndex]
+	
+	// Restore to original buffer state before applying new suggestion
+	if e.originalBuf != nil {
+		e.buf = make([]rune, len(e.originalBuf))
+		copy(e.buf, e.originalBuf)
+	}
+	
 	lastWord := getLastWord(string(e.buf))
 	
 	if lastWord == "" {
@@ -406,5 +426,6 @@ func (e *Editor) applySuggestion() {
 func (e *Editor) clearSuggestions() {
 	e.suggestions = nil
 	e.suggestIndex = -1
+	e.originalBuf = nil
 }
 
