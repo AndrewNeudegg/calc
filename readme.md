@@ -313,6 +313,36 @@ Settings keys for `:set`:
 - `currency <CODE>` – Default currency code (GBP, USD, EUR, JPY)
 - `locale <locale>` – Locale for formatting (default: `en_GB`)
 - `fuzzy <on|off>` – Enable/disable natural-language parsing
+- `autocomplete <on|off>` – Enable/disable autocomplete suggestions (default: on)
+
+### Autocomplete
+
+The REPL includes intelligent autocomplete to help you quickly reuse variables, commands, functions, units, and currencies:
+
+**Triggering autocomplete:**
+- Press **Tab** to see suggestions and cycle forward through them
+- Press **Shift+Tab** to cycle backward through suggestions
+- Press **Enter** or **Tab** to accept the current suggestion
+- Press **Esc** to cancel and dismiss suggestions
+
+**What gets suggested:**
+- **Commands:** Type `:` followed by letters to see matching commands (`:help`, `:save`, `:set`, etc.)
+- **Variables:** Previously defined variable names appear as you type
+- **Functions:** Built-in functions like `sum`, `average`, `mean`, `min`, `max`, `print`
+- **Units:** Common units like `km`, `kg`, `m`, `cm`, `l`, etc.
+- **Currencies:** Currency codes like `usd`, `gbp`, `eur`, `jpy`
+- **Keywords:** Date keywords (`now`, `today`, `tomorrow`) and fuzzy phrases (`half of`, `double`) when fuzzy mode is enabled
+
+**Examples:**
+```
+1> :s<Tab>       # Suggests :save and :set
+2> my<Tab>       # Suggests any variables starting with "my"
+3> su<Tab>       # Suggests sum( function
+4> 10 k<Tab>     # Suggests km, kg, and other units starting with k
+5> 50 us<Tab>    # Suggests usd currency
+```
+
+**Note:** Autocomplete can be disabled with `:set autocomplete off` if preferred.
 
 Tips:
 - Press Ctrl-C to cancel the current input line.

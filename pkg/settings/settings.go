@@ -9,22 +9,24 @@ import (
 
 // Settings holds user preferences.
 type Settings struct {
-	Precision  int    `json:"precision"`
-	DateFormat string `json:"date_format"`
-	Currency   string `json:"currency"`
-	Locale     string `json:"locale"`
-	FuzzyMode  bool   `json:"fuzzy_mode"`
-	ConfigPath string `json:"-"`
+	Precision    int    `json:"precision"`
+	DateFormat   string `json:"date_format"`
+	Currency     string `json:"currency"`
+	Locale       string `json:"locale"`
+	FuzzyMode    bool   `json:"fuzzy_mode"`
+	Autocomplete bool   `json:"autocomplete"`
+	ConfigPath   string `json:"-"`
 }
 
 // Default returns default settings.
 func Default() *Settings {
 	return &Settings{
-		Precision:  2,
-		DateFormat: "2 Jan 2006",
-		Currency:   "GBP",
-		Locale:     "en_GB",
-		FuzzyMode:  true,
+		Precision:    2,
+		DateFormat:   "2 Jan 2006",
+		Currency:     "GBP",
+		Locale:       "en_GB",
+		FuzzyMode:    true,
+		Autocomplete: true,
 	}
 }
 
@@ -84,6 +86,8 @@ func (s *Settings) Set(name, value string) error {
 		s.Locale = value
 	case "fuzzy", "fuzzy_mode":
 		s.FuzzyMode = value == "on" || value == "true" || value == "1"
+	case "autocomplete":
+		s.Autocomplete = value == "on" || value == "true" || value == "1"
 	default:
 		return fmt.Errorf("unknown setting: %s", name)
 	}
