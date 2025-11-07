@@ -277,10 +277,31 @@ func (e *Editor) render(w io.Writer) {
 		content = e.hlFn(content)
 	}
 	fmt.Fprint(w, content)
-	// Move cursor to correct position
-	tail := len(e.buf) - e.cur
-	if tail > 0 {
-		fmt.Fprintf(w, "\x1b[%dD", tail)
+	
+	// Save cursor position
+	cursorOffset := len(e.buf) - e.cur
+	
+	// Show current suggestion hint if available
+	if len(e.suggestions) > 0 && e.suggestIndex >= 0 && e.suggestIndex < len(e.suggestions) {
+		sugg := e.suggestions[e.suggestIndex]
+		// Show suggestion hint in gray after the buffer
+		fmt.Fprintf(w, " \x1b[90m[%s (%d/%d)]\x1b[0m", sugg.Display, e.suggestIndex+1, len(e.suggestions))
+	}
+	
+	// Move cursor to correct position (back from end of buffer)
+	if cursorOffset > 0 {
+		// Need to account for the suggestion hint we just printed
+		// Move cursor back to the correct position in the buffer
+		fmt.Fprintf(w, "\r")
+		fmt.Fprint(w, e.prompt)
+		// Print buffer content up to cursor position
+		contentUpToCursor := string(e.buf[:e.cur])
+		if e.hlFn != nil {
+			// Can't use highlighter for partial content, just print raw
+			fmt.Fprint(w, contentUpToCursor)
+		} else {
+			fmt.Fprint(w, contentUpToCursor)
+		}
 	}
 }
 
