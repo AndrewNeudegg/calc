@@ -256,7 +256,9 @@ func isWordDelimiter(r rune) bool {
 func getLastWord(input string) string {
 	// If input ends with a delimiter, return empty (starting new word)
 	if len(input) > 0 {
-		lastChar := rune(input[len(input)-1])
+		// Convert to runes for proper UTF-8 handling
+		runes := []rune(input)
+		lastChar := runes[len(runes)-1]
 		if isWordDelimiter(lastChar) {
 			return ""
 		}
