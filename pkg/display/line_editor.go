@@ -10,27 +10,34 @@ import (
 
 // Editor provides a minimal line editor with history and control key support.
 type Editor struct {
-	prompt string
-	buf    []rune
-	cur    int
-	hist   []string
-	hIndex int // -1 means new entry (not on history)
-	hlFn   func(string) string
+	prompt         string
+	buf            []rune
+	cur            int
+	hist           []string
+	hIndex         int // -1 means new entry (not on history)
+	hlFn           func(string) string
+	autocompleteFn func(string) []Suggestion
+	suggestions    []Suggestion
+	suggestIndex   int // Current suggestion index (-1 means no active suggestion)
 }
 
 // NewEditor creates a new editor instance for a single line entry.
 func NewEditor(prompt string, history []string) *Editor {
 	return &Editor{
-		prompt: prompt,
-		buf:    []rune{},
-		cur:    0,
-		hist:   append([]string{}, history...),
-		hIndex: -1,
+		prompt:       prompt,
+		buf:          []rune{},
+		cur:          0,
+		hist:         append([]string{}, history...),
+		hIndex:       -1,
+		suggestIndex: -1,
 	}
 }
 
 // SetHighlighter sets an optional function to colorize the buffer when rendering.
 func (e *Editor) SetHighlighter(fn func(string) string) { e.hlFn = fn }
+
+// SetAutocompleteFn sets the autocomplete function.
+func (e *Editor) SetAutocompleteFn(fn func(string) []Suggestion) { e.autocompleteFn = fn }
 
 // ReadLine reads a line using raw key processing. It returns the line, whether it was aborted (Ctrl-C), and whether EOF (Ctrl-D on empty).
 func (e *Editor) ReadLine(r *bufio.Reader, w io.Writer) (string, bool, bool) {
@@ -82,6 +89,8 @@ func (e *Editor) ReadLine(r *bufio.Reader, w io.Writer) (string, bool, bool) {
 			e.buf = e.buf[:0]
 			e.cur = 0
 			return "", true, false
+		case 0x09: // Tab - trigger autocomplete
+			e.handleTab()
 		case 0x1b: // ESC sequence
 			e.handleEscape(r)
 		default:
@@ -120,9 +129,11 @@ func (e *Editor) insertRune(rn rune) {
 
 func (e *Editor) handleEscape(r *bufio.Reader) {
 	// Look ahead for known sequences
-	// Could be: ESC [ A/B/C/D, ESC [1;5C/D, ESC b/f, ESC [3~ (Delete), ESC [H/F
+	// Could be: ESC [ A/B/C/D, ESC [1;5C/D, ESC b/f, ESC [3~ (Delete), ESC [H/F, ESC [Z (Shift+Tab)
 	seq, _ := r.Peek(1)
 	if len(seq) == 0 {
+		// Bare ESC - clear suggestions
+		e.clearSuggestions()
 		return
 	}
 	if seq[0] == '[' { // CSI
@@ -158,26 +169,35 @@ func (e *Editor) handleEscape(r *bufio.Reader) {
 func (e *Editor) handleCSI(cmd byte, param string) {
 	switch cmd {
 	case 'A': // Up
+		e.clearSuggestions()
 		e.historyPrev()
 	case 'B': // Down
+		e.clearSuggestions()
 		e.historyNext()
 	case 'C': // Right
+		e.clearSuggestions()
 		if stringsHasSuffix(param, "1;5") { // Ctrl-Right
 			e.cur = e.wordRight()
 		} else if e.cur < len(e.buf) {
 			e.cur++
 		}
 	case 'D': // Left
+		e.clearSuggestions()
 		if stringsHasSuffix(param, "1;5") { // Ctrl-Left
 			e.cur = e.wordLeft()
 		} else if e.cur > 0 {
 			e.cur--
 		}
 	case 'H': // Home
+		e.clearSuggestions()
 		e.cur = 0
 	case 'F': // End
+		e.clearSuggestions()
 		e.cur = len(e.buf)
+	case 'Z': // Shift+Tab
+		e.handleShiftTab()
 	case '~': // Delete key: ESC [3~
+		e.clearSuggestions()
 		if param == "3" {
 			if e.cur < len(e.buf) {
 				e.buf = append(e.buf[:e.cur], e.buf[e.cur+1:]...)
@@ -288,3 +308,87 @@ func stringsHasSuffix(s, suf string) bool {
 	}
 	return s[len(s)-len(suf):] == suf
 }
+
+// handleTab handles Tab key press for autocomplete.
+func (e *Editor) handleTab() {
+	if e.autocompleteFn == nil {
+		return
+	}
+
+	// If we don't have active suggestions, get them
+	if e.suggestIndex == -1 {
+		e.suggestions = e.autocompleteFn(string(e.buf))
+		if len(e.suggestions) == 0 {
+			return
+		}
+		e.suggestIndex = 0
+	} else {
+		// Cycle to next suggestion
+		e.suggestIndex = (e.suggestIndex + 1) % len(e.suggestions)
+	}
+
+	// Apply the suggestion
+	e.applySuggestion()
+}
+
+// handleShiftTab handles Shift+Tab for reverse cycling (called from handleCSI).
+func (e *Editor) handleShiftTab() {
+	if e.autocompleteFn == nil || len(e.suggestions) == 0 {
+		return
+	}
+
+	// Cycle to previous suggestion
+	e.suggestIndex--
+	if e.suggestIndex < 0 {
+		e.suggestIndex = len(e.suggestions) - 1
+	}
+
+	// Apply the suggestion
+	e.applySuggestion()
+}
+
+// applySuggestion replaces the last word with the current suggestion.
+func (e *Editor) applySuggestion() {
+	if e.suggestIndex < 0 || e.suggestIndex >= len(e.suggestions) {
+		return
+	}
+
+	suggestion := e.suggestions[e.suggestIndex]
+	lastWord := getLastWord(string(e.buf))
+	
+	if lastWord == "" {
+		// Just append the suggestion
+		for _, r := range suggestion.Text {
+			e.buf = append(e.buf, r)
+		}
+		e.cur = len(e.buf)
+		return
+	}
+
+	// Find and replace the last word
+	bufStr := string(e.buf)
+	lastIdx := -1
+	for i := len(bufStr) - len(lastWord); i >= 0; i-- {
+		if i+len(lastWord) <= len(bufStr) && bufStr[i:i+len(lastWord)] == lastWord {
+			lastIdx = i
+			break
+		}
+	}
+
+	if lastIdx >= 0 {
+		// Replace the last word
+		newBuf := []rune(bufStr[:lastIdx])
+		for _, r := range suggestion.Text {
+			newBuf = append(newBuf, r)
+		}
+		e.buf = newBuf
+		e.cur = len(e.buf)
+	}
+}
+
+// clearSuggestions clears the active suggestions.
+func (e *Editor) clearSuggestions() {
+	e.suggestions = nil
+	e.suggestIndex = -1
+}
+

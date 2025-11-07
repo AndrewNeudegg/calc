@@ -26,17 +26,18 @@ type Line struct {
 
 // REPL manages the read-eval-print loop.
 type REPL struct {
-	lines     map[int]*Line
-	nextID    int
-	env       *evaluator.Environment
-	eval      *evaluator.Evaluator
-	formatter *formatter.Formatter
-	commands  *commands.Handler
-	settings  *settings.Settings
-	depGraph  *graph.Graph
-	theme     *Theme
-	silent    bool
-	quiet     bool
+	lines        map[int]*Line
+	nextID       int
+	env          *evaluator.Environment
+	eval         *evaluator.Evaluator
+	formatter    *formatter.Formatter
+	commands     *commands.Handler
+	settings     *settings.Settings
+	depGraph     *graph.Graph
+	theme        *Theme
+	silent       bool
+	quiet        bool
+	autocomplete *AutocompleteEngine
 }
 
 // NewREPL creates a new REPL instance.
@@ -64,6 +65,9 @@ func NewREPL() *REPL {
 		depGraph:  graph.NewGraph(),
 		theme:     DefaultTheme(),
 	}
+	
+	// Initialize autocomplete engine
+	r.autocomplete = NewAutocompleteEngine(env, env.Units(), env.Currency(), sett)
 	
 	// Set up history function for prev support
 	env.SetHistoryFunc(r.getHistoryValue)
@@ -134,6 +138,10 @@ func (r *REPL) runInteractive() {
 		// Install syntax highlighter for the buffer
 		hl := NewHighlighter(r.theme)
 		ed.SetHighlighter(hl.Colorize)
+		// Install autocomplete function if enabled
+		if r.settings.Autocomplete {
+			ed.SetAutocompleteFn(r.autocomplete.GetSuggestions)
+		}
 		line, aborted, eof := ed.ReadLine(reader, os.Stdout)
 		if eof {
 			fmt.Fprintln(os.Stdout)

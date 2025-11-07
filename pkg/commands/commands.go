@@ -126,7 +126,8 @@ Available settings:
   dateformat <fmt>   Date format string (default: "2 Jan 2006")
   currency <code>    Default currency code (default: GBP)
   locale <locale>    Locale for formatting (default: en_GB)
-  fuzzy <on|off>     Enable fuzzy phrase parsing (default: on)`
+  fuzzy <on|off>     Enable fuzzy phrase parsing (default: on)
+  autocomplete <on|off> Enable autocomplete suggestions (default: on)`
 }
 
 func (h *Handler) clear() string {

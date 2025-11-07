@@ -47,6 +47,25 @@ func (e *Environment) SetVariable(name string, value Value) {
 	e.variables[name] = value
 }
 
+// GetVariableNames returns a list of all variable names in the environment.
+func (e *Environment) GetVariableNames() []string {
+	names := make([]string, 0, len(e.variables))
+	for name := range e.variables {
+		names = append(names, name)
+	}
+	return names
+}
+
+// Units returns the units system.
+func (e *Environment) Units() *units.System {
+	return e.units
+}
+
+// Currency returns the currency system.
+func (e *Environment) Currency() *currency.System {
+	return e.currency
+}
+
 // Eval evaluates an expression using this environment.
 func (e *Environment) Eval(expr parser.Expr) Value {
 	evaluator := New(e)
