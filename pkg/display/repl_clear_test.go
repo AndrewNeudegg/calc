@@ -52,3 +52,44 @@ func TestREPL_ClearCommand_ResetsSession(t *testing.T) {
 		t.Fatalf("expected undefined variable error message, got: %q", v3.Error)
 	}
 }
+
+// Test that :clear also clears autocomplete suggestions for variables.
+func TestREPL_ClearCommand_ClearsAutocompleteSuggestions(t *testing.T) {
+	// Isolate HOME so defaults are consistent
+	t.Setenv("HOME", t.TempDir())
+	r := NewREPL()
+
+	// Define some variables
+	_ = r.EvaluateLine("example1 = 55")
+	_ = r.EvaluateLine("example2 = 66")
+
+	// Verify variables are suggested before clear
+	suggestions := r.autocomplete.GetSuggestions("example")
+	if len(suggestions) == 0 {
+		t.Fatal("expected autocomplete suggestions for 'example' before clear")
+	}
+	foundExample1 := false
+	foundExample2 := false
+	for _, sugg := range suggestions {
+		if sugg.Text == "example1" && sugg.Category == "variable" {
+			foundExample1 = true
+		}
+		if sugg.Text == "example2" && sugg.Category == "variable" {
+			foundExample2 = true
+		}
+	}
+	if !foundExample1 || !foundExample2 {
+		t.Fatal("expected both example1 and example2 variables in autocomplete before clear")
+	}
+
+	// Issue :clear
+	_ = r.EvaluateLine(":clear")
+
+	// Verify variables are no longer suggested after clear
+	suggestions = r.autocomplete.GetSuggestions("example")
+	for _, sugg := range suggestions {
+		if sugg.Category == "variable" && (sugg.Text == "example1" || sugg.Text == "example2") {
+			t.Errorf("variable %q should not be in autocomplete suggestions after :clear", sugg.Text)
+		}
+	}
+}
