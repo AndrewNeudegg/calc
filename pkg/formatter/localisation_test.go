@@ -21,9 +21,9 @@ func TestLocalisationNumberFormatting(t *testing.T) {
 		{"en_GB", 1000000, 2, "1,000,000.00"},
 		{"en_GB", 42.123456, 4, "42.1235"},
 
-		// US English (same as UK for numbers)
-		{"en_US", 1234.56, 2, "1234.56"}, // Currently no thousand separator for non-GB
-		{"en_US", 1000000, 2, "1000000.00"},
+		// US English (same as UK for numbers - both use comma thousands separator)
+		{"en_US", 1234.56, 2, "1,234.56"},
+		{"en_US", 1000000, 2, "1,000,000.00"},
 
 		// French (space for thousands, comma for decimal - not yet implemented)
 		// {"fr_FR", 1234.56, 2, "1 234,56"},
@@ -65,8 +65,8 @@ func TestLocalisationCurrencyFormatting(t *testing.T) {
 		{"en_GB", 1234.56, "£", "£1,234.56"},
 		{"en_GB", 100, "£", "£100.00"},
 
-		// US English - symbol before, no comma (current implementation)
-		{"en_US", 1234.56, "$", "$1234.56"},
+		// US English - symbol before, comma separators (standard US format)
+		{"en_US", 1234.56, "$", "$1,234.56"},
 		{"en_US", 100, "$", "$100.00"},
 
 		// Euro formatting (not yet fully implemented for different locales)
@@ -174,8 +174,8 @@ func TestLocalisationUnitFormatting(t *testing.T) {
 		{"en_GB", 1234.56, "m", 2, "1,234.56 m"},
 		{"en_GB", 100, "kg", 2, "100.00 kg"},
 
-		// US English
-		{"en_US", 1234.56, "m", 2, "1234.56 m"},
+		// US English (also uses comma thousands separator)
+		{"en_US", 1234.56, "m", 2, "1,234.56 m"},
 		{"en_US", 100, "kg", 2, "100.00 kg"},
 	}
 
@@ -211,11 +211,11 @@ func TestLocalisationEdgeCases(t *testing.T) {
 		{"Zero value UK", "en_GB", 0, 2, "0.00"},
 		{"Zero value US", "en_US", 0, 2, "0.00"},
 		{"Negative UK", "en_GB", -1234.56, 2, "-1,234.56"},
-		{"Negative US", "en_US", -1234.56, 2, "-1234.56"},
+		{"Negative US", "en_US", -1234.56, 2, "-1,234.56"},
 		{"Very large UK", "en_GB", 1234567890.12, 2, "1,234,567,890.12"},
 		{"Very small UK", "en_GB", 0.000001, 6, "0.000001"},
 		{"No precision UK", "en_GB", 1234, 0, "1,234"},
-		{"No precision US", "en_US", 1234, 0, "1234"},
+		{"No precision US", "en_US", 1234, 0, "1,234"},
 	}
 
 	for _, tt := range tests {

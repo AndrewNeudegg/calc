@@ -8,8 +8,8 @@ import (
 func TestDefaultSettings(t *testing.T) {
 	s := Default()
 
-	if s.Locale != "en_GB" {
-		t.Errorf("Expected default locale en_GB, got %s", s.Locale)
+	if s.Locale != "en_US" {
+		t.Errorf("Expected default locale en_US, got %s", s.Locale)
 	}
 
 	if s.Precision != 2 {

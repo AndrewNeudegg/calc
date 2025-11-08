@@ -15,39 +15,47 @@ func TestNumberFormatting(t *testing.T) {
 		name     string
 		input    string
 		expected string
+		locale   string // Locale for parsing the input
 	}{
 		// US format (comma as thousand separator, period as decimal)
 		{
 			name:     "US format - simple thousands",
 			input:    "31,432",
 			expected: "31,432.00",
+			locale:   "en_US",
 		},
 		{
 			name:     "US format - with decimals",
 			input:    "55,101.10",
 			expected: "55,101.10",
+			locale:   "en_US",
 		},
 		{
 			name:     "US format - millions",
 			input:    "1,500,000",
 			expected: "1,500,000.00",
+			locale:   "en_US",
 		},
 		{
 			name:     "US format - large number with decimals",
 			input:    "12,345,678.90",
 			expected: "12,345,678.90",
+			locale:   "en_US",
 		},
 		
-		// European format (period as thousand separator, comma as decimal)
+		// European format input (period as thousand separator, comma as decimal)
+		// Output is always in US format for now
 		{
 			name:     "European format - with comma decimal",
 			input:    "65.342,10",
 			expected: "65,342.10",
+			locale:   "de_DE",
 		},
 		{
 			name:     "European format - multiple periods",
 			input:    "12.345.678,90",
 			expected: "12,345,678.90",
+			locale:   "de_DE",
 		},
 		
 		// Currency with formatted numbers
@@ -55,16 +63,19 @@ func TestNumberFormatting(t *testing.T) {
 			name:     "USD with thousands",
 			input:    "$31,432",
 			expected: "$31,432.00",
+			locale:   "en_US",
 		},
 		{
 			name:     "USD with thousands and decimals",
 			input:    "$55,101.10",
 			expected: "$55,101.10",
+			locale:   "en_US",
 		},
 		{
 			name:     "EUR with European format",
 			input:    "€65.342,10",
 			expected: "€65,342.10",
+			locale:   "de_DE",
 		},
 		
 		// Arithmetic with formatted numbers
@@ -72,29 +83,35 @@ func TestNumberFormatting(t *testing.T) {
 			name:     "Addition with formatted numbers",
 			input:    "1,234 + 5,678",
 			expected: "6,912.00",
+			locale:   "en_US",
 		},
 		{
 			name:     "Multiplication with formatted numbers",
 			input:    "10,000 * 2.5",
 			expected: "25,000.00",
+			locale:   "en_US",
 		},
 		{
 			name:     "Division with formatted numbers",
 			input:    "100,000 / 4",
 			expected: "25,000.00",
+			locale:   "en_US",
 		},
 	}
 
-	s := settings.Default()
-	env := evaluator.NewEnvironment()
-	e := evaluator.New(env)
-	f := formatter.New(s)
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Use US locale for output formatting (formatter always uses US format)
+			s := settings.Default()
+			s.Locale = "en_US"
+			env := evaluator.NewEnvironment()
+			e := evaluator.New(env)
+			f := formatter.New(s)
+
 			l := lexer.New(tt.input)
 			tokens := l.AllTokens()
-			p := parser.New(tokens)
+			// Use specified locale for parsing
+			p := parser.NewWithLocale(tokens, tt.locale)
 			
 			expr, err := p.Parse()
 			if err != nil {
