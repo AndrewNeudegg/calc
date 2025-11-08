@@ -520,7 +520,7 @@ func (l *Lexer) isKnownUnit(s string) bool {
 		"month": true, "months": true,
 		"quarter": true, "quarters": true,
 		"semester": true, "semesters": true,
-		"year": true, "years": true,
+		"year": true, "years": true, "y": true,
 
 		// Volume
 		"l": true, "ml": true, "litre": true, "litres": true, "liter": true, "liters": true,

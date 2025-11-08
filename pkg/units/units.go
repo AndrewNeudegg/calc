@@ -155,6 +155,7 @@ func (s *System) initStandardUnits() {
 	s.addUnit("semesters", DimensionTime, 15778800.0, "s")
 	s.addUnit("year", DimensionTime, 31557600.0, "s") // 365.25 days
 	s.addUnit("years", DimensionTime, 31557600.0, "s")
+	s.addUnit("y", DimensionTime, 31557600.0, "s") // short form for year
 	// Special time-of-day unit (stores decimal hours as HH:MM format)
 	s.addUnit("time", DimensionTime, 3600.0, "s") // time unit for HH:MM format
 

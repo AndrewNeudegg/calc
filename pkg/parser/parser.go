@@ -839,6 +839,27 @@ func (p *Parser) parsePostfix() (Expr, error) {
 		}
 	}
 
+	// Check for compound unit rate after currency expression (e.g., "$2.93/hr" or "$2.93 per hour")
+	// This handles prefix currency symbols like $, £, €, ¥
+	if currExpr, ok := expr.(*CurrencyExpr); ok {
+		if p.current().Type == lexer.TokenPer {
+			p.advance()
+			if p.current().Type == lexer.TokenUnit {
+				unit := p.current().Literal
+				p.advance()
+				expr = &UnitExpr{Value: currExpr, Unit: currExpr.Currency + "/" + unit}
+			}
+		} else if p.current().Type == lexer.TokenDivide {
+			// Look ahead to see if this is a rate (/ followed by unit)
+			if p.peek(1).Type == lexer.TokenUnit {
+				p.advance() // consume the /
+				unit := p.current().Literal
+				p.advance()
+				expr = &UnitExpr{Value: currExpr, Unit: currExpr.Currency + "/" + unit}
+			}
+		}
+	}
+
 	// Check for percentage
 	if p.current().Type == lexer.TokenPercent {
 		p.advance()

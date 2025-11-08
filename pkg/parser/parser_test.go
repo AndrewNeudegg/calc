@@ -476,3 +476,104 @@ func TestParseFuzzyPhraseWithVariableReference(t *testing.T) {
 		})
 	}
 }
+
+func TestParseCompoundUnitsWithCurrency(t *testing.T) {
+tests := []struct {
+input        string
+expectedType string // "unit" for UnitExpr
+description  string
+}{
+// Currency with / notation
+{"$2.93/hr", "unit", "dollar per hour with /hr"},
+{"$2.93/hour", "unit", "dollar per hour with /hour"},
+{"$2.93/h", "unit", "dollar per hour with /h"},
+{"$2.93/s", "unit", "dollar per second with /s"},
+{"$2.93/second", "unit", "dollar per second with /second"},
+{"$2.93/ms", "unit", "dollar per millisecond with /ms"},
+{"$2.93/millisecond", "unit", "dollar per millisecond with /millisecond"},
+{"$2.93/min", "unit", "dollar per minute with /min"},
+{"$2.93/minute", "unit", "dollar per minute with /minute"},
+{"$2.93/day", "unit", "dollar per day with /day"},
+{"$2.93/week", "unit", "dollar per week with /week"},
+{"$2.93/month", "unit", "dollar per month with /month"},
+{"$2.93/year", "unit", "dollar per year with /year"},
+{"$2.93/y", "unit", "dollar per year with /y"},
+
+// Currency with per notation
+{"$2.93 per hour", "unit", "dollar per hour with per"},
+{"$2.93 per second", "unit", "dollar per second with per"},
+{"$2.93 per millisecond", "unit", "dollar per millisecond with per"},
+{"$2.93 per minute", "unit", "dollar per minute with per"},
+{"$2.93 per day", "unit", "dollar per day with per"},
+{"$2.93 per week", "unit", "dollar per week with per"},
+{"$2.93 per month", "unit", "dollar per month with per"},
+{"$2.93 per year", "unit", "dollar per year with per"},
+
+// Other currencies
+{"£50/hour", "unit", "pound per hour"},
+{"€100/day", "unit", "euro per day"},
+{"¥1000/month", "unit", "yen per month"},
+{"£50 per hour", "unit", "pound per hour with per"},
+{"€100 per day", "unit", "euro per day with per"},
+{"¥1000 per month", "unit", "yen per month with per"},
+}
+
+for _, tt := range tests {
+t.Run(tt.description, func(t *testing.T) {
+expr, err := parseInput(tt.input)
+
+if err != nil {
+t.Errorf("Parser error for %q: %v", tt.input, err)
+return
+}
+
+if tt.expectedType == "unit" {
+unitExpr, ok := expr.(*UnitExpr)
+if !ok {
+t.Errorf("Expected UnitExpr for %q, got %T", tt.input, expr)
+return
+}
+
+// Verify the unit string contains a "/" 
+if unitExpr.Unit == "" {
+t.Errorf("Expected non-empty unit for %q", tt.input)
+}
+}
+})
+}
+}
+
+func TestParseCompoundUnitsWithRegularValues(t *testing.T) {
+tests := []struct {
+input       string
+description string
+}{
+// Values with units and compound rates
+{"10 m/s", "meters per second"},
+{"50 km/h", "kilometers per hour"},
+{"100 km per hour", "kilometers per hour with per"},
+{"5 kg/day", "kilograms per day"},
+{"5 kg per day", "kilograms per day with per"},
+}
+
+for _, tt := range tests {
+t.Run(tt.description, func(t *testing.T) {
+expr, err := parseInput(tt.input)
+
+if err != nil {
+t.Errorf("Parser error for %q: %v", tt.input, err)
+return
+}
+
+unitExpr, ok := expr.(*UnitExpr)
+if !ok {
+t.Errorf("Expected UnitExpr for %q, got %T", tt.input, expr)
+return
+}
+
+if unitExpr.Unit == "" {
+t.Errorf("Expected non-empty unit for %q", tt.input)
+}
+})
+}
+}
