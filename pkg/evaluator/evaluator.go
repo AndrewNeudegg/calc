@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/andrewneudegg/calc/pkg/constants"
 	"github.com/andrewneudegg/calc/pkg/currency"
 	"github.com/andrewneudegg/calc/pkg/parser"
 	"github.com/andrewneudegg/calc/pkg/timezone"
@@ -14,12 +15,13 @@ import (
 
 // Environment stores variables and state.
 type Environment struct {
-	variables         map[string]Value
-	units             *units.System
-	currency          *currency.System
-	timezone          *timezone.System
-	historyFunc       func(offset int) (Value, error)       // Function to get previous results by relative offset
-	absoluteHistoryFunc func(lineID int) (Value, error)     // Function to get result by absolute line ID
+	variables           map[string]Value
+	units               *units.System
+	currency            *currency.System
+	timezone            *timezone.System
+	constants           *constants.System
+	historyFunc         func(offset int) (Value, error)   // Function to get previous results by relative offset
+	absoluteHistoryFunc func(lineID int) (Value, error)   // Function to get result by absolute line ID
 }
 
 // NewEnvironment creates a new evaluation environment.
@@ -29,6 +31,7 @@ func NewEnvironment() *Environment {
 		units:     units.NewSystem(),
 		currency:  currency.NewSystem(),
 		timezone:  timezone.NewSystem(),
+		constants: constants.NewSystem(),
 	}
 }
 
@@ -64,6 +67,11 @@ func (e *Environment) Units() *units.System {
 // Currency returns the currency system.
 func (e *Environment) Currency() *currency.System {
 	return e.currency
+}
+
+// Constants returns the constants system.
+func (e *Environment) Constants() *constants.System {
+	return e.constants
 }
 
 // Eval evaluates an expression using this environment.
@@ -278,6 +286,14 @@ func (e *Evaluator) evalUnary(node *parser.UnaryExpr) Value {
 func (e *Evaluator) evalIdent(node *parser.IdentExpr) Value {
 	val, ok := e.env.variables[node.Name]
 	if !ok {
+		// Check if it's a physical constant
+		if e.env.constants != nil && e.env.constants.IsConstant(node.Name) {
+			c, err := e.env.constants.GetConstant(node.Name)
+			if err == nil {
+				// Return constant as a unit value
+				return NewUnit(c.Value, c.Unit)
+			}
+		}
 		return NewError(fmt.Sprintf("undefined variable: %s", node.Name))
 	}
 	return val

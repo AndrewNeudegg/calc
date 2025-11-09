@@ -3,16 +3,19 @@ package commands
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
+	"github.com/andrewneudegg/calc/pkg/constants"
 	"github.com/andrewneudegg/calc/pkg/settings"
 	"github.com/andrewneudegg/calc/pkg/timezone"
 )
 
 // Handler handles command execution.
 type Handler struct {
-	settings *settings.Settings
-	timezone *timezone.System
+	settings  *settings.Settings
+	timezone  *timezone.System
+	constants *constants.System
 	// Optional workspace operations provided by the REPL
 	SaveWorkspace  func(filename string) error
 	LoadWorkspace  func(filename string) error
@@ -26,8 +29,9 @@ type Handler struct {
 // New creates a new command handler.
 func New(s *settings.Settings) *Handler {
 	return &Handler{
-		settings: s,
-		timezone: timezone.NewSystem(),
+		settings:  s,
+		timezone:  timezone.NewSystem(),
+		constants: constants.NewSystem(),
 	}
 }
 
@@ -44,6 +48,8 @@ func (h *Handler) Execute(command string, args []string) string {
 		return h.set(args)
 	case "tz":
 		return h.timezone_cmd(args)
+	case "const":
+		return h.const_cmd(args)
 	case "help":
 		return h.help()
 	case "clear", "cls":
@@ -118,6 +124,8 @@ func (h *Handler) help() string {
   :set <key> <val>   Set a preference
 	:clear             Clear screen and reset current session
 	:quiet [on|off]    Toggle or set quiet mode (suppress assignment output)
+  :const list        List all physical constants
+  :const show <name> Show details of a specific constant
   :help              Show this help
   :quit / :exit / :q Exit the program
 
@@ -201,4 +209,87 @@ func (h *Handler) quiet(args []string) string {
 	default:
 		return "usage: :quiet [on|off]"
 	}
+}
+
+func (h *Handler) const_cmd(args []string) string {
+	if len(args) == 0 {
+		return "usage: :const list | :const show <name>"
+	}
+
+	subcmd := strings.ToLower(args[0])
+
+	switch subcmd {
+	case "list":
+		return h.constList(args[1:])
+	case "show":
+		if len(args) < 2 {
+			return "usage: :const show <name>"
+		}
+		return h.constShow(args[1])
+	default:
+		return fmt.Sprintf("unknown const command: %s (use :const list or :const show <name>)", subcmd)
+	}
+}
+
+func (h *Handler) constList(args []string) string {
+	var consts []*constants.Constant
+
+	// If category specified, filter by category
+	if len(args) > 0 {
+		category := args[0]
+		consts = h.constants.ListByCategory(category)
+		if len(consts) == 0 {
+			cats := h.constants.GetCategories()
+			sort.Strings(cats)
+			return fmt.Sprintf("Unknown category: %s\nAvailable categories: %s", category, strings.Join(cats, ", "))
+		}
+	} else {
+		consts = h.constants.ListConstants()
+	}
+
+	// Sort by name
+	sort.Slice(consts, func(i, j int) bool {
+		return consts[i].Name < consts[j].Name
+	})
+
+	result := "Physical Constants:\n"
+	for _, c := range consts {
+		symbol := ""
+		if c.Symbol != "" && c.Symbol != c.Name {
+			symbol = fmt.Sprintf(" (%s)", c.Symbol)
+		}
+		result += fmt.Sprintf("  %-25s = %e %s\n", c.Name+symbol, c.Value, c.Unit)
+	}
+
+	// Show categories if no category specified
+	if len(args) == 0 {
+		cats := h.constants.GetCategories()
+		sort.Strings(cats)
+		result += fmt.Sprintf("\nCategories: %s\n", strings.Join(cats, ", "))
+		result += "Use :const list <category> to filter by category\n"
+	}
+
+	return result
+}
+
+func (h *Handler) constShow(name string) string {
+	c, err := h.constants.GetConstant(name)
+	if err != nil {
+		return fmt.Sprintf("Unknown constant: %s\nUse :const list to see all constants", name)
+	}
+
+	result := fmt.Sprintf("Constant: %s\n", c.Name)
+	if c.Symbol != "" && c.Symbol != c.Name {
+		result += fmt.Sprintf("Symbol: %s\n", c.Symbol)
+	}
+	result += fmt.Sprintf("Value: %e\n", c.Value)
+	if c.Unit != "" {
+		result += fmt.Sprintf("Unit: %s\n", c.Unit)
+	}
+	result += fmt.Sprintf("Category: %s\n", c.Category)
+	if c.Description != "" {
+		result += fmt.Sprintf("Description: %s\n", c.Description)
+	}
+
+	return result
 }

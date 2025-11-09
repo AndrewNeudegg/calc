@@ -180,6 +180,8 @@ func (r *REPL) collectHistory() []string {
 func (r *REPL) EvaluateLine(input string) evaluator.Value {
 	// Tokenise
 	lex := lexer.New(input)
+	// Hook up constants checker
+	lex.SetConstantChecker(r.env.Constants().IsConstant)
 	tokens := lex.AllTokens()
 
 	// Remove EOF token for parsing

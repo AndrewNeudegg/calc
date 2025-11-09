@@ -12,6 +12,7 @@ Terminal calculator with units, currency conversion, and natural language expres
 - Percentage calculations
 - Natural language phrases ("half of", "double", etc.)
 - Built-in functions (sum, average, mean)
+- **Physical constants**: CODATA-inspired constants (c, G, h, e, σ, etc.) for scientific calculations
 - REPL with command mode, syntax highlighting, and themes
 - Reference previous results with `prev`, `prev~N` (relative), and `prev#N` (absolute line number) keywords
 - Line comments with // (ignored by the lexer)
@@ -233,6 +234,81 @@ Notes:
 - If a placeholder variable is undefined, `print` returns an error.
 - Interpolated values use sensible defaults for formatting; date/time values render in a readable form.
 
+### Physical Constants
+
+The calculator includes physical constants based on CODATA 2018 recommended values for scientific calculations. Constants are treated as dimensioned values (like units) and can be used in expressions and arithmetic.
+
+**Using Constants:**
+
+```
+1> c
+   = 2.998e+08 m/s
+
+2> h
+   = 6.626e-34 J·s
+
+3> G
+   = 6.674e-11 m³/(kg·s²)
+
+4> energy = c * h
+   = 1.986e-25 (composite unit)
+
+5> c in km/s
+   = 2.998e+05 km/s
+```
+
+**Available Constants:**
+
+| Category | Constants | Description |
+|----------|-----------|-------------|
+| **Fundamental** | `c`, `h`, `ℏ`, `e`, `m_e`, `m_p`, `m_n`, `α`, `R_∞`, `N_A`, `k_B`, `R` | Speed of light, Planck constant, elementary charge, particle masses, fine-structure constant, Avogadro & Boltzmann constants |
+| **Electromagnetic** | `μ_0`, `ε_0`, `k_e`, `Z_0`, `μ_B`, `μ_N` | Vacuum permeability/permittivity, Coulomb constant, impedance of free space, Bohr magneton and nuclear magneton |
+| **Universal** | `G`, `g_n`, `σ`, `au`, `ly`, `pc`, `M_☉`, `M_⊕`, `R_☉`, `R_⊕`, `H_0` | Gravitational constant, standard gravity, Stefan-Boltzmann constant, astronomical units, solar/Earth properties, Hubble constant |
+
+**Constant Symbols:**
+- `c` - Speed of light in vacuum (exactly 2.99792458×10⁸ m/s)
+- `h` - Planck constant (6.626e-34 J·s)
+- `ℏ` - Reduced Planck constant (ℏ = h/2π) (1.055e-34 J·s)
+- `e` - Elementary charge (1.602e-19 C)
+- `G` - Gravitational constant (6.674e-11 m³/(kg·s²))
+- `σ` - Stefan-Boltzmann constant (5.670e-08 W/(m²·K⁴))
+- `k_B` - Boltzmann constant (1.381e-23 J/K)
+- `N_A` - Avogadro constant (6.022e+23 1/mol)
+
+**REPL Commands:**
+```
+:const list                 # List all constants
+:const list fundamental     # List fundamental constants only
+:const show c               # Show details of speed of light
+:const show planck          # Show details by name
+```
+
+**Examples:**
+```
+# Planck energy
+planck_energy = h * c
+   = 1.986e-25 (composite unit)
+
+# Convert speed of light to different units
+c in km/s
+   = 2.998e+05 km/s
+
+# Use multiple constants
+force = G * electron_mass * proton_mass
+   = 1.016e-66 (composite unit)
+
+# Constants work with variables
+v = 0.1 * c
+   = 2.998e+07 m/s
+```
+
+**Notes:**
+- Constants are case-insensitive: `c`, `C`, `planck`, `PLANCK` all work
+- Constants can be accessed by name or symbol: `c` or `speed_of_light`
+- UTF-8 symbols like `σ`, `ℏ`, `μ` are supported
+- Constants preserve their units through calculations
+- Values are from CODATA 2018 recommended values
+
 ### Date Keywords
 
 | Keyword | Description |
@@ -329,6 +405,9 @@ Notes:
 | `:quit` / `:exit` / `:q` | Exit |
 | `:tz list` | List available timezones |
 | `:quiet [on/off]` | Toggle or set quiet mode (suppress assignment output) |
+| `:const list` | List all physical constants |
+| `:const list <category>` | List constants by category (fundamental, electromagnetic, universal) |
+| `:const show <name>` | Show details of a specific constant |
 
 Settings keys for `:set`:
 - `precision <n>` – Number of decimal places (default: 2)
@@ -349,9 +428,10 @@ The REPL includes intelligent autocomplete to help you quickly reuse variables, 
 - Press **Esc** to cancel and dismiss suggestions
 
 **What gets suggested:**
-- **Commands:** Type `:` followed by letters to see matching commands (`:help`, `:save`, `:set`, etc.)
+- **Commands:** Type `:` followed by letters to see matching commands (`:help`, `:save`, `:set`, `:const`, etc.)
 - **Variables:** Previously defined variable names appear as you type
 - **Functions:** Built-in functions like `sum`, `average`, `mean`, `min`, `max`, `print`
+- **Constants:** Physical constants like `c`, `h`, `G`, `planck`, `boltzmann`
 - **Units:** Common units like `km`, `kg`, `m`, `cm`, `l`, etc.
 - **Currencies:** Currency codes like `usd`, `gbp`, `eur`, `jpy`
 - **Keywords:** Date keywords (`now`, `today`, `tomorrow`) and fuzzy phrases (`half of`, `double`) when fuzzy mode is enabled
