@@ -142,3 +142,15 @@ func IsNumberWord(word string, locale string) bool {
 	}
 	return connectorWords[strings.ToLower(word)]
 }
+
+// IsScaleWord checks if a word is a scale word (hundred, thousand, million, etc.)
+func IsScaleWord(word string, locale string) bool {
+	numberWords := GetNumberWords(locale)
+	val, exists := numberWords[strings.ToLower(word)]
+	return exists && val >= 100
+}
+
+// IsConnectorWord checks if a word is a connector (and, a, an)
+func IsConnectorWord(word string) bool {
+	return connectorWords[strings.ToLower(word)]
+}

@@ -686,6 +686,25 @@ func (p *Parser) parseAdditive() (Expr, error) {
 			} else if tok.Literal == "minus" {
 				op = "-"
 			} else if tok.Literal == "and" {
+				// Validate: reject mixing numeric literals with number words via "and"
+				// Check if left is a simple number literal and right would be a number word
+				if _, ok := left.(*NumberExpr); ok {
+					// Check what comes after "and"
+					nextTok := p.peek(1)
+					isNumberWord := false
+					
+					// Check if next token is a number word
+					if nextTok.Type == lexer.TokenIdent && lexer.IsNumberWord(nextTok.Literal, "en_GB") {
+						isNumberWord = true
+					} else if nextTok.Type == lexer.TokenThree {
+						// "three" is a special keyword
+						isNumberWord = true
+					}
+					
+					if isNumberWord {
+						return nil, fmt.Errorf("invalid syntax: cannot mix numeric literals with number words using 'and' (e.g., '100000 and three')")
+					}
+				}
 				// "and" acts as addition when connecting units or numbers
 				op = "+"
 			} else {
@@ -910,6 +929,12 @@ func (p *Parser) parsePrimary() (Expr, error) {
 			return nil, fmt.Errorf("invalid number: %s", tok.Literal)
 		}
 		p.advance()
+		
+		// Check if this number is followed by scale words (e.g., "5 million")
+		if scaledVal, ok := p.tryParseNumericWithScale(val); ok {
+			return &NumberExpr{Value: scaledVal}, nil
+		}
+		
 		return &NumberExpr{Value: val}, nil
 
 	case lexer.TokenString:
@@ -1402,4 +1427,77 @@ done:
 	}
 
 	return val, true
+}
+
+// tryParseNumericWithScale attempts to parse a numeric literal followed by scale words
+// like "5 million", "10 thousand", "3.5 billion"
+// Returns the combined value and true if successful, or 0 and false if not applicable
+func (p *Parser) tryParseNumericWithScale(numericValue float64) (float64, bool) {
+	startPos := p.pos
+	
+	// Check if the next token is a scale word or starts a sequence with scale words
+	tok := p.current()
+	
+	// Reject pattern: number + connector word (e.g., "100000 and three")
+	if tok.Type == lexer.TokenIdent && lexer.IsConnectorWord(tok.Literal) {
+		// Peek ahead to see if there's a number word after the connector
+		nextTok := p.peek(1)
+		if nextTok.Type == lexer.TokenIdent && lexer.IsNumberWord(nextTok.Literal, "en_GB") {
+			// This is an invalid pattern like "100000 and three"
+			// Don't consume any tokens, just return false
+			return 0, false
+		}
+		// If it's just a connector not followed by number words, continue normally
+	}
+	
+	// Collect scale words that follow the number
+	var scaleWords []string
+	var foundScale bool
+	
+	for {
+		tok := p.current()
+		
+		if tok.Type != lexer.TokenIdent {
+			break
+		}
+		
+		word := tok.Literal
+		
+		// Check if this is a scale word
+		if lexer.IsScaleWord(word, "en_GB") {
+			scaleWords = append(scaleWords, word)
+			foundScale = true
+			p.advance()
+		} else if lexer.IsNumberWord(word, "en_GB") && !lexer.IsScaleWord(word, "en_GB") && foundScale {
+			// After finding a scale word, we can have more number words, but not more scale words
+			// e.g., "5 hundred twenty"
+			scaleWords = append(scaleWords, word)
+			p.advance()
+		} else {
+			break
+		}
+	}
+	
+	if !foundScale {
+		// No scale words found, restore position
+		p.pos = startPos
+		return 0, false
+	}
+	
+	// Parse the scale words to get the multiplier
+	scaleValue, ok := lexer.ParseNumberWords(scaleWords, "en_GB")
+	if !ok {
+		// Failed to parse scale words, restore position
+		p.pos = startPos
+		return 0, false
+	}
+	
+	// If the scale is >= 100, multiply the numeric value by it
+	if scaleValue >= 100 {
+		return numericValue * scaleValue, true
+	}
+	
+	// For other cases, restore and return false
+	p.pos = startPos
+	return 0, false
 }
