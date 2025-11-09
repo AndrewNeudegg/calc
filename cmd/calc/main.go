@@ -234,6 +234,15 @@ func executeFile(path string, providedArgs map[string]string) error {
 		if argDir, ok := expr.(*parser.ArgDirectiveExpr); ok {
 			requiredArgs[argDir.Name] = argDir.Prompt
 		} else if unitDir, ok := expr.(*parser.UnitDirectiveExpr); ok {
+			// Check if unit already exists (don't allow redefining standard units)
+			unit, exists := repl.Env().Units().GetUnit(unitDir.Name)
+			if exists {
+				// Don't allow redefining standard units
+				if !unit.IsCustom {
+					return fmt.Errorf("cannot redefine standard unit '%s'", unitDir.Name)
+				}
+			}
+			
 			// Process :unit directives immediately
 			valueResult := repl.Env().Eval(unitDir.Value)
 			if valueResult.IsError() {

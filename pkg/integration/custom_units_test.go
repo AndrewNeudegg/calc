@@ -205,3 +205,57 @@ func TestCustomUnitPersistence(t *testing.T) {
 		t.Errorf("expected 30.0, got %.2f", result)
 	}
 }
+
+// TestCustomUnitFromExpression tests defining a unit using an expression (e.g., yard = 3 foot)
+func TestCustomUnitFromExpression(t *testing.T) {
+	env := evaluator.NewEnvironment()
+	
+	// Define foot in meters
+	err := env.Units().AddCustomUnit("foot", 0.3048, "m")
+	if err != nil {
+		t.Fatalf("failed to add foot unit: %v", err)
+	}
+	
+	// Parse and evaluate "3 foot"
+	input := "3 foot"
+	l := lexer.New(input)
+	l.SetUnitChecker(env.Units().UnitExists)
+	tokens := l.AllTokens()
+	p := parser.New(tokens)
+	expr, err := p.Parse()
+	if err != nil {
+		t.Fatalf("parse error for %q: %v", input, err)
+	}
+	
+	result := env.Eval(expr)
+	if result.IsError() {
+		t.Fatalf("evaluation error for %q: %s", input, result.Error)
+	}
+	
+	// Define yard as 3 foot
+	err = env.Units().AddCustomUnit("yard", result.Number, result.Unit)
+	if err != nil {
+		t.Fatalf("failed to add yard unit: %v", err)
+	}
+	
+	// Test: 1 yard should be 0.9144 meters (3 * 0.3048)
+	input2 := "1 yard in m"
+	l2 := lexer.New(input2)
+	l2.SetUnitChecker(env.Units().UnitExists)
+	tokens2 := l2.AllTokens()
+	p2 := parser.New(tokens2)
+	expr2, err := p2.Parse()
+	if err != nil {
+		t.Fatalf("parse error for %q: %v", input2, err)
+	}
+	
+	result2 := env.Eval(expr2)
+	if result2.IsError() {
+		t.Fatalf("evaluation error for %q: %s", input2, result2.Error)
+	}
+	
+	expected := 0.9144
+	if result2.Number < expected-0.001 || result2.Number > expected+0.001 {
+		t.Errorf("expected approximately %.4f meters, got %.4f meters", expected, result2.Number)
+	}
+}
