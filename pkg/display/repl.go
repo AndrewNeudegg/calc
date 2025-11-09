@@ -295,6 +295,50 @@ func (r *REPL) EvaluateLine(input string) evaluator.Value {
 		return evaluator.NewError("")
 	}
 
+	// Check if it's a unit directive (shorthand form: ":unit name = value")
+	if unitDir, ok := expr.(*parser.UnitDirectiveExpr); ok {
+		// Evaluate the value expression
+		valueResult := r.eval.Eval(unitDir.Value)
+		if valueResult.IsError() {
+			return evaluator.NewError(fmt.Sprintf("error evaluating unit value: %s", valueResult.Error))
+		}
+		
+		// Extract the numeric value and unit
+		if valueResult.Type != evaluator.ValueUnit {
+			return evaluator.NewError("unit definition must have a unit (e.g., '15 ml')")
+		}
+		
+		// Check if unit already exists (don't allow redefining standard units)
+		if unit, exists := r.env.Units().GetUnit(unitDir.Name); exists {
+			// Don't allow redefining standard units
+			if !unit.IsCustom {
+				return evaluator.NewError(fmt.Sprintf("cannot redefine standard unit '%s'", unitDir.Name))
+			}
+		}
+		
+		// Add the custom unit
+		err := r.env.Units().AddCustomUnit(unitDir.Name, valueResult.Number, valueResult.Unit)
+		if err != nil {
+			return evaluator.NewError(fmt.Sprintf("failed to define unit: %s", err.Error()))
+		}
+		
+		// Save custom units
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not determine home directory: %v\n", err)
+			return evaluator.NewError("")
+		}
+		customUnitsPath := fmt.Sprintf("%s/.config/calc/custom_units.json", homeDir)
+		if err := r.env.Units().SaveCustomUnits(customUnitsPath); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not save custom units: %v\n", err)
+		}
+		
+		if !r.silent {
+			printWithCRLF(os.Stdout, fmt.Sprintf("defined custom unit: %s = %.2f %s", unitDir.Name, valueResult.Number, valueResult.Unit))
+		}
+		return evaluator.NewError("")
+	}
+
 	// Evaluate
 	result := r.eval.Eval(expr)
 

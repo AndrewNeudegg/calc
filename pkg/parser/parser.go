@@ -212,18 +212,20 @@ func (p *Parser) parseCommand() (Expr, error) {
 	if command == "unit" {
 		// Only treat as a directive if it's the shorthand form: ":unit name = value"
 		// Commands like ":unit define ...", ":unit list", etc. should fall through to normal command handling
-		if p.current().Type == lexer.TokenIdent {
+		// Check for identifier OR unit token (for redefining built-in units like "yard")
+		if p.current().Type == lexer.TokenIdent || p.current().Type == lexer.TokenUnit {
 			savedPos := p.pos
 			p.advance()
 			
-			// If the identifier is followed by '=', this is a shorthand directive
+			// If the identifier/unit is followed by '=', this is a shorthand directive
 			if p.current().Type == lexer.TokenEquals {
 				// ":unit name = value" - parse as directive
 				p.pos = savedPos
 				return p.parseUnitDirective()
 			} else {
 				// Otherwise, treat as a command (including ":unit define name = value")
-				p.pos = savedPos - 1
+				// Reset to the position we saved (the first identifier after "unit")
+				p.pos = savedPos
 				// Fall through to normal command handling
 			}
 		}
@@ -294,9 +296,13 @@ func (p *Parser) parseArgDirective() (Expr, error) {
 
 // parseUnitDirective parses ":unit name = value unit" directives (e.g., ":unit spoon = 15 ml").
 // This is only called for the shorthand form, not for ":unit define name = value" which is handled as a command.
+// parseUnitDirective parses ":unit name = value unit" directives (e.g., ":unit spoon = 15 ml").
+// This is only called for the shorthand form, not for ":unit define name = value" which is handled as a command.
 func (p *Parser) parseUnitDirective() (Expr, error) {
-	// Expect unit name
-	if p.current().Type != lexer.TokenIdent && !p.isKeywordToken(p.current().Type) {
+	// Expect unit name (can be TokenIdent, TokenUnit for redefining, or keyword)
+	if p.current().Type != lexer.TokenIdent && 
+		p.current().Type != lexer.TokenUnit && 
+		!p.isKeywordToken(p.current().Type) {
 		return nil, fmt.Errorf("expected unit name after :unit")
 	}
 
@@ -310,7 +316,8 @@ func (p *Parser) parseUnitDirective() (Expr, error) {
 	p.advance()
 
 	// Parse the value expression (e.g., "15 ml")
-	valueExpr, err := p.parseExpression()
+	// Call parseConversion directly to ensure units are parsed
+	valueExpr, err := p.parseConversion()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse unit value: %w", err)
 	}

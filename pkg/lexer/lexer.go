@@ -450,20 +450,22 @@ func (l *Lexer) scanIdentifier() Token {
 		}
 	}
 
-	// Check if it's a constant (if checker is available)
-	if l.constantChecker != nil && l.constantChecker(literal) {
+	// Check if it's a known unit BEFORE checking constants
+	// This ensures "g" is treated as gram (unit) not gravitational constant
+	// Units take priority over constants in ambiguous cases
+	if l.isKnownUnit(literal) || (l.unitChecker != nil && l.unitChecker(literal)) {
 		return Token{
-			Type:    TokenConstant,
+			Type:    TokenUnit,
 			Literal: literal,
 			Line:    l.line,
 			Column:  startCol,
 		}
 	}
 
-	// Check if it's a known unit
-	if l.isKnownUnit(literal) || (l.unitChecker != nil && l.unitChecker(literal)) {
+	// Check if it's a constant (if checker is available)
+	if l.constantChecker != nil && l.constantChecker(literal) {
 		return Token{
-			Type:    TokenUnit,
+			Type:    TokenConstant,
 			Literal: literal,
 			Line:    l.line,
 			Column:  startCol,
