@@ -113,6 +113,10 @@ func (r *REPL) Run() {
 		if !result.IsError() || result.Error != "" {
 			fmt.Printf("   = %s\n\n", r.formatter.Format(result))
 		}
+		// Check if quit command was executed
+		if r.commands.ShouldQuit() {
+			break
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading input: %s\n", err)
@@ -160,6 +164,10 @@ func (r *REPL) runInteractive() {
 		result := r.EvaluateLine(input)
 		if !result.IsError() || result.Error != "" {
 			fmt.Fprintf(os.Stdout, "   = %s\n\n", r.formatter.Format(result))
+		}
+		// Check if quit command was executed
+		if r.commands.ShouldQuit() {
+			break
 		}
 	}
 }

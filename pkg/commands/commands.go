@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -24,6 +23,8 @@ type Handler struct {
 	SetQuiet    func(enabled bool)
 	ToggleQuiet func() bool
 	GetQuiet    func() bool
+	// shouldQuit is set to true when the quit command is executed
+	shouldQuit bool
 }
 
 // New creates a new command handler.
@@ -33,6 +34,11 @@ func New(s *settings.Settings) *Handler {
 		timezone:  timezone.NewSystem(),
 		constants: constants.NewSystem(),
 	}
+}
+
+// ShouldQuit returns true if the quit command has been executed.
+func (h *Handler) ShouldQuit() bool {
+	return h.shouldQuit
 }
 
 // Execute executes a command and returns a message.
@@ -57,7 +63,7 @@ func (h *Handler) Execute(command string, args []string) string {
 	case "quiet":
 		return h.quiet(args)
 	case "quit", "exit", "q":
-		os.Exit(0)
+		h.shouldQuit = true
 		return ""
 	default:
 		return fmt.Sprintf("unknown command: %s (type :help for available commands)", command)
