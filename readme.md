@@ -508,7 +508,7 @@ Run with:
 | month | months | - |
 | quarter | quarters | - |
 | semester | semesters | - |
-| year | years | - |
+| year | years | y |
 
 ### Volume
 
@@ -689,6 +689,35 @@ Run with:
 ```
 
 Note: Currency can be written with symbols (£, $, €, ¥) before the number, or with codes/names (gbp, usd, dollars, euros, yen) after the number.
+
+### Currency Rates (Compound Units)
+```
+13> hourly_rate = $25/hour
+   = 25.00 $/hour
+
+14> daily_cost = hourly_rate * 24
+   = 600.00 $/hour
+
+15> weekly_salary = hourly_rate * 40
+   = 1,000.00 $/hour
+
+16> ab_cost = $2.93/hr
+   = 2.93 $/hr
+
+17> ab_cost * 24
+   = 70.32 $/hr
+
+18> £50 per hour
+   = 50.00 £/hour
+
+19> €100/day
+   = 100.00 €/day
+
+20> ¥1000/month
+   = 1,000.00 ¥/month
+```
+
+Note: Currency rates can be expressed using `/` or `per` with any time unit (e.g., `$25/hour`, `$25 per hour`, `£50/day`, `€100 per month`). Supported time units include: `s`, `second`, `ms`, `millisecond`, `min`, `minute`, `h`, `hr`, `hour`, `day`, `week`, `month`, `year`, `y`.
 
 ### Percentages
 ```
