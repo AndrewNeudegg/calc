@@ -1,7 +1,9 @@
 package units
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -672,4 +674,123 @@ func (s *System) ConvertCompoundUnit(value float64, fromUnit, toUnit string) (fl
 // IsCompoundUnit checks if a string looks like a compound unit (contains /).
 func IsCompoundUnit(unitStr string) bool {
 	return strings.Contains(unitStr, "/")
+}
+
+// CustomUnitDefinition represents a custom unit for persistence.
+type CustomUnitDefinition struct {
+	Name     string  `json:"name"`
+	Value    float64 `json:"value"`
+	BaseUnit string  `json:"base_unit"`
+}
+
+// ListCustomUnits returns a list of all custom units.
+func (s *System) ListCustomUnits() []*Unit {
+	units := make([]*Unit, 0, len(s.custom))
+	for _, u := range s.custom {
+		units = append(units, u)
+	}
+	return units
+}
+
+// GetUnit returns a unit by name (including custom units).
+func (s *System) GetUnit(name string) (*Unit, bool) {
+	unit, ok := s.units[strings.ToLower(name)]
+	return unit, ok
+}
+
+// DeleteCustomUnit removes a custom unit definition.
+func (s *System) DeleteCustomUnit(name string) error {
+	name = strings.ToLower(name)
+	
+	// Check if it's a custom unit
+	if _, exists := s.custom[name]; !exists {
+		return fmt.Errorf("custom unit not found: %s", name)
+	}
+	
+	delete(s.custom, name)
+	delete(s.units, name)
+	
+	return nil
+}
+
+// ListAllUnits returns a list of all units (including custom ones).
+func (s *System) ListAllUnits() []*Unit {
+	units := make([]*Unit, 0, len(s.units))
+	for _, u := range s.units {
+		units = append(units, u)
+	}
+	return units
+}
+
+// SaveCustomUnits saves custom units to a JSON file.
+func (s *System) SaveCustomUnits(filePath string) error {
+	defs := make([]CustomUnitDefinition, 0, len(s.custom))
+	
+	for name, unit := range s.custom {
+		// Calculate the value in terms of the base unit
+		// The stored ToBase is already multiplied, so we need to divide to get the original multiplier
+		baseUnit, ok := s.units[unit.BaseUnit]
+		if !ok {
+			continue
+		}
+		value := unit.ToBase / baseUnit.ToBase
+		
+		defs = append(defs, CustomUnitDefinition{
+			Name:     name,
+			Value:    value,
+			BaseUnit: unit.BaseUnit,
+		})
+	}
+	
+	data, err := json.MarshalIndent(defs, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal custom units: %w", err)
+	}
+	
+	// Ensure directory exists
+	dir := strings.TrimSuffix(filePath, "/"+strings.Split(filePath, "/")[len(strings.Split(filePath, "/"))-1])
+	if dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+	}
+	
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write custom units file: %w", err)
+	}
+	
+	return nil
+}
+
+// LoadCustomUnits loads custom units from a JSON file.
+func (s *System) LoadCustomUnits(filePath string) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File doesn't exist yet, that's okay
+			return nil
+		}
+		return fmt.Errorf("failed to read custom units file: %w", err)
+	}
+	
+	var defs []CustomUnitDefinition
+	if err := json.Unmarshal(data, &defs); err != nil {
+		return fmt.Errorf("failed to unmarshal custom units: %w", err)
+	}
+	
+	// Add each custom unit
+	for _, def := range defs {
+		if err := s.AddCustomUnit(def.Name, def.Value, def.BaseUnit); err != nil {
+			// Log error but continue loading others
+			fmt.Fprintf(os.Stderr, "warning: failed to load custom unit %s: %v\n", def.Name, err)
+		}
+	}
+	
+	return nil
+}
+
+// UnitExists checks if a unit exists (custom or standard).
+func (s *System) UnitExists(name string) bool {
+	_, ok := s.units[strings.ToLower(name)]
+	return ok
 }

@@ -208,6 +208,38 @@ func (p *Parser) parseCommand() (Expr, error) {
 		return p.parseArgDirective()
 	}
 
+	// Special handling for :unit directive - only if it's a definition (has = in it)
+	if command == "unit" {
+		// Peek ahead to see if this looks like a definition directive
+		// A definition has the pattern: name = value
+		// A command has patterns like: list, show name, delete name, define name = value
+		if p.current().Type == lexer.TokenIdent {
+			// Could be either a subcommand or a unit name
+			// Check if the next token after the ident is '='
+			savedPos := p.pos
+			ident := p.current().Literal
+			p.advance()
+			
+			// Check for special subcommands
+			if ident == "list" || ident == "show" || ident == "delete" {
+				// This is definitely a command
+				p.pos = savedPos - 1 // restore to command position
+				// Fall through to normal command handling
+			} else if ident == "define" {
+				// ":unit define name = value" - parse as directive
+				p.pos = savedPos
+				return p.parseUnitDirective()
+			} else if p.current().Type == lexer.TokenEquals {
+				// ":unit name = value" - parse as directive
+				p.pos = savedPos
+				return p.parseUnitDirective()
+			} else {
+				// Not a valid directive format, treat as command
+				p.pos = savedPos - 1
+			}
+		}
+	}
+
 	// Reconstruct the remainder of the line into a raw tail string while
 	// preserving filename/path punctuation like '.', '/', and '-' by gluing
 	// those to adjacent tokens without spaces. Then split on spaces to get args.
@@ -268,6 +300,39 @@ func (p *Parser) parseArgDirective() (Expr, error) {
 	return &ArgDirectiveExpr{
 		Name:   varName,
 		Prompt: prompt,
+	}, nil
+}
+
+// parseUnitDirective parses ":unit name = value unit" directives (e.g., ":unit spoon = 15 ml").
+func (p *Parser) parseUnitDirective() (Expr, error) {
+	// Check for "define" subcommand
+	if p.current().Type == lexer.TokenIdent && p.current().Literal == "define" {
+		p.advance() // skip "define"
+	}
+	
+	// Expect unit name
+	if p.current().Type != lexer.TokenIdent && !p.isKeywordToken(p.current().Type) {
+		return nil, fmt.Errorf("expected unit name after :unit")
+	}
+
+	unitName := p.current().Literal
+	p.advance()
+
+	// Expect '='
+	if p.current().Type != lexer.TokenEquals {
+		return nil, fmt.Errorf("expected '=' after unit name")
+	}
+	p.advance()
+
+	// Parse the value expression (e.g., "15 ml")
+	valueExpr, err := p.parseExpression()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse unit value: %w", err)
+	}
+
+	return &UnitDirectiveExpr{
+		Name:  unitName,
+		Value: valueExpr,
 	}, nil
 }
 

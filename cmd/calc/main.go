@@ -172,13 +172,17 @@ func loadArgsFromFile(path string) (map[string]string, error) {
 }
 
 // parseLineToExpr parses a line of input into an AST expression.
-// The env parameter is optional; if provided, constants will be recognized by the lexer.
-// If env is nil, constants will not be recognized and will be treated as regular identifiers.
+// The env parameter is optional; if provided, constants and custom units will be recognized by the lexer.
+// If env is nil, constants and custom units will not be recognized and will be treated as regular identifiers.
 func parseLineToExpr(input string, env *evaluator.Environment) (parser.Expr, error) {
 	lex := lexer.New(input)
 	// Hook up constants checker if environment is available
 	if env != nil && env.Constants() != nil {
 		lex.SetConstantChecker(env.Constants().IsConstant)
+	}
+	// Hook up custom units checker if environment is available
+	if env != nil && env.Units() != nil {
+		lex.SetUnitChecker(env.Units().UnitExists)
 	}
 	tokens := lex.AllTokens()
 	if len(tokens) > 0 && tokens[len(tokens)-1].Type == lexer.TokenEOF {
@@ -211,7 +215,7 @@ func executeFile(path string, providedArgs map[string]string) error {
 	repl := display.NewREPL()
 	repl.SetSilent(true)
 
-	// First pass: collect all :arg directives
+	// First pass: collect all :arg directives and process :unit directives
 	requiredArgs := make(map[string]string) // name -> prompt
 	lines := strings.Split(string(b), "\n")
 	
@@ -221,7 +225,7 @@ func executeFile(path string, providedArgs map[string]string) error {
 			continue
 		}
 		
-		// Parse to check if it's an :arg directive
+		// Parse to check if it's an :arg or :unit directive
 		expr, parseErr := parseLineToExpr(input, repl.Env())
 		if parseErr != nil || expr == nil {
 			continue
@@ -229,6 +233,21 @@ func executeFile(path string, providedArgs map[string]string) error {
 		
 		if argDir, ok := expr.(*parser.ArgDirectiveExpr); ok {
 			requiredArgs[argDir.Name] = argDir.Prompt
+		} else if unitDir, ok := expr.(*parser.UnitDirectiveExpr); ok {
+			// Process :unit directives immediately
+			valueResult := repl.Env().Eval(unitDir.Value)
+			if valueResult.IsError() {
+				return fmt.Errorf("error evaluating unit value in '%s': %s", input, valueResult.Error)
+			}
+			
+			if valueResult.Type != evaluator.ValueUnit {
+				return fmt.Errorf("unit definition must have a unit (e.g., '15 ml') in '%s'", input)
+			}
+			
+			err := repl.Env().Units().AddCustomUnit(unitDir.Name, valueResult.Number, valueResult.Unit)
+			if err != nil {
+				return fmt.Errorf("failed to define unit '%s': %v", unitDir.Name, err)
+			}
 		}
 	}
 
@@ -267,11 +286,15 @@ func executeFile(path string, providedArgs map[string]string) error {
 			continue
 		}
 		
-		// Parse to check if it's an :arg directive (skip execution)
+		// Parse to check if it's an :arg or :unit directive (skip execution)
 		expr, parseErr := parseLineToExpr(input, repl.Env())
 		if parseErr == nil && expr != nil {
 			if _, ok := expr.(*parser.ArgDirectiveExpr); ok {
 				// Skip :arg directives in execution phase
+				continue
+			}
+			if _, ok := expr.(*parser.UnitDirectiveExpr); ok {
+				// Skip :unit directives in execution phase (already processed)
 				continue
 			}
 		}
