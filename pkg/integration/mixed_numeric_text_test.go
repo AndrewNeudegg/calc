@@ -204,3 +204,43 @@ func TestEdgeCasesForMixedRepresentations(t *testing.T) {
 		})
 	}
 }
+
+// TestNumericWithScaleWordFollowedByBasicWords tests that numeric + scale word can be followed by basic number words
+func TestNumericWithScaleWordFollowedByBasicWords(t *testing.T) {
+tests := []struct {
+input    string
+expected float64
+}{
+// Valid: numeric + scale word + basic number words
+// The basic number words are added to the scale word before multiplication
+{"5 hundred twenty", 600},       // 5 * (100 + 20) = 5 * 120 = 600
+{"10 hundred fifty", 1500},      // 10 * (100 + 50) = 10 * 150 = 1500
+{"3 thousand five", 3015},       // 3 * (1000 + 5) = 3 * 1005 = 3015
+{"2 hundred thirty five", 270},  // 2 * (100 + 35) = 2 * 135 = 270
+}
+
+for _, tt := range tests {
+t.Run(tt.input, func(t *testing.T) {
+env := evaluator.NewEnvironment()
+lex := lexer.New(tt.input)
+lex.SetConstantChecker(env.Constants().IsConstant)
+tokens := lex.AllTokens()
+p := parser.New(tokens)
+expr, err := p.Parse()
+
+if err != nil {
+t.Fatalf("Parse error for %q: %v", tt.input, err)
+}
+
+eval := evaluator.New(env)
+result := eval.Eval(expr)
+if result.IsError() {
+t.Fatalf("Eval error for %q: %s", tt.input, result.Error)
+}
+
+if result.Number != tt.expected {
+t.Errorf("%q = %f, want %f", tt.input, result.Number, tt.expected)
+}
+})
+}
+}

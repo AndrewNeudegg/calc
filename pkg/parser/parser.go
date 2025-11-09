@@ -688,7 +688,7 @@ func (p *Parser) parseAdditive() (Expr, error) {
 			} else if tok.Literal == "and" {
 				// Validate: reject mixing numeric literals with number words via "and"
 				// Check if left is a simple number literal and right would be a number word
-				if numExpr, ok := left.(*NumberExpr); ok {
+				if _, ok := left.(*NumberExpr); ok {
 					// Check what comes after "and"
 					nextTok := p.peek(1)
 					isNumberWord := false
@@ -702,7 +702,6 @@ func (p *Parser) parseAdditive() (Expr, error) {
 					}
 					
 					if isNumberWord {
-						_ = numExpr // avoid unused warning
 						return nil, fmt.Errorf("invalid syntax: cannot mix numeric literals with number words using 'and' (e.g., '100000 and three')")
 					}
 				}
@@ -1469,9 +1468,9 @@ func (p *Parser) tryParseNumericWithScale(numericValue float64) (float64, bool) 
 			scaleWords = append(scaleWords, word)
 			foundScale = true
 			p.advance()
-		} else if lexer.IsNumberWord(word, "en_GB") && foundScale {
-			// After finding a scale word, we can have more number words
-			// e.g., "5 hundred thousand"
+		} else if lexer.IsNumberWord(word, "en_GB") && !lexer.IsScaleWord(word, "en_GB") && foundScale {
+			// After finding a scale word, we can have more number words, but not more scale words
+			// e.g., "5 hundred twenty"
 			scaleWords = append(scaleWords, word)
 			p.advance()
 		} else {
@@ -1493,12 +1492,8 @@ func (p *Parser) tryParseNumericWithScale(numericValue float64) (float64, bool) 
 		return 0, false
 	}
 	
-	// If the scale is >= 1000, multiply the numeric value by it
-	// For hundred, it depends on context
-	if scaleValue >= 1000 {
-		return numericValue * scaleValue, true
-	} else if scaleValue == 100 {
-		// Handle "5 hundred" as 500
+	// If the scale is >= 100, multiply the numeric value by it
+	if scaleValue >= 100 {
 		return numericValue * scaleValue, true
 	}
 	
