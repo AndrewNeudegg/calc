@@ -250,6 +250,9 @@ func (r *REPL) clearWorkspace() error {
 	// Reset dependency graph
 	r.depGraph = graph.NewGraph()
 
+	// Reinitialize autocomplete engine with the new environment
+	r.autocomplete = NewAutocompleteEngine(r.env, r.env.Units(), r.env.Currency(), r.settings)
+
 	return nil
 }
 
@@ -290,6 +293,9 @@ func (r *REPL) loadWorkspace(filename string) error {
 	// Re-wire history function
 	r.env.SetHistoryFunc(r.getHistoryValue)
 	r.env.SetAbsoluteHistoryFunc(r.getAbsoluteHistoryValue)
+
+	// Reinitialize autocomplete engine with the new environment
+	r.autocomplete = NewAutocompleteEngine(r.env, r.env.Units(), r.env.Currency(), r.settings)
 
 	lines := strings.Split(string(b), "\n")
 	for _, ln := range lines {
