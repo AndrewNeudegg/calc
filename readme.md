@@ -177,6 +177,28 @@ Examples:
 
 **Note:** Numbers with many decimal places (like `2.115` or `3.14159`) are correctly interpreted as decimals in UK format, not as thousands. Use `:set locale` to explicitly control the number format when working with European-style numbers.
 
+#### Number Words and Mixed Representations
+
+The calculator supports textual number words and allows mixing numeric literals with number words in natural ways:
+
+| Format | Example | Result |
+|--------|---------|--------|
+| Textual only | `five million` | 5,000,000.00 |
+| Textual only | `ten hundred thousand` | 1,000,000.00 |
+| Mixed: numeric + scale | `5 million` | 5,000,000.00 |
+| Mixed: numeric + scale | `10 thousand` | 10,000.00 |
+| Mixed: decimal + scale | `3.5 billion` | 3,500,000,000.00 |
+| Mixed: complex | `10 hundred thousand` | 1,000,000.00 |
+
+**Supported scale words:** hundred, thousand, million, billion, trillion
+
+**Note:** Mixing numeric literals with number words via "and" is not allowed (e.g., `100000 and three` will be rejected as invalid syntax). Use either all digits or all words for consistent readability.
+
+Valid examples with "and":
+- `5 and 5` → 10.00 (numeric addition)
+- `five and three` → 8.00 (textual addition)
+- `10 meters and 5 cm` → 10.05 meters (unit addition)
+
 ### Time Format
 
 Times in `HH:MM` format are recognized automatically:
