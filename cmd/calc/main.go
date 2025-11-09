@@ -172,8 +172,12 @@ func loadArgsFromFile(path string) (map[string]string, error) {
 }
 
 // parseLineToExpr parses a line of input into an AST expression
-func parseLineToExpr(input string) (parser.Expr, error) {
+func parseLineToExpr(input string, env *evaluator.Environment) (parser.Expr, error) {
 	lex := lexer.New(input)
+	// Hook up constants checker if environment is available
+	if env != nil && env.Constants() != nil {
+		lex.SetConstantChecker(env.Constants().IsConstant)
+	}
 	tokens := lex.AllTokens()
 	if len(tokens) > 0 && tokens[len(tokens)-1].Type == lexer.TokenEOF {
 		tokens = tokens[:len(tokens)-1]
@@ -216,7 +220,7 @@ func executeFile(path string, providedArgs map[string]string) error {
 		}
 		
 		// Parse to check if it's an :arg directive
-		expr, parseErr := parseLineToExpr(input)
+		expr, parseErr := parseLineToExpr(input, repl.Env())
 		if parseErr != nil || expr == nil {
 			continue
 		}
@@ -262,7 +266,7 @@ func executeFile(path string, providedArgs map[string]string) error {
 		}
 		
 		// Parse to check if it's an :arg directive (skip execution)
-		expr, parseErr := parseLineToExpr(input)
+		expr, parseErr := parseLineToExpr(input, repl.Env())
 		if parseErr == nil && expr != nil {
 			if _, ok := expr.(*parser.ArgDirectiveExpr); ok {
 				// Skip :arg directives in execution phase
@@ -290,7 +294,7 @@ func executeFile(path string, providedArgs map[string]string) error {
 // setArgVariable parses a string value and sets it as a variable in the REPL environment
 func setArgVariable(repl *display.REPL, name, value string) error {
 	// Parse the value through lexer/parser to support units, currency, expressions, etc.
-	expr, err := parseLineToExpr(value)
+	expr, err := parseLineToExpr(value, repl.Env())
 	if err != nil {
 		return err
 	}
@@ -310,8 +314,13 @@ func setArgVariable(repl *display.REPL, name, value string) error {
 }
 
 func executeAndExit(input string) {
+	// Create environment first
+	env := evaluator.NewEnvironment()
+	
 	// Create lexer and tokenise input
 	l := lexer.New(input)
+	// Hook up constants checker
+	l.SetConstantChecker(env.Constants().IsConstant)
 	tokens := l.AllTokens()
 
 	// Load settings to get locale preference
@@ -326,7 +335,6 @@ func executeAndExit(input string) {
 	}
 
 	// Create evaluator and evaluate expression
-	env := evaluator.NewEnvironment()
 	eval := evaluator.New(env)
 	result := eval.Eval(expr)
 

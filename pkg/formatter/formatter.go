@@ -34,7 +34,8 @@ func (f *Formatter) Format(val evaluator.Value) string {
 		if val.Unit == "time" {
 			return f.formatTime(val.Number)
 		}
-		return fmt.Sprintf("%s %s", f.formatNumber(val.Number), val.Unit)
+		// Use scientific notation for very small or very large numbers in units
+		return fmt.Sprintf("%s %s", f.formatNumberSmart(val.Number), val.Unit)
 	case evaluator.ValueCurrency:
 		return fmt.Sprintf("%s%s", val.Currency, f.formatNumber(val.Number))
 	case evaluator.ValuePercent:
@@ -88,6 +89,24 @@ func (f *Formatter) formatNumber(n float64) string {
 	// Default format
 	format := fmt.Sprintf("%%.%df", f.settings.Precision)
 	return fmt.Sprintf(format, rounded)
+}
+
+// formatNumberSmart formats a number, using scientific notation for very small/large values
+func (f *Formatter) formatNumberSmart(n float64) string {
+	absN := math.Abs(n)
+	
+	// Use scientific notation when the number would round to zero with current precision
+	// This helps display physical constants properly
+	if absN != 0 {
+		rounded := f.round(n, f.settings.Precision)
+		if rounded == 0 && absN > 0 {
+			// Number is too small for current precision, use scientific notation
+			return fmt.Sprintf("%.3e", n)
+		}
+	}
+	
+	// Otherwise use normal formatting
+	return f.formatNumber(n)
 }
 
 func (f *Formatter) round(val float64, decimals int) float64 {
