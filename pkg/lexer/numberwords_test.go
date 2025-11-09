@@ -103,3 +103,51 @@ func TestIsNumberWord(t *testing.T) {
 		}
 	}
 }
+
+func TestIsScaleWord(t *testing.T) {
+	tests := []struct {
+		word     string
+		expected bool
+	}{
+		{"hundred", true},
+		{"thousand", true},
+		{"million", true},
+		{"billion", true},
+		{"trillion", true},
+		{"one", false},
+		{"two", false},
+		{"five", false},
+		{"twenty", false},
+		{"and", false},
+		{"hello", false},
+	}
+	
+	for _, tt := range tests {
+		result := IsScaleWord(tt.word, "en_GB")
+		if result != tt.expected {
+			t.Errorf("IsScaleWord(%q) = %v, want %v", tt.word, result, tt.expected)
+		}
+	}
+}
+
+func TestIsConnectorWord(t *testing.T) {
+	tests := []struct {
+		word     string
+		expected bool
+	}{
+		{"and", true},
+		{"a", true},
+		{"an", true},
+		{"AND", true},
+		{"one", false},
+		{"hundred", false},
+		{"hello", false},
+	}
+	
+	for _, tt := range tests {
+		result := IsConnectorWord(tt.word)
+		if result != tt.expected {
+			t.Errorf("IsConnectorWord(%q) = %v, want %v", tt.word, result, tt.expected)
+		}
+	}
+}
