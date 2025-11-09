@@ -79,9 +79,9 @@ func (f *Formatter) formatNumber(n float64) string {
 	// Round to precision
 	rounded := f.round(n, f.settings.Precision)
 
-	// Format with thousand separators for US/UK locales
-	// Both US and UK use commas for thousands and periods for decimals
-	if f.settings.Locale == "en_US" || f.settings.Locale == "en_GB" || f.settings.Locale == "en_UK" {
+	// Format with thousand separators for UK/US locales
+	// Both UK and US use commas for thousands and periods for decimals
+	if f.settings.Locale == "en_GB" || f.settings.Locale == "en_UK" || f.settings.Locale == "en_US" {
 		return f.formatWithCommas(rounded, f.settings.Precision)
 	}
 

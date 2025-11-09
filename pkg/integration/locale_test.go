@@ -32,7 +32,7 @@ func TestLocaleIntegrationUSFormat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := settings.Default() // Default is en_US
+			s := settings.Default() // Default is en_GB
 			env := evaluator.NewEnvironment()
 			e := evaluator.New(env)
 			f := formatter.New(s)
@@ -81,9 +81,9 @@ func TestLocaleIntegrationEuropeanFormat(t *testing.T) {
 			env := evaluator.NewEnvironment()
 			e := evaluator.New(env)
 			
-			// Use US locale for formatting (output)
+			// Use UK locale for formatting (output)
 			sFormat := settings.Default()
-			sFormat.Locale = "en_US"
+			sFormat.Locale = "en_GB"
 			f := formatter.New(sFormat)
 
 			l := lexer.New(tt.input)
@@ -216,7 +216,7 @@ func TestLocaleEdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := settings.Default()
-			s.Locale = "en_US" // Output formatting
+			s.Locale = "en_GB" // Output formatting
 			env := evaluator.NewEnvironment()
 			e := evaluator.New(env)
 			f := formatter.New(s)

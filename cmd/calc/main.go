@@ -181,8 +181,8 @@ func parseLineToExpr(input string) (parser.Expr, error) {
 	if len(tokens) == 0 {
 		return nil, nil
 	}
-	// Use default US locale for file parsing
-	p := parser.NewWithLocale(tokens, "en_US")
+	// Use default UK locale for file parsing
+	p := parser.NewWithLocale(tokens, "en_GB")
 	return p.Parse()
 }
 

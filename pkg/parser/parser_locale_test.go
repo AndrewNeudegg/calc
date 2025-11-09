@@ -270,7 +270,7 @@ func TestDefaultLocale(t *testing.T) {
 		t.Run(tt.input, func(t *testing.T) {
 			l := lexer.New(tt.input)
 			tokens := l.AllTokens()
-			p := New(tokens) // Uses default en_US locale
+			p := New(tokens) // Uses default en_GB locale
 
 			expr, err := p.Parse()
 			if err != nil {

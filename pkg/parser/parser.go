@@ -13,15 +13,15 @@ import (
 type Parser struct {
 	tokens []lexer.Token
 	pos    int
-	locale string // Locale for number parsing (e.g., "en_US", "en_GB")
+	locale string // Locale for number parsing (e.g., "en_GB", "en_US")
 }
 
-// New creates a new parser from tokens with default US locale.
+// New creates a new parser from tokens with default UK locale.
 func New(tokens []lexer.Token) *Parser {
 	return &Parser{
 		tokens: tokens,
 		pos:    0,
-		locale: "en_US", // Default to US format
+		locale: "en_GB", // Default to UK format
 	}
 }
 
@@ -93,7 +93,7 @@ func (p *Parser) isCurrencyCode(unit string) bool {
 
 // normalizeNumber converts a number string with thousand separators to a valid float string.
 // It uses the parser's locale setting to determine how to interpret commas and periods.
-// US/UK format (en_US, en_GB): comma as thousand separator, period as decimal (1,234.56)
+// UK/US format (en_GB, en_US): comma as thousand separator, period as decimal (1,234.56)
 // European format (de_DE, fr_FR, etc.): period as thousand separator, comma as decimal (1.234,56)
 func (p *Parser) normalizeNumber(s string) string {
 	// If there are no commas or periods, return as-is
@@ -124,7 +124,7 @@ func (p *Parser) normalizeNumber(s string) string {
 		return s
 	}
 
-	// US/UK format: comma = thousands, period = decimal
+	// UK/US format: comma = thousands, period = decimal
 	if commaCount == 0 && periodCount > 0 {
 		// Only periods - they are decimal separators
 		return s

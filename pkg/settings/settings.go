@@ -24,7 +24,7 @@ func Default() *Settings {
 		Precision:    2,
 		DateFormat:   "2 Jan 2006",
 		Currency:     "GBP",
-		Locale:       "en_US", // Default to US format (period=decimal, comma=thousands)
+		Locale:       "en_GB", // Default to UK format (period=decimal, comma=thousands)
 		FuzzyMode:    true,
 		Autocomplete: true,
 	}

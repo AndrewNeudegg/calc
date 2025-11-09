@@ -101,9 +101,9 @@ func TestNumberFormatting(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Use US locale for output formatting (formatter always uses US format)
+			// Use UK locale for output formatting (formatter uses UK format by default)
 			s := settings.Default()
-			s.Locale = "en_US"
+			s.Locale = "en_GB"
 			env := evaluator.NewEnvironment()
 			e := evaluator.New(env)
 			f := formatter.New(s)
