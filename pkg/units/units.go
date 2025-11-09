@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -724,6 +725,8 @@ func (s *System) ListAllUnits() []*Unit {
 
 // SaveCustomUnits saves custom units to a JSON file.
 func (s *System) SaveCustomUnits(filePath string) error {
+	filePath = filepath.Clean(filePath)
+	
 	defs := make([]CustomUnitDefinition, 0, len(s.custom))
 	
 	for name, unit := range s.custom {
@@ -748,8 +751,8 @@ func (s *System) SaveCustomUnits(filePath string) error {
 	}
 	
 	// Ensure directory exists
-	dir := strings.TrimSuffix(filePath, "/"+strings.Split(filePath, "/")[len(strings.Split(filePath, "/"))-1])
-	if dir != "" {
+	dir := filepath.Dir(filePath)
+	if dir != "." && dir != "" {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create directory: %w", err)
 		}
@@ -764,6 +767,8 @@ func (s *System) SaveCustomUnits(filePath string) error {
 
 // LoadCustomUnits loads custom units from a JSON file.
 func (s *System) LoadCustomUnits(filePath string) error {
+	filePath = filepath.Clean(filePath)
+	
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {

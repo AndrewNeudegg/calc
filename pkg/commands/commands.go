@@ -144,7 +144,7 @@ func (h *Handler) help() string {
   :const list        List all physical constants
   :const show <name> Show details of a specific constant
   :unit define <name> = <value> <unit>  Define a custom unit
-  :unit list         List all units (custom and standard)
+  :unit list [all|custom|builtin]       List units (default: all)
   :unit show <name>  Show details of a specific unit
   :unit delete <name> Delete a custom unit
   :help              Show this help
@@ -326,7 +326,7 @@ func (h *Handler) unit_cmd(args []string) string {
 	case "define":
 		return h.unitDefine(args[1:])
 	case "list":
-		return h.unitList()
+		return h.unitList(args[1:])
 	case "show":
 		if len(args) < 2 {
 			return "usage: :unit show <name>"
@@ -354,7 +354,7 @@ func (h *Handler) unitDefine(args []string) string {
 	// Parse: <name> = <value> <unit>
 	// Join all args and parse
 	input := strings.Join(args, " ")
-	parts := strings.Split(input, "=")
+	parts := strings.SplitN(input, "=", 2)
 	if len(parts) != 2 {
 		return "usage: :unit define <name> = <value> <unit>\nexample: :unit define spoon = 15 ml"
 	}
@@ -377,23 +377,112 @@ func (h *Handler) unitDefine(args []string) string {
 	return fmt.Sprintf("DEFINE_UNIT:%s:%s", name, valueUnitStr)
 }
 
-func (h *Handler) unitList() string {
+func (h *Handler) unitList(args []string) string {
 	if h.units == nil {
 		return "unit system not available"
 	}
 
-	customUnits := h.units.ListCustomUnits()
-	
-	if len(customUnits) == 0 {
-		return "No custom units defined\nUse :unit define <name> = <value> <unit> to create one"
+	filter := "all"
+	if len(args) > 0 {
+		filter = strings.ToLower(args[0])
+		if filter != "all" && filter != "custom" && filter != "builtin" {
+			return "usage: :unit list [all|custom|builtin]"
+		}
 	}
 
-	result := "Custom Units:\n"
-	for _, u := range customUnits {
-		result += fmt.Sprintf("  %-15s (dimension: %d, base: %s)\n", u.Name, u.Dimension, u.BaseUnit)
+	result := ""
+
+	// Show custom units
+	if filter == "all" || filter == "custom" {
+		customUnits := h.units.ListCustomUnits()
+		
+		if len(customUnits) > 0 {
+			result += "Custom Units:\n"
+			for _, u := range customUnits {
+				result += fmt.Sprintf("  %-15s (dimension: %d, base: %s)\n", u.Name, u.Dimension, u.BaseUnit)
+			}
+		} else if filter == "custom" {
+			return "No custom units defined\nUse :unit define <name> = <value> <unit> to create one"
+		}
+	}
+
+	// Show builtin units
+	if filter == "all" || filter == "builtin" {
+		if result != "" {
+			result += "\n"
+		}
+		result += "Built-in Units:\n"
+		
+		allUnits := h.units.ListAllUnits()
+		builtinCount := 0
+		
+		// Group by dimension for better readability
+		dimensions := make(map[string][]string)
+		for _, u := range allUnits {
+			if !u.IsCustom {
+				dimName := h.getDimensionName(u.Dimension)
+				dimensions[dimName] = append(dimensions[dimName], u.Name)
+				builtinCount++
+			}
+		}
+		
+		// Display dimensions in order
+		dimOrder := []string{"Length", "Mass", "Time", "Volume", "Temperature", "Area", "Speed", "Pressure", "Force", "Angle", "Frequency", "Data", "DataRate", "None"}
+		for _, dimName := range dimOrder {
+			if units, ok := dimensions[dimName]; ok && len(units) > 0 {
+				result += fmt.Sprintf("  %s: ", dimName)
+				// Show first 10 units per dimension to keep output manageable
+				if len(units) > 10 {
+					result += fmt.Sprintf("%s (%d more...)\n", strings.Join(units[:10], ", "), len(units)-10)
+				} else {
+					result += fmt.Sprintf("%s\n", strings.Join(units, ", "))
+				}
+			}
+		}
+		
+		result += fmt.Sprintf("\nTotal built-in units: %d\n", builtinCount)
+	}
+
+	if result == "" && filter == "all" {
+		return "No units available"
 	}
 
 	return result
+}
+
+func (h *Handler) getDimensionName(dim units.Dimension) string {
+	switch dim {
+	case 0:
+		return "None"
+	case 1:
+		return "Length"
+	case 2:
+		return "Mass"
+	case 3:
+		return "Time"
+	case 4:
+		return "Temperature"
+	case 5:
+		return "Volume"
+	case 6:
+		return "Area"
+	case 7:
+		return "Data"
+	case 8:
+		return "DataRate"
+	case 9:
+		return "Speed"
+	case 10:
+		return "Pressure"
+	case 11:
+		return "Force"
+	case 12:
+		return "Angle"
+	case 13:
+		return "Frequency"
+	default:
+		return fmt.Sprintf("Unknown(%d)", dim)
+	}
 }
 
 func (h *Handler) unitShow(name string) string {
