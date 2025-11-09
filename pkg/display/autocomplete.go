@@ -52,6 +52,7 @@ func (ac *AutocompleteEngine) initCommands() {
 		{Text: ":clear", Display: ":clear", Category: "command", Description: "Clear screen and reset session"},
 		{Text: ":quiet ", Display: ":quiet [on|off]", Category: "command", Description: "Toggle quiet mode"},
 		{Text: ":tz ", Display: ":tz list", Category: "command", Description: "List timezones"},
+		{Text: ":const ", Display: ":const list|show", Category: "command", Description: "List or show physical constants"},
 		{Text: ":quit", Display: ":quit", Category: "command", Description: "Exit the program"},
 		{Text: ":exit", Display: ":exit", Category: "command", Description: "Exit the program"},
 		{Text: ":q", Display: ":q", Category: "command", Description: "Exit the program"},

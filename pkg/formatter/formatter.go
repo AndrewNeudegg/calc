@@ -101,7 +101,8 @@ func (f *Formatter) formatNumberSmart(n float64) string {
 		rounded := f.round(n, f.settings.Precision)
 		if rounded == 0 && absN > 0 {
 			// Number is too small for current precision, use scientific notation
-			return fmt.Sprintf("%.3e", n)
+			// Use the user's precision setting for consistency
+			return fmt.Sprintf("%.*e", f.settings.Precision, n)
 		}
 	}
 	

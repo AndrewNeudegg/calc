@@ -6,14 +6,6 @@ import (
 	"unicode/utf8"
 )
 
-// decodeRune decodes a UTF-8 rune from a byte slice.
-func decodeRune(s []byte) (rune, int) {
-	if len(s) == 0 {
-		return unicode.ReplacementChar, 0
-	}
-	return utf8.DecodeRune(s)
-}
-
 // Lexer tokenises input text.
 type Lexer struct {
 	input           string
@@ -405,24 +397,16 @@ func (l *Lexer) scanIdentifier() Token {
 	startCol := l.column
 
 	for l.pos < len(l.input) {
-		// Decode UTF-8 rune properly
-		r, size := decodeRune([]byte(l.input[l.pos:]))
-		if r == unicode.ReplacementChar && size == 1 {
-			// Invalid UTF-8 or ASCII character
-			ch := l.input[l.pos]
-			if !unicode.IsLetter(rune(ch)) && !unicode.IsDigit(rune(ch)) && ch != '_' {
-				break
-			}
-			l.pos++
-			l.column++
-		} else {
-			// Valid multi-byte UTF-8 character
-			if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
-				break
-			}
-			l.pos += size
-			l.column++
+		// Decode UTF-8 rune from string
+		r, size := utf8.DecodeRuneInString(l.input[l.pos:])
+		if size == 0 {
+			break
 		}
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
+			break
+		}
+		l.pos += size
+		l.column++
 	}
 
 	literal := l.input[start:l.pos]

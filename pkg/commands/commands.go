@@ -258,7 +258,7 @@ func (h *Handler) constList(args []string) string {
 		if c.Symbol != "" && c.Symbol != c.Name {
 			symbol = fmt.Sprintf(" (%s)", c.Symbol)
 		}
-		result += fmt.Sprintf("  %-25s%s = %e %s\n", c.Name+symbol, "", c.Value, c.Unit)
+		result += fmt.Sprintf("  %-25s = %e %s\n", c.Name+symbol, c.Value, c.Unit)
 	}
 
 	// Show categories if no category specified

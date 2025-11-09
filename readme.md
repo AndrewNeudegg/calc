@@ -236,7 +236,7 @@ Notes:
 
 ### Physical Constants
 
-The calculator includes CODATA-inspired physical constants for scientific calculations. Constants are treated as dimensioned values (like units) and can be used in expressions and arithmetic.
+The calculator includes physical constants based on CODATA 2018 recommended values for scientific calculations. Constants are treated as dimensioned values (like units) and can be used in expressions and arithmetic.
 
 **Using Constants:**
 
@@ -262,18 +262,18 @@ The calculator includes CODATA-inspired physical constants for scientific calcul
 | Category | Constants | Description |
 |----------|-----------|-------------|
 | **Fundamental** | `c`, `h`, `ℏ`, `e`, `m_e`, `m_p`, `m_n`, `α`, `R_∞`, `N_A`, `k_B`, `R` | Speed of light, Planck constant, elementary charge, particle masses, fine-structure constant, Avogadro & Boltzmann constants |
-| **Electromagnetic** | `μ_0`, `ε_0`, `k_e`, `Z_0`, `μ_B`, `μ_N` | Vacuum permeability/permittivity, Coulomb constant, impedance of free space, magnetons |
+| **Electromagnetic** | `μ_0`, `ε_0`, `k_e`, `Z_0`, `μ_B`, `μ_N` | Vacuum permeability/permittivity, Coulomb constant, impedance of free space, Bohr magneton and nuclear magneton |
 | **Universal** | `G`, `g_n`, `σ`, `au`, `ly`, `pc`, `M_☉`, `M_⊕`, `R_☉`, `R_⊕`, `H_0` | Gravitational constant, standard gravity, Stefan-Boltzmann constant, astronomical units, solar/Earth properties, Hubble constant |
 
 **Constant Symbols:**
-- `c` - Speed of light in vacuum (299,792,458 m/s)
-- `h` - Planck constant (6.626×10⁻³⁴ J·s)
-- `ℏ` - Reduced Planck constant (ℏ = h/2π)
-- `e` - Elementary charge (1.602×10⁻¹⁹ C)
-- `G` - Gravitational constant (6.674×10⁻¹¹ m³/(kg·s²))
-- `σ` - Stefan-Boltzmann constant (5.670×10⁻⁸ W/(m²·K⁴))
-- `k_B` - Boltzmann constant (1.381×10⁻²³ J/K)
-- `N_A` - Avogadro constant (6.022×10²³ 1/mol)
+- `c` - Speed of light in vacuum (exactly 2.99792458×10⁸ m/s)
+- `h` - Planck constant (6.626e-34 J·s)
+- `ℏ` - Reduced Planck constant (ℏ = h/2π) (1.055e-34 J·s)
+- `e` - Elementary charge (1.602e-19 C)
+- `G` - Gravitational constant (6.674e-11 m³/(kg·s²))
+- `σ` - Stefan-Boltzmann constant (5.670e-08 W/(m²·K⁴))
+- `k_B` - Boltzmann constant (1.381e-23 J/K)
+- `N_A` - Avogadro constant (6.022e+23 1/mol)
 
 **REPL Commands:**
 ```

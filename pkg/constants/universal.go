@@ -121,7 +121,7 @@ func (s *System) initUniversal() {
 		"H_0",
 		2.2e-18,
 		"1/s",
-		units.DimensionFrequency,
+		units.DimensionNone,
 		"Hubble constant (≈70 km/s/Mpc)",
 		"universal",
 	)

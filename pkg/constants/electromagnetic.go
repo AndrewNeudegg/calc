@@ -4,6 +4,8 @@ import "github.com/andrewneudegg/calc/pkg/units"
 
 // initElectromagnetic initializes electromagnetic constants.
 // Values are from CODATA 2018 recommended values.
+// Note: All constants use DimensionNone because they have composite dimensions
+// (e.g., N/A², F/m, Ω) that are not represented in the basic Dimension enum.
 func (s *System) initElectromagnetic() {
 	// Vacuum permeability (magnetic constant)
 	s.addConstant(

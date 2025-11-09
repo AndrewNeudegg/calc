@@ -965,7 +965,7 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		return &IdentExpr{Name: name}, nil
 
 	case lexer.TokenConstant:
-		// Physical constants are treated like identifiers
+		// Physical constants are parsed as identifiers and resolved to their constant values during evaluation
 		name := tok.Literal
 		p.advance()
 		return &IdentExpr{Name: name}, nil

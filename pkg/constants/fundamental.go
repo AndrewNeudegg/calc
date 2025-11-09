@@ -4,6 +4,8 @@ import "github.com/andrewneudegg/calc/pkg/units"
 
 // initFundamental initializes fundamental physical constants.
 // Values are from CODATA 2018 recommended values.
+// Note: Many constants use DimensionNone because they have composite dimensions
+// (e.g., J·s for Planck constant, C for charge) that are not represented in the basic Dimension enum.
 func (s *System) initFundamental() {
 	// Speed of light in vacuum
 	s.addConstant(

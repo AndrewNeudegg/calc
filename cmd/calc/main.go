@@ -171,7 +171,9 @@ func loadArgsFromFile(path string) (map[string]string, error) {
 	return args, nil
 }
 
-// parseLineToExpr parses a line of input into an AST expression
+// parseLineToExpr parses a line of input into an AST expression.
+// The env parameter is optional; if provided, constants will be recognized by the lexer.
+// If env is nil, constants will not be recognized and will be treated as regular identifiers.
 func parseLineToExpr(input string, env *evaluator.Environment) (parser.Expr, error) {
 	lex := lexer.New(input)
 	// Hook up constants checker if environment is available
