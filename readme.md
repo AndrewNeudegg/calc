@@ -126,15 +126,29 @@ Supported: USD ($), GBP (£), EUR (€), JPY (¥), and many more codes including
 
 ### Number Formats
 
-Both US and European number formats are automatically recognized and supported:
+The calculator supports both UK and European number formats. The format is determined by the `:set locale` setting.
 
-| Format | Description | Example Input | Parsed Value |
-|--------|-------------|---------------|--------------|
-| US Format | Comma as thousand separator, period as decimal | `1,234.56` | 1234.56 |
-| European Format | Period as thousand separator, comma as decimal | `1.234,56` | 1234.56 |
-| Large numbers | Multiple thousand separators | `12,345,678.90` | 12345678.90 |
-| Currency with format | Works with all currency symbols | `$55,101.10` | $55,101.10 |
-| European currency | European format with Euro | `€65.342,10` | €65,342.10 |
+**Default:** UK format (`en_GB`) - comma as thousand separator, period as decimal
+
+| Format | Description | Example Input | Parsed Value | Locale |
+|--------|-------------|---------------|--------------|--------|
+| UK Format | Comma as thousand separator, period as decimal | `1,234.56` | 1234.56 | `en_GB`, `en_US` |
+| European Format | Period as thousand separator, comma as decimal | `1.234,56` | 1234.56 | `de_DE`, `fr_FR`, etc. |
+| Large numbers | Multiple thousand separators | `12,345,678.90` | 12345678.90 | `en_GB` |
+| Currency with format | Works with all currency symbols | `$55,101.10` | $55,101.10 | `en_GB` |
+| European currency | European format with Euro | `€65.342,10` | €65,342.10 | `de_DE` |
+
+#### Setting Number Format Locale
+
+Use `:set locale <code>` to change how numbers are parsed:
+
+```
+:set locale en_GB    # UK/US format: 1,234.56 (default)
+:set locale en_US    # UK/US format: 1,234.56
+:set locale de_DE    # German format: 1.234,56
+:set locale fr_FR    # French format: 1.234,56
+:set locale es_ES    # Spanish format: 1.234,56
+```
 
 Examples:
 ```
@@ -144,14 +158,23 @@ Examples:
 2> half of $31,432
    = $15,716.00
 
-3> €65.342,10
+3> :set locale de_DE
+   Locale set to de_DE
+
+4> €65.342,10
    = €65,342.10
 
-4> 1,500,000 + 500,000
+5> :set locale en_GB
+   Locale set to en_GB
+
+6> 2.115 / 2
+   = 1.06
+
+7> 1,500,000 + 500,000
    = 2,000,000.00
 ```
 
-The calculator automatically detects which format you're using based on the position of commas and periods.
+**Note:** Numbers with many decimal places (like `2.115` or `3.14159`) are correctly interpreted as decimals in UK format, not as thousands. Use `:set locale` to explicitly control the number format when working with European-style numbers.
 
 ### Time Format
 

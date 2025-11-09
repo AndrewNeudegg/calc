@@ -181,7 +181,8 @@ func parseLineToExpr(input string) (parser.Expr, error) {
 	if len(tokens) == 0 {
 		return nil, nil
 	}
-	p := parser.New(tokens)
+	// Use default UK locale for file parsing
+	p := parser.NewWithLocale(tokens, "en_GB")
 	return p.Parse()
 }
 
@@ -313,8 +314,11 @@ func executeAndExit(input string) {
 	l := lexer.New(input)
 	tokens := l.AllTokens()
 
+	// Load settings to get locale preference
+	s := settings.Default()
+
 	// Parse tokens into AST
-	p := parser.New(tokens)
+	p := parser.NewWithLocale(tokens, s.Locale)
 	expr, err := p.Parse()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -327,7 +331,6 @@ func executeAndExit(input string) {
 	result := eval.Eval(expr)
 
 	// Format and print result
-	s := settings.Default()
 	f := formatter.New(s)
 	output := f.Format(result)
 

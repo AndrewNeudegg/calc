@@ -13,13 +13,24 @@ import (
 type Parser struct {
 	tokens []lexer.Token
 	pos    int
+	locale string // Locale for number parsing (e.g., "en_GB", "en_US")
 }
 
-// New creates a new parser from tokens.
+// New creates a new parser from tokens with default UK locale.
 func New(tokens []lexer.Token) *Parser {
 	return &Parser{
 		tokens: tokens,
 		pos:    0,
+		locale: "en_GB", // Default to UK format
+	}
+}
+
+// NewWithLocale creates a new parser from tokens with a specific locale.
+func NewWithLocale(tokens []lexer.Token, locale string) *Parser {
+	return &Parser{
+		tokens: tokens,
+		pos:    0,
+		locale: locale,
 	}
 }
 
@@ -81,69 +92,77 @@ func (p *Parser) isCurrencyCode(unit string) bool {
 }
 
 // normalizeNumber converts a number string with thousand separators to a valid float string.
-// It handles both US format (1,234.56) and European format (1.234,56).
+// It uses the parser's locale setting to determine how to interpret commas and periods.
+// UK/US format (en_GB, en_US): comma as thousand separator, period as decimal (1,234.56)
+// European format (de_DE, fr_FR, etc.): period as thousand separator, comma as decimal (1.234,56)
 func (p *Parser) normalizeNumber(s string) string {
 	// If there are no commas or periods, return as-is
 	if !strings.Contains(s, ",") && !strings.Contains(s, ".") {
 		return s
 	}
 
+	// Determine if locale uses European format (period=thousands, comma=decimal)
+	isEuropeanLocale := p.isEuropeanLocale()
+
 	// Count commas and periods
 	commaCount := strings.Count(s, ",")
 	periodCount := strings.Count(s, ".")
 
-	// Determine the format based on which separator appears last
-	lastComma := strings.LastIndex(s, ",")
-	lastPeriod := strings.LastIndex(s, ".")
-
-	if commaCount == 0 && periodCount > 0 {
-		// Only periods
-		if periodCount == 1 {
-			// Single period - check if it's a decimal or thousand separator
-			// If period is in the last 3 positions, it's likely a decimal
-			digitsAfterPeriod := len(s) - lastPeriod - 1
-			if digitsAfterPeriod <= 2 && digitsAfterPeriod > 0 {
-				// US decimal format (e.g., 100.50)
-				return s
-			} else if digitsAfterPeriod == 3 {
-				// Edge case: 100.000 could be European thousands (100k) or US with 3 decimals
-				// We default to European thousands separator for consistency with common usage
-				return strings.ReplaceAll(s, ".", "")
-			}
-			// US decimal format
-			return s
+	if isEuropeanLocale {
+		// European format: period = thousands, comma = decimal
+		if commaCount == 0 && periodCount > 0 {
+			// Only periods - they are thousand separators
+			return strings.ReplaceAll(s, ".", "")
 		}
-		// Multiple periods - European thousands separator
-		return strings.ReplaceAll(s, ".", "")
-	}
-
-	if periodCount == 0 && commaCount > 0 {
-		// Only commas
-		if commaCount == 1 {
-			// Single comma - check position
-			digitsAfterComma := len(s) - lastComma - 1
-			if digitsAfterComma <= 2 && digitsAfterComma > 0 {
-				// European decimal (e.g., 1234,56)
-				return strings.ReplaceAll(s, ",", ".")
-			}
-			// US thousands separator (e.g., 1,234)
-			return strings.ReplaceAll(s, ",", "")
+		if periodCount == 0 && commaCount > 0 {
+			// Only commas - they are decimal separators
+			return strings.ReplaceAll(s, ",", ".")
 		}
-		// Multiple commas - US thousands separator
-		return strings.ReplaceAll(s, ",", "")
-	}
-
-	// Both commas and periods present
-	if lastComma > lastPeriod {
-		// Comma appears after period - European format (1.234,56)
+		// Both present - period is thousands, comma is decimal
 		s = strings.ReplaceAll(s, ".", "")  // Remove thousand separators
 		s = strings.ReplaceAll(s, ",", ".") // Convert decimal separator
 		return s
 	}
 
-	// Period appears after comma - US format (1,234.56)
+	// UK/US format: comma = thousands, period = decimal
+	if commaCount == 0 && periodCount > 0 {
+		// Only periods - they are decimal separators
+		return s
+	}
+	if periodCount == 0 && commaCount > 0 {
+		// Only commas - they are thousand separators
+		return strings.ReplaceAll(s, ",", "")
+	}
+	// Both present - comma is thousands, period is decimal
 	s = strings.ReplaceAll(s, ",", "") // Remove thousand separators
 	return s
+}
+
+// isEuropeanLocale returns true if the locale uses European number format
+// (period as thousand separator, comma as decimal separator)
+func (p *Parser) isEuropeanLocale() bool {
+	// Common European locales that use comma as decimal separator
+	switch p.locale {
+	case "de_DE", "de_AT", "de_CH", // German
+		"fr_FR", "fr_BE", "fr_CH", // French
+		"es_ES", "es_MX", "es_AR", // Spanish
+		"it_IT", // Italian
+		"nl_NL", "nl_BE", // Dutch
+		"pt_PT", "pt_BR", // Portuguese
+		"pl_PL", // Polish
+		"ru_RU", // Russian
+		"cs_CZ", // Czech
+		"da_DK", // Danish
+		"fi_FI", // Finnish
+		"sv_SE", // Swedish
+		"no_NO", // Norwegian
+		"tr_TR", // Turkish
+		"hu_HU", // Hungarian
+		"ro_RO": // Romanian
+		return true
+	default:
+		return false
+	}
 }
 
 func (p *Parser) parseExpression() (Expr, error) {

@@ -193,7 +193,7 @@ func (r *REPL) EvaluateLine(input string) evaluator.Value {
 	}
 
 	// Parse
-	p := parser.New(tokens)
+	p := parser.NewWithLocale(tokens, r.settings.Locale)
 	expr, err := p.Parse()
 	if err != nil {
 		return evaluator.NewError(err.Error())
