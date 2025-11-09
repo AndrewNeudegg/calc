@@ -3,15 +3,25 @@ package lexer
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
+
+// decodeRune decodes a UTF-8 rune from a byte slice.
+func decodeRune(s []byte) (rune, int) {
+	if len(s) == 0 {
+		return unicode.ReplacementChar, 0
+	}
+	return utf8.DecodeRune(s)
+}
 
 // Lexer tokenises input text.
 type Lexer struct {
-	input    string
-	pos      int
-	line     int
-	column   int
-	keywords map[string]TokenType
+	input           string
+	pos             int
+	line            int
+	column          int
+	keywords        map[string]TokenType
+	constantChecker func(string) bool // Optional function to check if a string is a constant
 }
 
 // New creates a new lexer for the given input.
@@ -74,6 +84,11 @@ func New(input string) *Lexer {
 		},
 	}
 	return l
+}
+
+// SetConstantChecker sets a function to check if an identifier is a physical constant.
+func (l *Lexer) SetConstantChecker(checker func(string) bool) {
+	l.constantChecker = checker
 }
 
 // NextToken returns the next token from the input.
@@ -390,12 +405,24 @@ func (l *Lexer) scanIdentifier() Token {
 	startCol := l.column
 
 	for l.pos < len(l.input) {
-		ch := l.input[l.pos]
-		if !unicode.IsLetter(rune(ch)) && !unicode.IsDigit(rune(ch)) && ch != '_' {
-			break
+		// Decode UTF-8 rune properly
+		r, size := decodeRune([]byte(l.input[l.pos:]))
+		if r == unicode.ReplacementChar && size == 1 {
+			// Invalid UTF-8 or ASCII character
+			ch := l.input[l.pos]
+			if !unicode.IsLetter(rune(ch)) && !unicode.IsDigit(rune(ch)) && ch != '_' {
+				break
+			}
+			l.pos++
+			l.column++
+		} else {
+			// Valid multi-byte UTF-8 character
+			if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
+				break
+			}
+			l.pos += size
+			l.column++
 		}
-		l.pos++
-		l.column++
 	}
 
 	literal := l.input[start:l.pos]
@@ -427,6 +454,16 @@ func (l *Lexer) scanIdentifier() Token {
 	if typ, ok := l.keywords[lowerLiteral]; ok {
 		return Token{
 			Type:    typ,
+			Literal: literal,
+			Line:    l.line,
+			Column:  startCol,
+		}
+	}
+
+	// Check if it's a constant (if checker is available)
+	if l.constantChecker != nil && l.constantChecker(literal) {
+		return Token{
+			Type:    TokenConstant,
 			Literal: literal,
 			Line:    l.line,
 			Column:  startCol,

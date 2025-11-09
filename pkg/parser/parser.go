@@ -964,6 +964,12 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		// Treat as a variable reference
 		return &IdentExpr{Name: name}, nil
 
+	case lexer.TokenConstant:
+		// Physical constants are treated like identifiers
+		name := tok.Literal
+		p.advance()
+		return &IdentExpr{Name: name}, nil
+
 	case lexer.TokenThree:
 		// Could be "three quarters" or just "three" as a number
 		if p.peek(1).Type == lexer.TokenQuarters {

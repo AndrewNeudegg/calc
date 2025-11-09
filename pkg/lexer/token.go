@@ -83,6 +83,9 @@ const (
 	// Units (commonly recognised)
 	TokenUnit
 
+	// Constants (physical constants)
+	TokenConstant
+
 	// Currency symbols
 	TokenCurrency
 
@@ -232,6 +235,8 @@ func (t TokenType) String() string {
 		return "december"
 	case TokenUnit:
 		return "UNIT"
+	case TokenConstant:
+		return "CONSTANT"
 	case TokenCurrency:
 		return "CURRENCY"
 	case TokenDate:
