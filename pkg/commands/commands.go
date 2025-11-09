@@ -8,6 +8,7 @@ import (
 	"github.com/andrewneudegg/calc/pkg/constants"
 	"github.com/andrewneudegg/calc/pkg/settings"
 	"github.com/andrewneudegg/calc/pkg/timezone"
+	"github.com/andrewneudegg/calc/pkg/units"
 )
 
 // Handler handles command execution.
@@ -15,6 +16,7 @@ type Handler struct {
 	settings  *settings.Settings
 	timezone  *timezone.System
 	constants *constants.System
+	units     *units.System
 	// Optional workspace operations provided by the REPL
 	SaveWorkspace  func(filename string) error
 	LoadWorkspace  func(filename string) error
@@ -23,6 +25,8 @@ type Handler struct {
 	SetQuiet    func(enabled bool)
 	ToggleQuiet func() bool
 	GetQuiet    func() bool
+	// Unit management
+	DefineUnit func(name string, value float64, baseUnit string) error
 	// shouldQuit is set to true when the quit command is executed
 	shouldQuit bool
 }
@@ -34,6 +38,11 @@ func New(s *settings.Settings) *Handler {
 		timezone:  timezone.NewSystem(),
 		constants: constants.NewSystem(),
 	}
+}
+
+// SetUnits sets the units system for the command handler.
+func (h *Handler) SetUnits(u *units.System) {
+	h.units = u
 }
 
 // ShouldQuit returns true if the quit command has been executed.
@@ -56,6 +65,8 @@ func (h *Handler) Execute(command string, args []string) string {
 		return h.timezone_cmd(args)
 	case "const":
 		return h.const_cmd(args)
+	case "unit":
+		return h.unit_cmd(args)
 	case "help":
 		return h.help()
 	case "clear", "cls":
@@ -132,6 +143,10 @@ func (h *Handler) help() string {
 	:quiet [on|off]    Toggle or set quiet mode (suppress assignment output)
   :const list        List all physical constants
   :const show <name> Show details of a specific constant
+  :unit define <name> = <value> <unit>  Define a custom unit
+  :unit list [all|custom|builtin]       List units (default: all)
+  :unit show <name>  Show details of a specific unit
+  :unit delete <name> Delete a custom unit
   :help              Show this help
   :quit / :exit / :q Exit the program
 
@@ -298,4 +313,211 @@ func (h *Handler) constShow(name string) string {
 	}
 
 	return result
+}
+
+func (h *Handler) unit_cmd(args []string) string {
+	if len(args) == 0 {
+		return "usage: :unit define|list|show|delete"
+	}
+
+	subcmd := strings.ToLower(args[0])
+
+	switch subcmd {
+	case "define":
+		return h.unitDefine(args[1:])
+	case "list":
+		return h.unitList(args[1:])
+	case "show":
+		if len(args) < 2 {
+			return "usage: :unit show <name>"
+		}
+		return h.unitShow(args[1])
+	case "delete":
+		if len(args) < 2 {
+			return "usage: :unit delete <name>"
+		}
+		return h.unitDelete(args[1])
+	default:
+		return fmt.Sprintf("unknown unit command: %s (use :unit define|list|show|delete)", subcmd)
+	}
+}
+
+func (h *Handler) unitDefine(args []string) string {
+	if h.units == nil {
+		return "unit system not available"
+	}
+
+	if h.DefineUnit == nil {
+		return "unit definition not available in this context"
+	}
+
+	// Parse: <name> = <value> <unit>
+	// Join all args and parse
+	input := strings.Join(args, " ")
+	parts := strings.SplitN(input, "=", 2)
+	if len(parts) != 2 {
+		return "usage: :unit define <name> = <value> <unit>\nexample: :unit define spoon = 15 ml"
+	}
+
+	name := strings.TrimSpace(parts[0])
+	if name == "" {
+		return "unit name cannot be empty"
+	}
+
+	// Check if unit already exists
+	if h.units.UnitExists(name) {
+		return fmt.Sprintf("unit '%s' already exists (use :unit delete first to redefine)", name)
+	}
+
+	// Parse the value and unit from the right side
+	valueUnitStr := strings.TrimSpace(parts[1])
+	
+	// Call the DefineUnit callback which will parse and evaluate the expression
+	// For now, we'll return an instruction for the REPL to handle this
+	return fmt.Sprintf("DEFINE_UNIT:%s:%s", name, valueUnitStr)
+}
+
+func (h *Handler) unitList(args []string) string {
+	if h.units == nil {
+		return "unit system not available"
+	}
+
+	filter := "all"
+	if len(args) > 0 {
+		filter = strings.ToLower(args[0])
+		if filter != "all" && filter != "custom" && filter != "builtin" {
+			return "usage: :unit list [all|custom|builtin]"
+		}
+	}
+
+	result := ""
+
+	// Show custom units
+	if filter == "all" || filter == "custom" {
+		customUnits := h.units.ListCustomUnits()
+		
+		if len(customUnits) > 0 {
+			result += "Custom Units:\n"
+			for _, u := range customUnits {
+				result += fmt.Sprintf("  %-15s (dimension: %d, base: %s)\n", u.Name, u.Dimension, u.BaseUnit)
+			}
+		} else if filter == "custom" {
+			return "No custom units defined\nUse :unit define <name> = <value> <unit> to create one"
+		}
+	}
+
+	// Show builtin units
+	if filter == "all" || filter == "builtin" {
+		if result != "" {
+			result += "\n"
+		}
+		result += "Built-in Units:\n"
+		
+		allUnits := h.units.ListAllUnits()
+		builtinCount := 0
+		
+		// Group by dimension for better readability
+		dimensions := make(map[string][]string)
+		for _, u := range allUnits {
+			if !u.IsCustom {
+				dimName := h.getDimensionName(u.Dimension)
+				dimensions[dimName] = append(dimensions[dimName], u.Name)
+				builtinCount++
+			}
+		}
+		
+		// Display dimensions in order
+		dimOrder := []string{"Length", "Mass", "Time", "Volume", "Temperature", "Area", "Speed", "Pressure", "Force", "Angle", "Frequency", "Data", "DataRate", "None"}
+		for _, dimName := range dimOrder {
+			if units, ok := dimensions[dimName]; ok && len(units) > 0 {
+				result += fmt.Sprintf("  %s: ", dimName)
+				// Show first 10 units per dimension to keep output manageable
+				if len(units) > 10 {
+					result += fmt.Sprintf("%s (%d more...)\n", strings.Join(units[:10], ", "), len(units)-10)
+				} else {
+					result += fmt.Sprintf("%s\n", strings.Join(units, ", "))
+				}
+			}
+		}
+		
+		result += fmt.Sprintf("\nTotal built-in units: %d\n", builtinCount)
+	}
+
+	if result == "" && filter == "all" {
+		return "No units available"
+	}
+
+	return result
+}
+
+func (h *Handler) getDimensionName(dim units.Dimension) string {
+	switch dim {
+	case 0:
+		return "None"
+	case 1:
+		return "Length"
+	case 2:
+		return "Mass"
+	case 3:
+		return "Time"
+	case 4:
+		return "Temperature"
+	case 5:
+		return "Volume"
+	case 6:
+		return "Area"
+	case 7:
+		return "Data"
+	case 8:
+		return "DataRate"
+	case 9:
+		return "Speed"
+	case 10:
+		return "Pressure"
+	case 11:
+		return "Force"
+	case 12:
+		return "Angle"
+	case 13:
+		return "Frequency"
+	default:
+		return fmt.Sprintf("Unknown(%d)", dim)
+	}
+}
+
+func (h *Handler) unitShow(name string) string {
+	if h.units == nil {
+		return "unit system not available"
+	}
+
+	unit, ok := h.units.GetUnit(name)
+	if !ok {
+		return fmt.Sprintf("unknown unit: %s\nUse :unit list to see custom units", name)
+	}
+
+	result := fmt.Sprintf("Unit: %s\n", unit.Name)
+	result += fmt.Sprintf("Dimension: %d\n", unit.Dimension)
+	result += fmt.Sprintf("Base Unit: %s\n", unit.BaseUnit)
+	result += fmt.Sprintf("Conversion Factor: %e\n", unit.ToBase)
+	
+	if unit.IsCustom {
+		result += "Type: Custom\n"
+	} else {
+		result += "Type: Standard\n"
+	}
+
+	return result
+}
+
+func (h *Handler) unitDelete(name string) string {
+	if h.units == nil {
+		return "unit system not available"
+	}
+
+	err := h.units.DeleteCustomUnit(name)
+	if err != nil {
+		return fmt.Sprintf("error: %s", err)
+	}
+
+	return fmt.Sprintf("deleted custom unit: %s", name)
 }

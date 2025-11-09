@@ -208,6 +208,29 @@ func (p *Parser) parseCommand() (Expr, error) {
 		return p.parseArgDirective()
 	}
 
+	// Special handling for :unit directive - only if it's a shorthand definition (":unit name = value")
+	if command == "unit" {
+		// Only treat as a directive if it's the shorthand form: ":unit name = value"
+		// Commands like ":unit define ...", ":unit list", etc. should fall through to normal command handling
+		// Check for identifier OR unit token (for redefining built-in units like "yard")
+		if p.current().Type == lexer.TokenIdent || p.current().Type == lexer.TokenUnit {
+			savedPos := p.pos
+			p.advance()
+			
+			// If the identifier/unit is followed by '=', this is a shorthand directive
+			if p.current().Type == lexer.TokenEquals {
+				// ":unit name = value" - parse as directive
+				p.pos = savedPos
+				return p.parseUnitDirective()
+			} else {
+				// Otherwise, treat as a command (including ":unit define name = value")
+				// Reset to the position we saved (the first identifier after "unit")
+				p.pos = savedPos
+				// Fall through to normal command handling
+			}
+		}
+	}
+
 	// Reconstruct the remainder of the line into a raw tail string while
 	// preserving filename/path punctuation like '.', '/', and '-' by gluing
 	// those to adjacent tokens without spaces. Then split on spaces to get args.
@@ -268,6 +291,40 @@ func (p *Parser) parseArgDirective() (Expr, error) {
 	return &ArgDirectiveExpr{
 		Name:   varName,
 		Prompt: prompt,
+	}, nil
+}
+
+// parseUnitDirective parses ":unit name = value unit" directives (e.g., ":unit spoon = 15 ml").
+// This is only called for the shorthand form, not for ":unit define name = value" which is handled as a command.
+// parseUnitDirective parses ":unit name = value unit" directives (e.g., ":unit spoon = 15 ml").
+// This is only called for the shorthand form, not for ":unit define name = value" which is handled as a command.
+func (p *Parser) parseUnitDirective() (Expr, error) {
+	// Expect unit name (can be TokenIdent, TokenUnit for redefining, or keyword)
+	if p.current().Type != lexer.TokenIdent && 
+		p.current().Type != lexer.TokenUnit && 
+		!p.isKeywordToken(p.current().Type) {
+		return nil, fmt.Errorf("expected unit name after :unit")
+	}
+
+	unitName := p.current().Literal
+	p.advance()
+
+	// Expect '='
+	if p.current().Type != lexer.TokenEquals {
+		return nil, fmt.Errorf("expected '=' after unit name")
+	}
+	p.advance()
+
+	// Parse the value expression (e.g., "15 ml")
+	// Call parseConversion directly to ensure units are parsed
+	valueExpr, err := p.parseConversion()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse unit value: %w", err)
+	}
+
+	return &UnitDirectiveExpr{
+		Name:  unitName,
+		Value: valueExpr,
 	}, nil
 }
 

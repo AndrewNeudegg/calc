@@ -14,6 +14,7 @@ type Lexer struct {
 	column          int
 	keywords        map[string]TokenType
 	constantChecker func(string) bool // Optional function to check if a string is a constant
+	unitChecker     func(string) bool // Optional function to check if a string is a custom unit
 }
 
 // New creates a new lexer for the given input.
@@ -81,6 +82,11 @@ func New(input string) *Lexer {
 // SetConstantChecker sets a function to check if an identifier is a physical constant.
 func (l *Lexer) SetConstantChecker(checker func(string) bool) {
 	l.constantChecker = checker
+}
+
+// SetUnitChecker sets a function to check if an identifier is a custom unit.
+func (l *Lexer) SetUnitChecker(checker func(string) bool) {
+	l.unitChecker = checker
 }
 
 // NextToken returns the next token from the input.
@@ -444,20 +450,22 @@ func (l *Lexer) scanIdentifier() Token {
 		}
 	}
 
-	// Check if it's a constant (if checker is available)
-	if l.constantChecker != nil && l.constantChecker(literal) {
+	// Check if it's a known unit BEFORE checking constants
+	// This ensures "g" is treated as gram (unit) not gravitational constant
+	// Units take priority over constants in ambiguous cases
+	if l.isKnownUnit(literal) || (l.unitChecker != nil && l.unitChecker(literal)) {
 		return Token{
-			Type:    TokenConstant,
+			Type:    TokenUnit,
 			Literal: literal,
 			Line:    l.line,
 			Column:  startCol,
 		}
 	}
 
-	// Check if it's a known unit
-	if l.isKnownUnit(literal) {
+	// Check if it's a constant (if checker is available)
+	if l.constantChecker != nil && l.constantChecker(literal) {
 		return Token{
-			Type:    TokenUnit,
+			Type:    TokenConstant,
 			Literal: literal,
 			Line:    l.line,
 			Column:  startCol,

@@ -7,6 +7,7 @@ Terminal calculator with units, currency conversion, and natural language expres
 - Arithmetic with operator precedence and parentheses
 - Named variables with dependency tracking
 - Unit conversions (length, mass, time, volume, temperature, etc.)
+- **Custom units**: Define your own units for domain-specific calculations with persistence
 - Currency conversion with postfix notation support
 - Date and time arithmetic
 - Percentage calculations
@@ -430,6 +431,10 @@ Notes:
 | `:const list` | List all physical constants |
 | `:const list <category>` | List constants by category (fundamental, electromagnetic, universal) |
 | `:const show <name>` | Show details of a specific constant |
+| `:unit define <name> = <value> <unit>` | Define a custom unit |
+| `:unit list [all\|custom\|builtin]` | List units (default: all) |
+| `:unit show <name>` | Show details of a specific unit |
+| `:unit delete <name>` | Delete a custom unit |
 
 Settings keys for `:set`:
 - `precision <n>` – Number of decimal places (default: 2)
@@ -587,6 +592,111 @@ Run with:
 ```bash
 ./calc -f examples/shopping-list.calc --arg family_members=4 --arg nights=7 --arg price_per_meal=8.50
 ```
+
+### Custom Units
+
+Calc allows you to define your own custom units for domain-specific calculations. Custom units are persisted across sessions and work seamlessly with built-in units.
+
+#### Defining Custom Units
+
+Use the `:unit` command in the REPL or script directives to define custom units:
+
+**REPL command syntax:**
+```
+:unit define <name> = <value> <unit>
+```
+
+**Script directive syntax (shorthand):**
+```
+:unit <name> = <value> <unit>
+```
+
+Both forms accept any expression that evaluates to a unit value.
+
+**Examples:**
+```
+1> :unit define spoon = 15 ml
+   defined custom unit: spoon = 15.00 ml
+
+2> 2 spoon in ml
+   = 30.00 ml
+
+3> :unit bowl = 350 ml
+   (shorthand form in scripts)
+
+4> 1 bowl in spoon
+   = 23.33 spoon
+```
+
+#### Unit Chaining
+
+Define units based on other custom units or expressions:
+
+```
+1> :unit foot = 0.3048 meters
+   defined custom unit: foot = 0.30 meters
+
+2> :unit yard = 3 foot
+   defined custom unit: yard = 0.91 meters
+
+3> 1 yard in meters
+   = 0.91 meters
+
+4> 1 yard in foot
+   = 3.00 foot
+```
+
+#### Managing Custom Units
+
+**List units:**
+```
+:unit list              # List all units (custom and built-in)
+:unit list custom       # List only custom units
+:unit list builtin      # List only built-in units
+```
+
+**Show unit details:**
+```
+:unit show spoon        # Display details about a specific unit
+```
+
+**Delete a custom unit:**
+```
+:unit delete spoon      # Remove a custom unit definition
+```
+
+#### Persistence
+
+Custom units are automatically saved to `~/.config/calc/custom_units.json` and loaded when calc starts. They persist across sessions and are available in both REPL and script execution modes.
+
+#### Using Custom Units in Scripts
+
+Custom units can be defined in `.calc` script files using the directive syntax:
+
+```
+:unit spoon = 15 ml
+:unit cup = 240 ml
+:unit bowl = 350 ml
+
+recipe_volume = 2 bowl + 3 cup + 5 spoon
+total = recipe_volume in ml
+
+print("Total recipe volume: {total}")
+```
+
+Run the script:
+```bash
+./calc -f recipe.calc
+```
+
+**Example script:** See `examples/custom-units-demo.calc` for a complete example.
+
+#### Notes
+
+- Custom unit names must not conflict with built-in units unless you delete the custom unit first
+- Custom units support all the same operations as built-in units (conversion, arithmetic, etc.)
+- Unit definitions can use expressions: `:unit dozen = 12` or `:unit gross = 12 dozen`
+- Custom units are dimension-aware and only convert between compatible dimensions
 
 ## Supported Units
 

@@ -43,8 +43,16 @@ type REPL struct {
 // NewREPL creates a new REPL instance.
 func NewREPL() *REPL {
 	// Load settings
-	homeDir, _ := os.UserHomeDir()
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not determine home directory: %v\n", err)
+		homeDir = "" // Use empty string, which will result in relative paths
+	}
+	
 	configPath := fmt.Sprintf("%s/.config/calc/settings.json", homeDir)
+	if homeDir == "" {
+		configPath = ".config/calc/settings.json"
+	}
 
 	sett, err := settings.Load(configPath)
 	if err != nil {
@@ -82,6 +90,18 @@ func NewREPL() *REPL {
 	r.commands.SetQuiet = r.SetQuiet
 	r.commands.ToggleQuiet = r.ToggleQuiet
 	r.commands.GetQuiet = r.IsQuiet
+	// Wire units system
+	r.commands.SetUnits(env.Units())
+	r.commands.DefineUnit = r.defineUnit
+	
+	// Load custom units only if homeDir is available
+	if homeDir != "" {
+		customUnitsPath := fmt.Sprintf("%s/.config/calc/custom_units.json", homeDir)
+		if err := env.Units().LoadCustomUnits(customUnitsPath); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not load custom units: %v\n", err)
+		}
+	}
+	
 	return r
 }
 
@@ -190,6 +210,8 @@ func (r *REPL) EvaluateLine(input string) evaluator.Value {
 	lex := lexer.New(input)
 	// Hook up constants checker
 	lex.SetConstantChecker(r.env.Constants().IsConstant)
+	// Hook up custom units checker
+	lex.SetUnitChecker(r.env.Units().UnitExists)
 	tokens := lex.AllTokens()
 
 	// Remove EOF token for parsing
@@ -212,10 +234,108 @@ func (r *REPL) EvaluateLine(input string) evaluator.Value {
 	// Check if it's a command
 	if cmd, ok := expr.(*parser.CommandExpr); ok {
 		msg := r.commands.Execute(cmd.Command, cmd.Args)
+		
+		// Handle special DEFINE_UNIT response
+		if strings.HasPrefix(msg, "DEFINE_UNIT:") {
+			parts := strings.SplitN(msg, ":", 3)
+			if len(parts) == 3 {
+				unitName := parts[1]
+				valueUnitStr := parts[2]
+				
+				// Parse and evaluate the value expression
+				l := lexer.New(valueUnitStr)
+				l.SetConstantChecker(r.env.Constants().IsConstant)
+				l.SetUnitChecker(r.env.Units().UnitExists)
+				tokens := l.AllTokens()
+				p := parser.NewWithLocale(tokens, r.settings.Locale)
+				valueExpr, err := p.Parse()
+				if err != nil {
+					return evaluator.NewError(fmt.Sprintf("invalid unit definition: %s", err.Error()))
+				}
+				
+				// Evaluate to get the value
+				valueResult := r.eval.Eval(valueExpr)
+				if valueResult.IsError() {
+					return evaluator.NewError(fmt.Sprintf("error evaluating unit value: %s", valueResult.Error))
+				}
+				
+				// Extract the numeric value and unit
+				if valueResult.Type != evaluator.ValueUnit {
+					return evaluator.NewError("unit definition must have a unit (e.g., '15 ml')")
+				}
+				
+				// Add the custom unit
+				err = r.env.Units().AddCustomUnit(unitName, valueResult.Number, valueResult.Unit)
+				if err != nil {
+					return evaluator.NewError(fmt.Sprintf("failed to define unit: %s", err.Error()))
+				}
+				
+				// Save custom units
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "warning: could not determine home directory: %v\n", err)
+					return evaluator.NewError("")
+				}
+				customUnitsPath := fmt.Sprintf("%s/.config/calc/custom_units.json", homeDir)
+				if err := r.env.Units().SaveCustomUnits(customUnitsPath); err != nil {
+					fmt.Fprintf(os.Stderr, "warning: could not save custom units: %v\n", err)
+				}
+				
+				if !r.silent {
+					printWithCRLF(os.Stdout, fmt.Sprintf("defined custom unit: %s = %.2f %s", unitName, valueResult.Number, valueResult.Unit))
+				}
+				return evaluator.NewError("")
+			}
+		}
+		
 		if !r.silent {
 			printWithCRLF(os.Stdout, msg)
 		}
 		// Return a sentinel error value with empty message so caller skips printing a result line.
+		return evaluator.NewError("")
+	}
+
+	// Check if it's a unit directive (shorthand form: ":unit name = value")
+	if unitDir, ok := expr.(*parser.UnitDirectiveExpr); ok {
+		// Evaluate the value expression
+		valueResult := r.eval.Eval(unitDir.Value)
+		if valueResult.IsError() {
+			return evaluator.NewError(fmt.Sprintf("error evaluating unit value: %s", valueResult.Error))
+		}
+		
+		// Extract the numeric value and unit
+		if valueResult.Type != evaluator.ValueUnit {
+			return evaluator.NewError("unit definition must have a unit (e.g., '15 ml')")
+		}
+		
+		// Check if unit already exists (don't allow redefining standard units)
+		if unit, exists := r.env.Units().GetUnit(unitDir.Name); exists {
+			// Don't allow redefining standard units
+			if !unit.IsCustom {
+				return evaluator.NewError(fmt.Sprintf("cannot redefine standard unit '%s'", unitDir.Name))
+			}
+		}
+		
+		// Add the custom unit
+		err := r.env.Units().AddCustomUnit(unitDir.Name, valueResult.Number, valueResult.Unit)
+		if err != nil {
+			return evaluator.NewError(fmt.Sprintf("failed to define unit: %s", err.Error()))
+		}
+		
+		// Save custom units
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not determine home directory: %v\n", err)
+			return evaluator.NewError("")
+		}
+		customUnitsPath := fmt.Sprintf("%s/.config/calc/custom_units.json", homeDir)
+		if err := r.env.Units().SaveCustomUnits(customUnitsPath); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not save custom units: %v\n", err)
+		}
+		
+		if !r.silent {
+			printWithCRLF(os.Stdout, fmt.Sprintf("defined custom unit: %s = %.2f %s", unitDir.Name, valueResult.Number, valueResult.Unit))
+		}
 		return evaluator.NewError("")
 	}
 
@@ -432,4 +552,24 @@ func (r *REPL) getAbsoluteHistoryValue(lineID int) (evaluator.Value, error) {
 	
 	// Return the result of that line
 	return line.Result, nil
+}
+
+// defineUnit is a callback for the commands handler to define a custom unit.
+func (r *REPL) defineUnit(name string, value float64, baseUnit string) error {
+	err := r.env.Units().AddCustomUnit(name, value, baseUnit)
+	if err != nil {
+		return err
+	}
+	
+	// Save custom units
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("could not determine user home directory: %w", err)
+	}
+	customUnitsPath := fmt.Sprintf("%s/.config/calc/custom_units.json", homeDir)
+	if err := r.env.Units().SaveCustomUnits(customUnitsPath); err != nil {
+		return fmt.Errorf("failed to save custom units: %w", err)
+	}
+	
+	return nil
 }

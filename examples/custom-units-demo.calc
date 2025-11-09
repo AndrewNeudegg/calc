@@ -1,0 +1,28 @@
+// Custom Units Demo
+// This demonstrates defining and using custom units
+
+// Define some kitchen units
+:unit spoon = 15 ml
+:unit cup = 240 ml
+:unit bowl = 350 ml
+
+// Use custom units in calculations
+print("2 spoons in ml:")
+2 spoon in ml
+
+print("1 bowl in spoons:")
+1 bowl in spoon
+
+// Define length units based on each other
+:unit foot = 0.3048 meters
+:unit yard = 3 foot
+
+print("1 yard in meters:")
+1 yard in meters
+
+print("1 yard in feet:")
+1 yard in foot
+
+// Mix custom and standard units
+print("10 spoons in liters:")
+10 spoon in l
