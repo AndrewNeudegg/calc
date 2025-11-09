@@ -208,34 +208,23 @@ func (p *Parser) parseCommand() (Expr, error) {
 		return p.parseArgDirective()
 	}
 
-	// Special handling for :unit directive - only if it's a definition (has = in it)
+	// Special handling for :unit directive - only if it's a shorthand definition (":unit name = value")
 	if command == "unit" {
-		// Peek ahead to see if this looks like a definition directive
-		// A definition has the pattern: name = value
-		// A command has patterns like: list, show name, delete name, define name = value
+		// Only treat as a directive if it's the shorthand form: ":unit name = value"
+		// Commands like ":unit define ...", ":unit list", etc. should fall through to normal command handling
 		if p.current().Type == lexer.TokenIdent {
-			// Could be either a subcommand or a unit name
-			// Check if the next token after the ident is '='
 			savedPos := p.pos
-			ident := p.current().Literal
 			p.advance()
 			
-			// Check for special subcommands
-			if ident == "list" || ident == "show" || ident == "delete" {
-				// This is definitely a command
-				p.pos = savedPos - 1 // restore to command position
-				// Fall through to normal command handling
-			} else if ident == "define" {
-				// ":unit define name = value" - parse as directive
-				p.pos = savedPos
-				return p.parseUnitDirective()
-			} else if p.current().Type == lexer.TokenEquals {
+			// If the identifier is followed by '=', this is a shorthand directive
+			if p.current().Type == lexer.TokenEquals {
 				// ":unit name = value" - parse as directive
 				p.pos = savedPos
 				return p.parseUnitDirective()
 			} else {
-				// Not a valid directive format, treat as command
+				// Otherwise, treat as a command (including ":unit define name = value")
 				p.pos = savedPos - 1
+				// Fall through to normal command handling
 			}
 		}
 	}
@@ -304,12 +293,8 @@ func (p *Parser) parseArgDirective() (Expr, error) {
 }
 
 // parseUnitDirective parses ":unit name = value unit" directives (e.g., ":unit spoon = 15 ml").
+// This is only called for the shorthand form, not for ":unit define name = value" which is handled as a command.
 func (p *Parser) parseUnitDirective() (Expr, error) {
-	// Check for "define" subcommand
-	if p.current().Type == lexer.TokenIdent && p.current().Literal == "define" {
-		p.advance() // skip "define"
-	}
-	
 	// Expect unit name
 	if p.current().Type != lexer.TokenIdent && !p.isKeywordToken(p.current().Type) {
 		return nil, fmt.Errorf("expected unit name after :unit")
