@@ -405,8 +405,8 @@ func (l *Lexer) scanIdentifier() Token {
 		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
 			break
 		}
-		l.pos += size
-		l.column++
+		l.pos += size    // Advance by byte size
+		l.column++       // Column tracks visual character position (1 per rune)
 	}
 
 	literal := l.input[start:l.pos]
