@@ -801,25 +801,37 @@ func (e *Evaluator) evalUnitBinary(left Value, op string, right Value) Value {
 			return NewError("division by zero")
 		}
 		if right.Type == ValueUnit {
-			// For division, try to convert if possible
+			// If left is a plain number (not a unit), result is in 1/right.Unit
+			if left.Type != ValueUnit {
+				return NewUnit(left.Number/right.Number, "1/"+right.Unit)
+			}
+			
+			// Both are units - divide and simplify
+			resultNum := left.Number / right.Number
+			
+			// For division, try to convert if units are compatible first
 			if left.Unit != right.Unit {
 				converted, err := e.env.units.Convert(right.Number, right.Unit, left.Unit)
 				if err == nil {
-					// Units are compatible, convert and divide
-					right.Number = converted
-					right.Unit = left.Unit
+					// Units are compatible, convert and divide - result is dimensionless
+					return NewNumber(left.Number / converted)
 				}
-				// If conversion fails, units are incompatible - we'll create a rate unit below
 			}
-
-			result := left.Number / right.Number
-			// If units are the same (after conversion), return dimensionless number
+			
+			// If units are the same, return dimensionless number
 			if left.Unit == right.Unit {
-				return NewNumber(result)
+				return NewNumber(resultNum)
 			}
-			// Otherwise, create rate unit for incompatible units
-			rateUnit := left.Unit + "/" + right.Unit
-			return NewUnit(result, rateUnit)
+			
+			// Units are incompatible - create and simplify compound unit
+			simplifiedUnit := e.simplifyUnits(left.Unit, right.Unit, "/")
+			
+			// If simplification resulted in a dimensionless unit, return a plain number
+			if simplifiedUnit == "1" || simplifiedUnit == "" {
+				return NewNumber(resultNum)
+			}
+			
+			return NewUnit(resultNum, simplifiedUnit)
 		}
 		return NewUnit(left.Number/right.Number, left.Unit)
 
@@ -830,13 +842,14 @@ func (e *Evaluator) evalUnitBinary(left Value, op string, right Value) Value {
 
 // simplifyUnits simplifies unit expressions by canceling matching units in numerator and denominator.
 // For multiplication: $/hr * hours -> $ (hr cancels with hours)
-// For division: similar logic applies
+// For division: km / hours -> km/hours (creates compound), then can cancel if matched
 func (e *Evaluator) simplifyUnits(leftUnit, rightUnit, op string) string {
 	if op == "*" {
 		return e.simplifyMultiplication(leftUnit, rightUnit)
 	}
-	// TODO: Implement division unit simplification for consistency
-	// For now, fall back to simple concatenation
+	if op == "/" {
+		return e.simplifyDivision(leftUnit, rightUnit)
+	}
 	return leftUnit + "/" + rightUnit
 }
 
@@ -854,6 +867,29 @@ func (e *Evaluator) simplifyMultiplication(leftUnit, rightUnit string) string {
 	// Combine numerators and denominators
 	numerators := append(leftParts.numerators, rightParts.numerators...)
 	denominators := append(leftParts.denominators, rightParts.denominators...)
+	
+	// Cancel matching units
+	numerators, denominators = e.cancelUnits(numerators, denominators)
+	
+	// Build result string
+	return e.buildUnitString(numerators, denominators)
+}
+
+// simplifyDivision simplifies unit division, handling cancellation
+// Examples:
+// - km / hour -> km/hour
+// - (km/hour) / km -> 1/hour
+// - m / m -> 1 (dimensionless)
+func (e *Evaluator) simplifyDivision(leftUnit, rightUnit string) string {
+	// Parse left and right units to extract numerator and denominator
+	leftParts := e.parseCompoundUnit(leftUnit)
+	rightParts := e.parseCompoundUnit(rightUnit)
+	
+	// For division: left/right means left numerators over (left denominators + right numerators)
+	// and left denominators become (left denominators + right numerators)
+	// But we need to think of it as: (leftNum/leftDen) / (rightNum/rightDen) = (leftNum * rightDen) / (leftDen * rightNum)
+	numerators := append(leftParts.numerators, rightParts.denominators...)
+	denominators := append(leftParts.denominators, rightParts.numerators...)
 	
 	// Cancel matching units
 	numerators, denominators = e.cancelUnits(numerators, denominators)

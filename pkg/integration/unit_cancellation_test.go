@@ -366,6 +366,88 @@ func TestUnitCancellation(t *testing.T) {
 	}
 }
 
+// TestCompleteCancellation tests cases where all units cancel, reducing to dimensionless
+func TestCompleteCancellation(t *testing.T) {
+	tests := []struct {
+		description string
+		lines       []string
+		expectNum   float64
+	}{
+		{
+			description: "$ * hours / $ / hours -> dimensionless",
+			lines: []string{
+				"a = $10/hour",
+				"b = 5 hours",
+				"c = $50",
+				"result = a * b / c",
+			},
+			expectNum: 1.0,
+		},
+		{
+			description: "currency rate * time / currency -> dimensionless",
+			lines: []string{
+				"rate = $20/hour",
+				"time = 3 hours",
+				"cost = $60",
+				"result = rate * time / cost",
+			},
+			expectNum: 1.0,
+		},
+		{
+			description: "km/hour * hours / km -> dimensionless",
+			lines: []string{
+				"speed = 100 km/hour",
+				"time = 2 hours",
+				"dist = 200 km",
+				"result = speed * time / dist",
+			},
+			expectNum: 1.0,
+		},
+		{
+			description: "Multiple same units cancel completely",
+			lines: []string{
+				"val1 = 10 m",
+				"val2 = 5 m",
+				"val3 = 2 m",
+				"val4 = 5 m",
+				"result = val1 * val2 / val3 / val4",
+			},
+			expectNum: 5.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			env := evaluator.NewEnvironment()
+			e := evaluator.New(env)
+			var result evaluator.Value
+
+			for _, line := range tt.lines {
+				l := lexer.New(line)
+				tokens := l.AllTokens()
+				p := parser.New(tokens)
+				expr, err := p.Parse()
+				if err != nil {
+					t.Fatalf("Parse error for %q: %v", line, err)
+				}
+				result = e.Eval(expr)
+				if result.IsError() {
+					t.Fatalf("Evaluation error for %q: %s", line, result.Error)
+				}
+			}
+
+			// Check that result is dimensionless (plain number)
+			if result.Type != evaluator.ValueNumber {
+				t.Errorf("Expected dimensionless result (ValueNumber), got %v with unit %q", result.Type, result.Unit)
+			}
+
+			if !approxEqual(result.Number, tt.expectNum, 0.01) {
+				t.Errorf("Expected %v, got %v", tt.expectNum, result.Number)
+			}
+		})
+	}
+}
+
 // TestUnitCancellationVariations tests all variations of time units
 func TestUnitCancellationVariations(t *testing.T) {
 	tests := []struct {
