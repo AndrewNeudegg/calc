@@ -835,7 +835,8 @@ func (e *Evaluator) simplifyUnits(leftUnit, rightUnit, op string) string {
 	if op == "*" {
 		return e.simplifyMultiplication(leftUnit, rightUnit)
 	}
-	// For division, we'd need different logic, but for now focus on multiplication
+	// TODO: Implement division unit simplification for consistency
+	// For now, fall back to simple concatenation
 	return leftUnit + "/" + rightUnit
 }
 
@@ -873,6 +874,7 @@ type unitParts struct {
 // - "m" -> numerators: ["m"], denominators: []
 // - "m/s" -> numerators: ["m"], denominators: ["s"]
 // - "$/hr·hours" -> numerators: ["$", "hours"], denominators: ["hr"]
+// - "$/hr*hours" -> numerators: ["$", "hours"], denominators: ["hr"]
 func (e *Evaluator) parseCompoundUnit(unit string) unitParts {
 	parts := unitParts{
 		numerators:   []string{},
@@ -883,8 +885,16 @@ func (e *Evaluator) parseCompoundUnit(unit string) unitParts {
 		return parts
 	}
 	
-	// First, split by · (middle dot) to handle products
-	products := strings.Split(unit, "·")
+	// First, split by · (middle dot) or * to handle products
+	// Support both characters for better usability
+	products := []string{}
+	if strings.Contains(unit, "·") {
+		products = strings.Split(unit, "·")
+	} else if strings.Contains(unit, "*") {
+		products = strings.Split(unit, "*")
+	} else {
+		products = []string{unit}
+	}
 	
 	for _, product := range products {
 		// Each product might be a simple unit or a ratio (num/den)
@@ -961,6 +971,9 @@ func (e *Evaluator) cancelUnits(numerators, denominators []string) ([]string, []
 
 // unitsMatch checks if two unit strings represent the same unit
 // Handles variations like "hr" vs "hours", "h" vs "hour", etc.
+// Note: This performs dimension lookups for each check, but since unit cancellations
+// are relatively infrequent and unit lists are small, the performance impact is minimal.
+// If needed in the future, consider caching unit equivalence results.
 func (e *Evaluator) unitsMatch(unit1, unit2 string) bool {
 	// Exact match
 	if unit1 == unit2 {

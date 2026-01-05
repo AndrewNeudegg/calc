@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -464,5 +465,5 @@ func approxEqual(a, b, tolerance float64) bool {
 }
 
 func errorf(format string, args ...interface{}) error {
-	return nil // Simple implementation for testing
+	return fmt.Errorf(format, args...)
 }
