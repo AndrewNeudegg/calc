@@ -783,8 +783,16 @@ func (e *Evaluator) evalUnitBinary(left Value, op string, right Value) Value {
 			if left.Type != ValueUnit {
 				return NewUnit(left.Number*right.Number, right.Unit)
 			}
-			// Both are units - creating compound unit
-			return NewUnit(left.Number*right.Number, left.Unit+"·"+right.Unit)
+			// Both are units - multiply and simplify
+			resultNum := left.Number * right.Number
+			simplifiedUnit := e.simplifyUnits(left.Unit, right.Unit, "*")
+			
+			// If simplification resulted in a dimensionless unit, return a plain number
+			if simplifiedUnit == "1" || simplifiedUnit == "" {
+				return NewNumber(resultNum)
+			}
+			
+			return NewUnit(resultNum, simplifiedUnit)
 		}
 		return NewUnit(left.Number*right.Number, left.Unit)
 
@@ -818,6 +826,190 @@ func (e *Evaluator) evalUnitBinary(left Value, op string, right Value) Value {
 	default:
 		return NewError(fmt.Sprintf("unknown operator: %s", op))
 	}
+}
+
+// simplifyUnits simplifies unit expressions by canceling matching units in numerator and denominator.
+// For multiplication: $/hr * hours -> $ (hr cancels with hours)
+// For division: similar logic applies
+func (e *Evaluator) simplifyUnits(leftUnit, rightUnit, op string) string {
+	if op == "*" {
+		return e.simplifyMultiplication(leftUnit, rightUnit)
+	}
+	// For division, we'd need different logic, but for now focus on multiplication
+	return leftUnit + "/" + rightUnit
+}
+
+// simplifyMultiplication simplifies unit multiplication, handling cancellation
+// Examples:
+// - $/hr * hours -> $
+// - $/hour * hours -> $
+// - km/h * h -> km
+// - m/s * s -> m
+func (e *Evaluator) simplifyMultiplication(leftUnit, rightUnit string) string {
+	// Parse left and right units to extract numerator and denominator
+	leftParts := e.parseCompoundUnit(leftUnit)
+	rightParts := e.parseCompoundUnit(rightUnit)
+	
+	// Combine numerators and denominators
+	numerators := append(leftParts.numerators, rightParts.numerators...)
+	denominators := append(leftParts.denominators, rightParts.denominators...)
+	
+	// Cancel matching units
+	numerators, denominators = e.cancelUnits(numerators, denominators)
+	
+	// Build result string
+	return e.buildUnitString(numerators, denominators)
+}
+
+// unitParts holds the parsed parts of a compound unit
+type unitParts struct {
+	numerators   []string
+	denominators []string
+}
+
+// parseCompoundUnit parses a unit string into numerator and denominator parts
+// Examples:
+// - "$/hr" -> numerators: ["$"], denominators: ["hr"]
+// - "m" -> numerators: ["m"], denominators: []
+// - "m/s" -> numerators: ["m"], denominators: ["s"]
+// - "$/hr·hours" -> numerators: ["$", "hours"], denominators: ["hr"]
+func (e *Evaluator) parseCompoundUnit(unit string) unitParts {
+	parts := unitParts{
+		numerators:   []string{},
+		denominators: []string{},
+	}
+	
+	if unit == "" || unit == "1" {
+		return parts
+	}
+	
+	// First, split by · (middle dot) to handle products
+	products := strings.Split(unit, "·")
+	
+	for _, product := range products {
+		// Each product might be a simple unit or a ratio (num/den)
+		if strings.Contains(product, "/") {
+			// It's a ratio
+			ratio := strings.Split(product, "/")
+			if len(ratio) == 2 {
+				num := strings.TrimSpace(ratio[0])
+				den := strings.TrimSpace(ratio[1])
+				if num != "" && num != "1" {
+					parts.numerators = append(parts.numerators, num)
+				}
+				if den != "" && den != "1" {
+					parts.denominators = append(parts.denominators, den)
+				}
+			}
+		} else {
+			// Simple unit - goes to numerator
+			simple := strings.TrimSpace(product)
+			if simple != "" && simple != "1" {
+				parts.numerators = append(parts.numerators, simple)
+			}
+		}
+	}
+	
+	return parts
+}
+
+// cancelUnits cancels matching units between numerators and denominators
+// Returns the simplified numerators and denominators
+func (e *Evaluator) cancelUnits(numerators, denominators []string) ([]string, []string) {
+	// Create copies to avoid modifying the originals
+	nums := make([]string, len(numerators))
+	copy(nums, numerators)
+	dens := make([]string, len(denominators))
+	copy(dens, denominators)
+	
+	// Try to cancel each numerator with each denominator
+	for i := 0; i < len(nums); i++ {
+		if nums[i] == "" {
+			continue
+		}
+		for j := 0; j < len(dens); j++ {
+			if dens[j] == "" {
+				continue
+			}
+			// Check if units match (accounting for variations)
+			if e.unitsMatch(nums[i], dens[j]) {
+				// Cancel them out
+				nums[i] = ""
+				dens[j] = ""
+				break
+			}
+		}
+	}
+	
+	// Filter out empty strings
+	resultNums := []string{}
+	for _, n := range nums {
+		if n != "" {
+			resultNums = append(resultNums, n)
+		}
+	}
+	
+	resultDens := []string{}
+	for _, d := range dens {
+		if d != "" {
+			resultDens = append(resultDens, d)
+		}
+	}
+	
+	return resultNums, resultDens
+}
+
+// unitsMatch checks if two unit strings represent the same unit
+// Handles variations like "hr" vs "hours", "h" vs "hour", etc.
+func (e *Evaluator) unitsMatch(unit1, unit2 string) bool {
+	// Exact match
+	if unit1 == unit2 {
+		return true
+	}
+	
+	// Normalize and compare
+	u1 := strings.ToLower(strings.TrimSpace(unit1))
+	u2 := strings.ToLower(strings.TrimSpace(unit2))
+	
+	// Check if they're the same unit in the units system
+	// Try to get the dimension for each unit
+	if e.env.units.IsUnit(u1) && e.env.units.IsUnit(u2) {
+		dim1, err1 := e.env.units.GetDimension(u1)
+		dim2, err2 := e.env.units.GetDimension(u2)
+		
+		// If both are recognized units with the same dimension
+		if err1 == nil && err2 == nil && dim1 == dim2 {
+			// Check if they convert 1:1 (i.e., they're the same unit with different names)
+			// e.g., "meter" and "metre"
+			val, err := e.env.units.Convert(1.0, u1, u2)
+			if err == nil && val == 1.0 {
+				return true
+			}
+		}
+	}
+	
+	return false
+}
+
+// buildUnitString builds a unit string from numerators and denominators
+func (e *Evaluator) buildUnitString(numerators, denominators []string) string {
+	if len(numerators) == 0 && len(denominators) == 0 {
+		return "1" // Dimensionless
+	}
+	
+	numStr := ""
+	if len(numerators) == 0 {
+		numStr = "1"
+	} else {
+		numStr = strings.Join(numerators, "·")
+	}
+	
+	if len(denominators) == 0 {
+		return numStr
+	}
+	
+	denStr := strings.Join(denominators, "·")
+	return numStr + "/" + denStr
 }
 
 // GetVariable retrieves a variable from the environment.
