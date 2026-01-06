@@ -93,6 +93,7 @@ func (p *Parser) isCurrencyCode(unit string) bool {
 
 // parseBusinessDayUnit checks if the current unit is "business" followed by a time unit,
 // and combines them into a compound unit like "business days".
+// Currently supports "business days" only; may be extended for "business weeks" in the future.
 // Returns the combined unit string and whether it was a business day pattern.
 func (p *Parser) parseBusinessDayUnit(unit string) (string, bool) {
 	if strings.ToLower(unit) == "business" && (p.current().Type == lexer.TokenUnit || p.current().Type == lexer.TokenIdent) {
@@ -838,7 +839,7 @@ func (p *Parser) parsePostfix() (Expr, error) {
 		unit, isBusinessDay := p.parseBusinessDayUnit(unit)
 		if isBusinessDay {
 			expr = &UnitExpr{Value: expr, Unit: unit}
-			// Skip further processing for business days
+			// Business days are handled directly as units, skip currency/rate processing
 		} else if p.isCurrencyCode(unit) {
 			// Convert to CurrencyExpr
 			expr = &CurrencyExpr{

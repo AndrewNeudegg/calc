@@ -213,9 +213,9 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 		unit := right.Unit
 		var newDate time.Time
 
-		// Check for business days
-		if strings.Contains(strings.ToLower(unit), "business") {
-			// Extract the base unit (e.g., "business days" -> "days")
+		// Check for business days (exact match)
+		lowerUnit := strings.ToLower(unit)
+		if lowerUnit == "business day" || lowerUnit == "business days" {
 			// Get the business day schedule for the current locale
 			schedule := businessdays.GetScheduleForLocale(e.env.GetLocale())
 			newDate = businessdays.AddBusinessDays(left.Date, int(offset), schedule)
@@ -678,8 +678,8 @@ func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {
 	var result time.Time
 	unit := strings.ToLower(node.Unit)
 
-	// Check for business days
-	if strings.Contains(unit, "business") {
+	// Check for business days (exact match)
+	if unit == "business day" || unit == "business days" {
 		schedule := businessdays.GetScheduleForLocale(e.env.GetLocale())
 		result = businessdays.AddBusinessDays(base.Date, offsetVal, schedule)
 	} else {
