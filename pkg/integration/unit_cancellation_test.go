@@ -448,6 +448,102 @@ func TestCompleteCancellation(t *testing.T) {
 	}
 }
 
+// TestMultipleSlashBehavior tests behavior with multiple division operations
+// This documents the current behavior where a/b/c is parsed as (a/b)/c
+func TestMultipleSlashBehavior(t *testing.T) {
+	tests := []struct {
+		description string
+		lines       []string
+		expectType  evaluator.ValueType
+		expectUnit  string
+		expectNum   float64
+	}{
+		{
+			description: "10 m / 2 m / 5 -> dimensionless 1",
+			lines: []string{
+				"result = 10 m / 2 m / 5",
+			},
+			expectType: evaluator.ValueNumber,
+			expectUnit: "",
+			expectNum:  1.0,
+		},
+		{
+			description: "100 km / 2 hours / 5 -> 10 km/hours",
+			lines: []string{
+				"result = 100 km / 2 hours / 5",
+			},
+			expectType: evaluator.ValueUnit,
+			expectUnit: "km/hours",
+			expectNum:  10.0,
+		},
+		{
+			description: "100 m / 10 m / 2 m -> 5 1/m (current behavior, not fully canceled)",
+			lines: []string{
+				"result = 100 m / 10 m / 2 m",
+			},
+			expectType: evaluator.ValueUnit,
+			expectUnit: "1/m",
+			expectNum:  5.0,
+		},
+		{
+			description: "Grouped divisions for complete cancellation: (100 m / 10 m) / 2 m",
+			lines: []string{
+				"temp = 100 m / 10 m",
+				"result = temp / 2 m",
+			},
+			expectType: evaluator.ValueUnit,
+			expectUnit: "1/m",
+			expectNum:  5.0,
+		},
+		{
+			description: "Proper complete cancellation with explicit grouping",
+			lines: []string{
+				"val1 = 100 m",
+				"val2 = 10 m",
+				"val3 = 10 m",
+				"result = val1 / val2 / val3",
+			},
+			expectType: evaluator.ValueUnit,
+			expectUnit: "1/m",
+			expectNum:  1.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			env := evaluator.NewEnvironment()
+			e := evaluator.New(env)
+			var result evaluator.Value
+
+			for _, line := range tt.lines {
+				l := lexer.New(line)
+				tokens := l.AllTokens()
+				p := parser.New(tokens)
+				expr, err := p.Parse()
+				if err != nil {
+					t.Fatalf("Parse error for %q: %v", line, err)
+				}
+				result = e.Eval(expr)
+				if result.IsError() {
+					t.Fatalf("Evaluation error for %q: %s", line, result.Error)
+				}
+			}
+
+			if result.Type != tt.expectType {
+				t.Errorf("Expected type %v, got %v", tt.expectType, result.Type)
+			}
+
+			if tt.expectType == evaluator.ValueUnit && result.Unit != tt.expectUnit {
+				t.Errorf("Expected unit %q, got %q", tt.expectUnit, result.Unit)
+			}
+
+			if !approxEqual(result.Number, tt.expectNum, 0.01) {
+				t.Errorf("Expected %v, got %v", tt.expectNum, result.Number)
+			}
+		})
+	}
+}
+
 // TestUnitCancellationVariations tests all variations of time units
 func TestUnitCancellationVariations(t *testing.T) {
 	tests := []struct {
