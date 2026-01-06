@@ -822,8 +822,15 @@ func (p *Parser) parsePostfix() (Expr, error) {
 		unit := p.current().Literal
 		p.advance()
 
-		// Check if this unit is actually a currency code
-		if p.isCurrencyCode(unit) {
+		// Check for "business days" or "business weeks" pattern
+		if strings.ToLower(unit) == "business" && p.current().Type == lexer.TokenUnit {
+			timeUnit := p.current().Literal
+			p.advance()
+			// Combine into compound unit like "business days"
+			unit = unit + " " + timeUnit
+			expr = &UnitExpr{Value: expr, Unit: unit}
+			// Skip further processing for business days
+		} else if p.isCurrencyCode(unit) {
 			// Convert to CurrencyExpr
 			expr = &CurrencyExpr{
 				Value:    expr,
@@ -1310,6 +1317,13 @@ func (p *Parser) parseDateKeyword() (Expr, error) {
 		if p.current().Type == lexer.TokenUnit || p.current().Type == lexer.TokenIdent {
 			unit = p.current().Literal
 			p.advance()
+			
+			// Check for "business days" or "business weeks" pattern
+			if strings.ToLower(unit) == "business" && (p.current().Type == lexer.TokenUnit || p.current().Type == lexer.TokenIdent) {
+				timeUnit := p.current().Literal
+				p.advance()
+				unit = unit + " " + timeUnit
+			}
 		}
 
 		return &DateArithmeticExpr{

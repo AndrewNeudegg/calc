@@ -542,6 +542,7 @@ func (l *Lexer) isKnownUnit(s string) bool {
 		"quarter": true, "quarters": true,
 		"semester": true, "semesters": true,
 		"year": true, "years": true, "y": true,
+		"business": true, // For "business days"
 
 		// Volume
 		"l": true, "ml": true, "litre": true, "litres": true, "liter": true, "liters": true,
