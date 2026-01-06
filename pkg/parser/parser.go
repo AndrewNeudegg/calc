@@ -898,6 +898,32 @@ func (p *Parser) parsePostfix() (Expr, error) {
 		}
 	}
 
+	// Check for unit rate after plain number (e.g., "730/month", "50 per day")
+	// This handles expressions like "730/month" where a number is followed by /unit
+	// The result should be stored as a rate with a dimensionless numerator, e.g., "1/month"
+	if numExpr, ok := expr.(*NumberExpr); ok {
+		if p.current().Type == lexer.TokenPer {
+			p.advance()
+			if p.current().Type == lexer.TokenUnit {
+				unit := p.current().Literal
+				p.advance()
+				// Store as a compound unit with "1" as numerator dimension (dimensionless rate)
+				// e.g., "730 per month" becomes 730 with unit "1/month"
+				expr = &UnitExpr{Value: numExpr, Unit: "1/" + unit}
+			}
+		} else if p.current().Type == lexer.TokenDivide {
+			// Look ahead to see if this is a rate (/ followed by unit)
+			if p.peek(1).Type == lexer.TokenUnit {
+				p.advance() // consume the /
+				unit := p.current().Literal
+				p.advance()
+				// Store as a compound unit with "1" as numerator dimension (dimensionless rate)
+				// e.g., "730/month" becomes 730 with unit "1/month"
+				expr = &UnitExpr{Value: numExpr, Unit: "1/" + unit}
+			}
+		}
+	}
+
 	// Check for percentage
 	if p.current().Type == lexer.TokenPercent {
 		p.advance()
