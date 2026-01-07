@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/andrewneudegg/calc/pkg/businessdays"
 	"github.com/andrewneudegg/calc/pkg/constants"
 	"github.com/andrewneudegg/calc/pkg/currency"
 	"github.com/andrewneudegg/calc/pkg/parser"
@@ -20,6 +21,7 @@ type Environment struct {
 	currency            *currency.System
 	timezone            *timezone.System
 	constants           *constants.System
+	locale              string // Current locale for business days and number formatting
 	historyFunc         func(offset int) (Value, error)   // Function to get previous results by relative offset
 	absoluteHistoryFunc func(lineID int) (Value, error)   // Function to get result by absolute line ID
 }
@@ -32,6 +34,7 @@ func NewEnvironment() *Environment {
 		currency:  currency.NewSystem(),
 		timezone:  timezone.NewSystem(),
 		constants: constants.NewSystem(),
+		locale:    "en_GB", // Default locale
 	}
 }
 
@@ -72,6 +75,16 @@ func (e *Environment) Currency() *currency.System {
 // Constants returns the constants system.
 func (e *Environment) Constants() *constants.System {
 	return e.constants
+}
+
+// SetLocale sets the locale for the environment (for business days and number formatting).
+func (e *Environment) SetLocale(locale string) {
+	e.locale = locale
+}
+
+// GetLocale returns the current locale.
+func (e *Environment) GetLocale() string {
+	return e.locale
 }
 
 // Eval evaluates an expression using this environment.
@@ -200,23 +213,31 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 		unit := right.Unit
 		var newDate time.Time
 
-		switch strings.ToLower(unit) {
-		case "day", "days", "d":
-			newDate = left.Date.AddDate(0, 0, int(offset))
-		case "week", "weeks", "w":
-			newDate = left.Date.AddDate(0, 0, int(offset*7))
-		case "month", "months", "mo":
-			newDate = left.Date.AddDate(0, int(offset), 0)
-		case "year", "years", "y":
-			newDate = left.Date.AddDate(int(offset), 0, 0)
-		case "hour", "hours", "h", "hr":
-			newDate = left.Date.Add(time.Duration(offset * float64(time.Hour)))
-		case "minute", "minutes", "min":
-			newDate = left.Date.Add(time.Duration(offset * float64(time.Minute)))
-		case "second", "seconds", "s", "sec":
-			newDate = left.Date.Add(time.Duration(offset * float64(time.Second)))
-		default:
-			return NewError(fmt.Sprintf("cannot add unit '%s' to date", unit))
+		// Check for business days (exact match)
+		lowerUnit := strings.ToLower(unit)
+		if lowerUnit == "business day" || lowerUnit == "business days" {
+			// Get the business day schedule for the current locale
+			schedule := businessdays.GetScheduleForLocale(e.env.GetLocale())
+			newDate = businessdays.AddBusinessDays(left.Date, int(offset), schedule)
+		} else {
+			switch strings.ToLower(unit) {
+			case "day", "days", "d":
+				newDate = left.Date.AddDate(0, 0, int(offset))
+			case "week", "weeks", "w":
+				newDate = left.Date.AddDate(0, 0, int(offset*7))
+			case "month", "months", "mo":
+				newDate = left.Date.AddDate(0, int(offset), 0)
+			case "year", "years", "y":
+				newDate = left.Date.AddDate(int(offset), 0, 0)
+			case "hour", "hours", "h", "hr":
+				newDate = left.Date.Add(time.Duration(offset * float64(time.Hour)))
+			case "minute", "minutes", "min":
+				newDate = left.Date.Add(time.Duration(offset * float64(time.Minute)))
+			case "second", "seconds", "s", "sec":
+				newDate = left.Date.Add(time.Duration(offset * float64(time.Second)))
+			default:
+				return NewError(fmt.Sprintf("cannot add unit '%s' to date", unit))
+			}
 		}
 
 		return NewDate(newDate)
@@ -657,23 +678,29 @@ func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {
 	var result time.Time
 	unit := strings.ToLower(node.Unit)
 
-	switch unit {
-	case "day", "days":
-		result = base.Date.AddDate(0, 0, offsetVal)
-	case "week", "weeks":
-		result = base.Date.AddDate(0, 0, offsetVal*7)
-	case "month", "months":
-		result = base.Date.AddDate(0, offsetVal, 0)
-	case "year", "years":
-		result = base.Date.AddDate(offsetVal, 0, 0)
-	case "hour", "hours", "h", "hr":
-		result = base.Date.Add(time.Duration(offsetVal) * time.Hour)
-	case "minute", "minutes", "min":
-		result = base.Date.Add(time.Duration(offsetVal) * time.Minute)
-	case "second", "seconds", "s", "sec":
-		result = base.Date.Add(time.Duration(offsetVal) * time.Second)
-	default:
-		return NewError(fmt.Sprintf("unknown time unit: %s", node.Unit))
+	// Check for business days (exact match)
+	if unit == "business day" || unit == "business days" {
+		schedule := businessdays.GetScheduleForLocale(e.env.GetLocale())
+		result = businessdays.AddBusinessDays(base.Date, offsetVal, schedule)
+	} else {
+		switch unit {
+		case "day", "days":
+			result = base.Date.AddDate(0, 0, offsetVal)
+		case "week", "weeks":
+			result = base.Date.AddDate(0, 0, offsetVal*7)
+		case "month", "months":
+			result = base.Date.AddDate(0, offsetVal, 0)
+		case "year", "years":
+			result = base.Date.AddDate(offsetVal, 0, 0)
+		case "hour", "hours", "h", "hr":
+			result = base.Date.Add(time.Duration(offsetVal) * time.Hour)
+		case "minute", "minutes", "min":
+			result = base.Date.Add(time.Duration(offsetVal) * time.Minute)
+		case "second", "seconds", "s", "sec":
+			result = base.Date.Add(time.Duration(offsetVal) * time.Second)
+		default:
+			return NewError(fmt.Sprintf("unknown time unit: %s", node.Unit))
+		}
 	}
 
 	return NewDate(result)

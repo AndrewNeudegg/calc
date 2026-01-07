@@ -91,6 +91,19 @@ func (p *Parser) isCurrencyCode(unit string) bool {
 	}
 }
 
+// parseBusinessDayUnit checks if the current unit is "business" followed by a time unit,
+// and combines them into a compound unit like "business days".
+// Currently supports "business days" only; may be extended for "business weeks" in the future.
+// Returns the combined unit string and whether it was a business day pattern.
+func (p *Parser) parseBusinessDayUnit(unit string) (string, bool) {
+	if strings.ToLower(unit) == "business" && (p.current().Type == lexer.TokenUnit || p.current().Type == lexer.TokenIdent) {
+		timeUnit := p.current().Literal
+		p.advance()
+		return unit + " " + timeUnit, true
+	}
+	return unit, false
+}
+
 // normalizeNumber converts a number string with thousand separators to a valid float string.
 // It uses the parser's locale setting to determine how to interpret commas and periods.
 // UK/US format (en_GB, en_US): comma as thousand separator, period as decimal (1,234.56)
@@ -822,8 +835,12 @@ func (p *Parser) parsePostfix() (Expr, error) {
 		unit := p.current().Literal
 		p.advance()
 
-		// Check if this unit is actually a currency code
-		if p.isCurrencyCode(unit) {
+		// Check for "business days" or "business weeks" pattern
+		unit, isBusinessDay := p.parseBusinessDayUnit(unit)
+		if isBusinessDay {
+			expr = &UnitExpr{Value: expr, Unit: unit}
+			// Business days are handled directly as units, skip currency/rate processing
+		} else if p.isCurrencyCode(unit) {
 			// Convert to CurrencyExpr
 			expr = &CurrencyExpr{
 				Value:    expr,
@@ -1310,6 +1327,9 @@ func (p *Parser) parseDateKeyword() (Expr, error) {
 		if p.current().Type == lexer.TokenUnit || p.current().Type == lexer.TokenIdent {
 			unit = p.current().Literal
 			p.advance()
+			
+			// Check for "business days" or "business weeks" pattern
+			unit, _ = p.parseBusinessDayUnit(unit)
 		}
 
 		return &DateArithmeticExpr{

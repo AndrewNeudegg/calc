@@ -9,6 +9,7 @@ Terminal calculator with units, currency conversion, and natural language expres
 - Unit conversions (length, mass, time, volume, temperature, etc.)
 - Currency conversion with postfix notation support
 - Date and time arithmetic
+- **Business days**: Locale-aware business day calculations (e.g., `today + 10 business days`)
 - Percentage calculations
 - Natural language phrases ("half of", "double", etc.)
 - Built-in functions (sum, average, mean)
@@ -344,6 +345,67 @@ v = 0.1 * c
 | `next month` | Today + 30 days |
 
 Also supported in date arithmetic: smaller units including hours, minutes, and seconds (e.g., `today + 3 days + 2 hours`).
+
+### Business Days
+
+Business days allow you to add or subtract working days from a date, automatically skipping weekends. The definition of a "business day" is locale-aware, supporting different weekly schedules around the world.
+
+**Basic Usage:**
+```
+1> today + 10 business days
+   = 17 Jan 2024
+
+2> 05/01/2024 + 3 business days
+   = 10 Jan 2024
+
+3> deadline = today + 5 business days
+   = 12 Jan 2024
+
+4> 15/01/2024 - 2 business days
+   = 11 Jan 2024
+```
+
+**Locale-Aware Schedules:**
+
+Business days respect your locale setting (`:set locale <code>`), which determines which days of the week are considered business days:
+
+| Locale | Business Days | Weekend |
+|--------|---------------|---------|
+| `en_GB`, `en_US`, `de_DE`, `fr_FR`, `es_ES` | Monday-Friday | Saturday-Sunday |
+| `ar_SA`, `ar_AE` | Sunday-Thursday | Friday-Saturday |
+| `he_IL` | Sunday-Thursday | Friday-Saturday |
+
+**Examples:**
+
+Western schedule (Monday-Friday):
+```
+1> :set locale en_GB
+   Locale set to en_GB
+
+2> 05/01/2024 + 1 business day
+   = 08 Jan 2024  # Friday + 1 business day = Monday (skips weekend)
+
+3> 01/01/2024 + 5 business days
+   = 08 Jan 2024  # One full work week
+```
+
+Middle Eastern schedule (Sunday-Thursday):
+```
+1> :set locale ar_SA
+   Locale set to ar_SA
+
+2> 04/01/2024 + 1 business day
+   = 07 Jan 2024  # Thursday + 1 business day = Sunday (skips Fri-Sat weekend)
+
+3> 07/01/2024 + 5 business days
+   = 14 Jan 2024  # One full work week (Sun-Thu)
+```
+
+**Notes:**
+- Business days automatically skip weekends based on your locale
+- You can use both "business day" and "business days"
+- Business days work with date literals (`01/01/2024`), keywords (`today`, `tomorrow`), and variables
+- The default locale is `en_GB` (Monday-Friday schedule)
 
 ### Previous Result Keywords
 
