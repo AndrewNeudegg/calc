@@ -27,6 +27,13 @@ type Value struct {
 	Date     time.Time
 	Text     string
 	Error    string
+	
+	// DateRange stores the start and end dates for date differences.
+	// This is used to support converting date differences to business days.
+	// StartDate and EndDate are only populated when Type is ValueUnit and
+	// the value represents a date difference.
+	StartDate *time.Time
+	EndDate   *time.Time
 }
 
 // NewNumber creates a new number value.
@@ -62,6 +69,20 @@ func NewString(s string) Value {
 // NewError creates a new error value.
 func NewError(msg string) Value {
 	return Value{Type: ValueError, Error: msg}
+}
+
+// NewDateDifference creates a new unit value representing a date difference.
+// It stores the original start and end dates to enable conversion to business days.
+func NewDateDifference(days float64, start, end time.Time) Value {
+	startCopy := start
+	endCopy := end
+	return Value{
+		Type:      ValueUnit,
+		Number:    days,
+		Unit:      "days",
+		StartDate: &startCopy,
+		EndDate:   &endCopy,
+	}
 }
 
 // IsError returns true if the value is an error.
