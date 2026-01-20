@@ -1,6 +1,7 @@
 package evaluator
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -199,3 +200,149 @@ func TestBusinessDaysKeywordWithToday(t *testing.T) {
 		})
 	}
 }
+
+// TestBusinessDaysConversion tests converting date differences to business days
+func TestBusinessDaysConversion(t *testing.T) {
+	tests := []struct {
+		name              string
+		input             string
+		expectedBusinessDays float64
+		locale            string
+	}{
+		{
+			name:              "simple date difference to business days",
+			input:             "08/01/2024 - 01/01/2024 in business days", // Monday to Monday (1 week)
+			expectedBusinessDays: 5,
+			locale:            "en_GB",
+		},
+		{
+			name:              "over weekend to business days",
+			input:             "08/01/2024 - 05/01/2024 in business days", // Friday to Monday
+			expectedBusinessDays: 1,
+			locale:            "en_GB",
+		},
+		{
+			name:              "two weeks to business days",
+			input:             "15/01/2024 - 01/01/2024 in business days", // Monday to Monday (2 weeks)
+			expectedBusinessDays: 10,
+			locale:            "en_GB",
+		},
+		{
+			name:              "negative difference to business days",
+			input:             "01/01/2024 - 08/01/2024 in business days", // Monday to Monday backwards
+			expectedBusinessDays: -5,
+			locale:            "en_GB",
+		},
+		{
+			name:              "Middle Eastern locale date difference",
+			input:             "11/01/2024 - 07/01/2024 in business days", // Sunday to Thursday (4 business days in ar_SA)
+			expectedBusinessDays: 4,
+			locale:            "ar_SA",
+		},
+		{
+			name:              "same day difference",
+			input:             "01/01/2024 - 01/01/2024 in business days",
+			expectedBusinessDays: 0,
+			locale:            "en_GB",
+		},
+		{
+			name:              "single business day",
+			input:             "02/01/2024 - 01/01/2024 in business day", // Monday to Tuesday
+			expectedBusinessDays: 1,
+			locale:            "en_GB",
+		},
+		{
+			name:              "mixed case unit",
+			input:             "08/01/2024 - 01/01/2024 in Business Days",
+			expectedBusinessDays: 5,
+			locale:            "en_GB",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := NewEnvironment()
+			if tt.locale != "" {
+				env.SetLocale(tt.locale)
+			}
+			
+			l := lexer.New(tt.input)
+			toks := l.AllTokens()
+			p := parser.New(toks)
+			expr, err := p.Parse()
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			evaluator := New(env)
+			result := evaluator.Eval(expr)
+
+			if result.IsError() {
+				t.Fatalf("Eval error: %s", result.Error)
+			}
+
+			if result.Type != ValueUnit {
+				t.Fatalf("Expected ValueUnit, got %v", result.Type)
+			}
+
+			if result.Number != tt.expectedBusinessDays {
+				t.Errorf("Expected %.0f business days, got %.0f", tt.expectedBusinessDays, result.Number)
+			}
+			
+			// Verify the unit is preserved (either "business days" or "business day")
+			lowerUnit := strings.ToLower(result.Unit)
+			if lowerUnit != "business days" && lowerUnit != "business day" {
+				t.Errorf("Expected unit 'business days' or 'business day', got '%s'", result.Unit)
+			}
+		})
+	}
+}
+
+// TestBusinessDaysConversionWithKeywords tests business days conversion with date keywords
+func TestBusinessDaysConversionWithKeywords(t *testing.T) {
+	// Test with a fixed future date minus today
+	tests := []struct {
+		name  string
+		input string
+		minDays int
+		maxDays int
+	}{
+		{
+			name:  "future date minus today in business days",
+			input: "31/12/2026 - today in business days",
+			minDays: 100, // At least 100 business days from now to end of 2026
+			maxDays: 500, // But less than 500
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := NewEnvironment()
+			
+			l := lexer.New(tt.input)
+			toks := l.AllTokens()
+			p := parser.New(toks)
+			expr, err := p.Parse()
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			evaluator := New(env)
+			result := evaluator.Eval(expr)
+
+			if result.IsError() {
+				t.Fatalf("Eval error: %s", result.Error)
+			}
+
+			if result.Type != ValueUnit {
+				t.Fatalf("Expected ValueUnit, got %v", result.Type)
+			}
+			
+			// Verify it's a reasonable number
+			if result.Number < float64(tt.minDays) || result.Number > float64(tt.maxDays) {
+				t.Errorf("Expected between %d and %d business days, got %.0f", tt.minDays, tt.maxDays, result.Number)
+			}
+		})
+	}
+}
+

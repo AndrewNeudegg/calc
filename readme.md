@@ -365,6 +365,24 @@ Business days allow you to add or subtract working days from a date, automatical
    = 11 Jan 2024
 ```
 
+**Calculating Business Days Between Dates:**
+
+You can calculate the number of business days between two dates by subtracting them and converting to business days:
+
+```
+1> 15/01/2024 - 01/01/2024 in business days
+   = 10.00 business days  # 2 weeks = 10 working days
+
+2> 08/01/2024 - 05/01/2024 in business days
+   = 1.00 business days  # Friday to Monday (skips weekend)
+
+3> deadline = 31/03/2026
+   deadline - today in business days
+   = 50.00 business days
+```
+
+This feature automatically counts only business days in the date range, skipping weekends according to your locale setting.
+
 **Locale-Aware Schedules:**
 
 Business days respect your locale setting (`:set locale <code>`), which determines which days of the week are considered business days:

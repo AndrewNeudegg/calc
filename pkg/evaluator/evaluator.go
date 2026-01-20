@@ -103,6 +103,13 @@ func New(env *Environment) *Evaluator {
 	return &Evaluator{env: env}
 }
 
+// isBusinessDayUnit checks if the given unit string represents business days.
+// It handles both singular and plural forms, case-insensitively.
+func isBusinessDayUnit(unit string) bool {
+	lower := strings.ToLower(unit)
+	return lower == "business day" || lower == "business days"
+}
+
 // Eval evaluates an expression and returns a value.
 func (e *Evaluator) Eval(expr parser.Expr) Value {
 	if expr == nil {
@@ -243,11 +250,11 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 		return NewDate(newDate)
 	}
 
-	// Handle date-date subtraction (returns days with unit)
+	// Handle date-date subtraction (returns days with unit and stores date range for business day conversion)
 	if left.Type == ValueDate && right.Type == ValueDate && node.Operator == "-" {
 		duration := left.Date.Sub(right.Date)
 		days := duration.Hours() / 24.0
-		return NewUnit(days, "days")
+		return NewDateDifference(days, right.Date, left.Date)
 	}
 
 	// Handle currency operations
@@ -356,6 +363,14 @@ func (e *Evaluator) evalConversion(node *parser.ConversionExpr) Value {
 
 	// Handle unit conversion
 	if val.Type == ValueUnit {
+		// Check if this is a date difference being converted to business days
+		if isBusinessDayUnit(node.ToUnit) && val.StartDate != nil && val.EndDate != nil {
+			// Use the stored date range to count business days
+			schedule := businessdays.GetScheduleForLocale(e.env.GetLocale())
+			businessDays := businessdays.CountBusinessDays(*val.StartDate, *val.EndDate, schedule)
+			return NewUnit(float64(businessDays), node.ToUnit)
+		}
+		
 		// Special case: currency/time rates (e.g., $/day) to other currency/time (e.g., gbp/month)
 		if units.IsCompoundUnit(val.Unit) || units.IsCompoundUnit(node.ToUnit) {
 			fromParts := strings.Split(val.Unit, "/")

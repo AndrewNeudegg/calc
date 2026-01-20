@@ -473,6 +473,10 @@ func (p *Parser) tryWrapWithConversion(expr Expr) (Expr, bool) {
 		p.advance()
 		toUnit := p.current().Literal
 		p.advance()
+		
+		// Check for "business days" or similar multi-word units
+		toUnit, _ = p.parseBusinessDayUnit(toUnit)
+		
 		if p.current().Type == lexer.TokenPer {
 			p.advance()
 			if p.current().Type == lexer.TokenUnit {
@@ -623,6 +627,9 @@ func (p *Parser) parseConversion() (Expr, error) {
 		p.advance()
 		toUnit := p.current().Literal
 		p.advance()
+		
+		// Check for "business days" or similar multi-word units
+		toUnit, _ = p.parseBusinessDayUnit(toUnit)
 
 		// Check if this is a compound unit (e.g., "m/s" or "km per hour")
 		if p.current().Type == lexer.TokenPer {
