@@ -143,12 +143,15 @@ func (s *System) initStandardUnits() {
 	s.addUnit("hours", DimensionTime, 3600.0, "s")
 	s.addUnit("day", DimensionTime, 86400.0, "s")
 	s.addUnit("days", DimensionTime, 86400.0, "s")
+	s.addUnit("d", DimensionTime, 86400.0, "s") // short form for day
 	s.addUnit("week", DimensionTime, 604800.0, "s")
 	s.addUnit("weeks", DimensionTime, 604800.0, "s")
+	s.addUnit("w", DimensionTime, 604800.0, "s") // short form for week
 	s.addUnit("fortnight", DimensionTime, 1209600.0, "s") // 2 weeks = 14 days
 	s.addUnit("fortnights", DimensionTime, 1209600.0, "s")
 	s.addUnit("month", DimensionTime, 2629800.0, "s") // average month: 30.4375 days
 	s.addUnit("months", DimensionTime, 2629800.0, "s")
+	s.addUnit("mo", DimensionTime, 2629800.0, "s") // short form for month
 	s.addUnit("quarter", DimensionTime, 7889400.0, "s") // 3 months = 91.3125 days
 	s.addUnit("quarters", DimensionTime, 7889400.0, "s")
 	s.addUnit("semester", DimensionTime, 15778800.0, "s") // 6 months = 182.625 days
