@@ -147,6 +147,290 @@ func TestTimeConversions(t *testing.T) {
 	}
 }
 
+// TestBusinessTimeConversions tests conversions involving business time units.
+// Business time units represent working hours, not calendar time:
+// - 1 business day = 8 hours (standard working day)
+// - 1 business week = 5 business days = 40 hours (Monday-Friday)
+// - 1 business month ≈ 21.67 business days = 173.33 hours (260 working days / 12 months)
+func TestBusinessTimeConversions(t *testing.T) {
+	s := NewSystem()
+
+	tests := []struct {
+		name     string
+		value    float64
+		from     string
+		to       string
+		expected float64
+		tolerance float64
+	}{
+		// Business day conversions
+		{
+			name:      "1 business day to hours",
+			value:     1,
+			from:      "business day",
+			to:        "hours",
+			expected:  8,
+			tolerance: 0.01,
+		},
+		{
+			name:      "1 business day to hours (plural form)",
+			value:     1,
+			from:      "business days",
+			to:        "hours",
+			expected:  8,
+			tolerance: 0.01,
+		},
+		{
+			name:      "5 business days to hours",
+			value:     5,
+			from:      "business days",
+			to:        "hours",
+			expected:  40,
+			tolerance: 0.01,
+		},
+		{
+			name:      "1 business day to seconds",
+			value:     1,
+			from:      "business day",
+			to:        "seconds",
+			expected:  28800,
+			tolerance: 0.01,
+		},
+		{
+			name:      "1 business day to minutes",
+			value:     1,
+			from:      "business days",
+			to:        "minutes",
+			expected:  480,
+			tolerance: 0.01,
+		},
+		{
+			name:      "8 hours to business days",
+			value:     8,
+			from:      "hours",
+			to:        "business days",
+			expected:  1,
+			tolerance: 0.01,
+		},
+		{
+			name:      "40 hours to business days",
+			value:     40,
+			from:      "hours",
+			to:        "business days",
+			expected:  5,
+			tolerance: 0.01,
+		},
+		{
+			name:      "no-space variant: businessday",
+			value:     1,
+			from:      "businessday",
+			to:        "hours",
+			expected:  8,
+			tolerance: 0.01,
+		},
+		{
+			name:      "no-space variant: businessdays",
+			value:     2,
+			from:      "businessdays",
+			to:        "hours",
+			expected:  16,
+			tolerance: 0.01,
+		},
+		
+		// Business week conversions
+		{
+			name:      "1 business week to hours",
+			value:     1,
+			from:      "business week",
+			to:        "hours",
+			expected:  40,
+			tolerance: 0.01,
+		},
+		{
+			name:      "1 business week to hours (plural form)",
+			value:     1,
+			from:      "business weeks",
+			to:        "hours",
+			expected:  40,
+			tolerance: 0.01,
+		},
+		{
+			name:      "1 business week to business days",
+			value:     1,
+			from:      "business week",
+			to:        "business days",
+			expected:  5,
+			tolerance: 0.01,
+		},
+		{
+			name:      "2 business weeks to business days",
+			value:     2,
+			from:      "business weeks",
+			to:        "business days",
+			expected:  10,
+			tolerance: 0.01,
+		},
+		{
+			name:      "1 business week to seconds",
+			value:     1,
+			from:      "business week",
+			to:        "seconds",
+			expected:  144000,
+			tolerance: 0.01,
+		},
+		{
+			name:      "40 hours to business weeks",
+			value:     40,
+			from:      "hours",
+			to:        "business weeks",
+			expected:  1,
+			tolerance: 0.01,
+		},
+		{
+			name:      "5 business days to business weeks",
+			value:     5,
+			from:      "business days",
+			to:        "business weeks",
+			expected:  1,
+			tolerance: 0.01,
+		},
+		{
+			name:      "no-space variant: businessweek",
+			value:     1,
+			from:      "businessweek",
+			to:        "hours",
+			expected:  40,
+			tolerance: 0.01,
+		},
+		{
+			name:      "no-space variant: businessweeks",
+			value:     2,
+			from:      "businessweeks",
+			to:        "hours",
+			expected:  80,
+			tolerance: 0.01,
+		},
+		
+		// Business month conversions
+		{
+			name:      "1 business month to business days",
+			value:     1,
+			from:      "business month",
+			to:        "business days",
+			expected:  21.67,
+			tolerance: 0.1,
+		},
+		{
+			name:      "1 business month to hours",
+			value:     1,
+			from:      "business month",
+			to:        "hours",
+			expected:  173.33,
+			tolerance: 0.5,
+		},
+		{
+			name:      "1 business month to hours (plural form)",
+			value:     1,
+			from:      "business months",
+			to:        "hours",
+			expected:  173.33,
+			tolerance: 0.5,
+		},
+		{
+			name:      "1 business month to business weeks",
+			value:     1,
+			from:      "business month",
+			to:        "business weeks",
+			expected:  4.333,
+			tolerance: 0.1,
+		},
+		{
+			name:      "12 business months to business days",
+			value:     12,
+			from:      "business months",
+			to:        "business days",
+			expected:  260,
+			tolerance: 1,
+		},
+		{
+			name:      "no-space variant: businessmonth",
+			value:     1,
+			from:      "businessmonth",
+			to:        "hours",
+			expected:  173.33,
+			tolerance: 0.5,
+		},
+		{
+			name:      "no-space variant: businessmonths",
+			value:     2,
+			from:      "businessmonths",
+			to:        "hours",
+			expected:  346.67,
+			tolerance: 1,
+		},
+		
+		// Cross-conversions between calendar and business time
+		{
+			name:      "1 calendar day to business days",
+			value:     1,
+			from:      "day",
+			to:        "business days",
+			expected:  3,
+			tolerance: 0.01,
+		},
+		{
+			name:      "1 calendar week to business weeks",
+			value:     1,
+			from:      "week",
+			to:        "business weeks",
+			expected:  4.2,
+			tolerance: 0.01,
+		},
+		
+		// Real-world scenario: business year calculation
+		// A typical business year has 52.2 business weeks (260 working days / 5 days per week)
+		{
+			name:      "52.2 business weeks to business days",
+			value:     52.2,
+			from:      "business weeks",
+			to:        "business days",
+			expected:  261,
+			tolerance: 0.1,
+		},
+		{
+			name:      "260 business days to business weeks",
+			value:     260,
+			from:      "business days",
+			to:        "business weeks",
+			expected:  52,
+			tolerance: 0.1,
+		},
+		{
+			name:      "260 business days to hours",
+			value:     260,
+			from:      "business days",
+			to:        "hours",
+			expected:  2080,
+			tolerance: 0.1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.Convert(tt.value, tt.from, tt.to)
+			if err != nil {
+				t.Errorf("conversion %f %s to %s failed: %s", tt.value, tt.from, tt.to, err)
+				return
+			}
+
+			if math.Abs(result-tt.expected) > tt.tolerance {
+				t.Errorf("%f %s in %s: expected %.2f, got %.2f (tolerance: %.2f)", 
+					tt.value, tt.from, tt.to, tt.expected, result, tt.tolerance)
+			}
+		})
+	}
+}
+
 func TestAreaConversions(t *testing.T) {
 	s := NewSystem()
 
