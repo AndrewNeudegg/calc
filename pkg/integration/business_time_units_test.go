@@ -49,7 +49,7 @@ func TestBusinessTimeUnitConversions(t *testing.T) {
 			unit:      "seconds",
 			tolerance: 0.01,
 		},
-		
+
 		// Business week to time unit conversions
 		{
 			name:      "business week to hours",
@@ -72,7 +72,7 @@ func TestBusinessTimeUnitConversions(t *testing.T) {
 			unit:      "seconds",
 			tolerance: 0.01,
 		},
-		
+
 		// Business month conversions
 		{
 			name:      "business month to hours",
@@ -95,7 +95,7 @@ func TestBusinessTimeUnitConversions(t *testing.T) {
 			unit:      "business weeks",
 			tolerance: 0.5,
 		},
-		
+
 		// Chained conversions (the main issue from the bug report)
 		{
 			name:      "business days to hours to seconds - chained",
@@ -118,7 +118,7 @@ func TestBusinessTimeUnitConversions(t *testing.T) {
 			unit:      "hours",
 			tolerance: 0.5,
 		},
-		
+
 		// Time units to business units
 		{
 			name:      "hours to business days",
@@ -134,7 +134,7 @@ func TestBusinessTimeUnitConversions(t *testing.T) {
 			unit:      "business weeks",
 			tolerance: 0.01,
 		},
-		
+
 		// Calendar time to business time
 		{
 			name:      "calendar days to business days",
@@ -150,7 +150,7 @@ func TestBusinessTimeUnitConversions(t *testing.T) {
 			unit:      "business weeks",
 			tolerance: 0.1,
 		},
-		
+
 		// Real-world business calculations
 		{
 			name:      "business year in business days (52.2 weeks)",
@@ -181,29 +181,29 @@ func TestBusinessTimeUnitConversions(t *testing.T) {
 			toks := l.AllTokens()
 			p := parser.New(toks)
 			expr, err := p.Parse()
-			
+
 			if err != nil {
 				t.Fatalf("parser error: %v", err)
 			}
-			
+
 			env := evaluator.NewEnvironment()
 			ev := evaluator.New(env)
 			result := ev.Eval(expr)
-			
+
 			if result.Type == evaluator.ValueError {
 				t.Fatalf("evaluation error: %s", result.Error)
 			}
-			
+
 			if result.Type != evaluator.ValueUnit {
 				t.Fatalf("expected unit value, got type %v", result.Type)
 			}
-			
+
 			// Check the result value
 			if math.Abs(result.Number-tt.expected) > tt.tolerance {
-				t.Errorf("expected %.2f, got %.2f (tolerance: %.2f)", 
+				t.Errorf("expected %.2f, got %.2f (tolerance: %.2f)",
 					tt.expected, result.Number, tt.tolerance)
 			}
-			
+
 			// Check the unit name (case-insensitive)
 			if !strings.EqualFold(result.Unit, tt.unit) {
 				t.Errorf("expected unit '%s', got '%s'", tt.unit, result.Unit)
@@ -244,29 +244,29 @@ func TestBusinessTimeUnitWithDateDifferences(t *testing.T) {
 			toks := l.AllTokens()
 			p := parser.New(toks)
 			expr, err := p.Parse()
-			
+
 			if err != nil {
 				t.Fatalf("parser error: %v", err)
 			}
-			
+
 			env := evaluator.NewEnvironment()
 			ev := evaluator.New(env)
 			result := ev.Eval(expr)
-			
+
 			if result.Type == evaluator.ValueError {
 				t.Fatalf("evaluation error: %s", result.Error)
 			}
-			
+
 			if result.Type != evaluator.ValueUnit {
 				t.Fatalf("expected unit value, got type %v", result.Type)
 			}
-			
+
 			// Check the result is within expected range
 			if result.Number < tt.expectMin || result.Number > tt.expectMax {
-				t.Errorf("expected value between %.2f and %.2f, got %.2f", 
+				t.Errorf("expected value between %.2f and %.2f, got %.2f",
 					tt.expectMin, tt.expectMax, result.Number)
 			}
-			
+
 			// Check the unit name (case-insensitive)
 			if !strings.EqualFold(result.Unit, tt.unit) {
 				t.Errorf("expected unit '%s', got '%s'", tt.unit, result.Unit)
@@ -285,11 +285,11 @@ func TestBusinessTimeUnitVariants(t *testing.T) {
 		// Space variants (these are the main requirement)
 		{name: "business day (with space)", input: "1 business day in hours", expected: 8},
 		{name: "business days (with space, plural)", input: "1 business days in hours", expected: 8},
-		
+
 		// Week variants
 		{name: "business week (with space)", input: "1 business week in hours", expected: 40},
 		{name: "business weeks (with space, plural)", input: "1 business weeks in hours", expected: 40},
-		
+
 		// Month variants
 		{name: "business month (with space)", input: "1 business month in business days", expected: 21.67},
 		{name: "business months (with space, plural)", input: "1 business months in business days", expected: 21.67},
@@ -301,25 +301,25 @@ func TestBusinessTimeUnitVariants(t *testing.T) {
 			toks := l.AllTokens()
 			p := parser.New(toks)
 			expr, err := p.Parse()
-			
+
 			if err != nil {
 				t.Fatalf("parser error: %v", err)
 			}
-			
+
 			env := evaluator.NewEnvironment()
 			ev := evaluator.New(env)
 			result := ev.Eval(expr)
-			
+
 			if result.Type == evaluator.ValueError {
 				t.Fatalf("evaluation error: %s", result.Error)
 			}
-			
+
 			// Allow 5% tolerance for business month calculations
 			tolerance := 0.1
 			if strings.Contains(tt.input, "month") {
 				tolerance = 0.5
 			}
-			
+
 			if math.Abs(result.Number-tt.expected) > tolerance {
 				t.Errorf("expected %.2f, got %.2f", tt.expected, result.Number)
 			}
@@ -369,34 +369,34 @@ func TestIssueReproduction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			env := evaluator.NewEnvironment()
-			
+
 			for i, input := range tt.expressions {
 				l := lexer.New(input)
 				toks := l.AllTokens()
 				p := parser.New(toks)
 				expr, err := p.Parse()
-				
+
 				if err != nil {
 					if tt.shouldSucceed {
 						t.Fatalf("expression %d: parser error: %v", i+1, err)
 					}
 					continue
 				}
-				
+
 				ev := evaluator.New(env)
 				result := ev.Eval(expr)
-				
+
 				if result.Type == evaluator.ValueError {
 					if tt.shouldSucceed {
 						t.Fatalf("expression %d: evaluation error: %s (input: %s)", i+1, result.Error, input)
 					}
 					continue
 				}
-				
+
 				if !tt.shouldSucceed {
 					t.Fatalf("expression %d: expected error but got result: %v", i+1, result)
 				}
-				
+
 				// If this was a variable assignment, store it
 				if strings.HasPrefix(input, "t =") {
 					env.SetVariable("t", result)

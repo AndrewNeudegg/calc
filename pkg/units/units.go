@@ -167,7 +167,7 @@ func (s *System) initStandardUnits() {
 	s.addUnit("business weeks", DimensionTime, 144000.0, "s") // 40 hours = 144000 seconds
 	s.addUnit("businessweek", DimensionTime, 144000.0, "s")   // 40 hours = 144000 seconds
 	s.addUnit("businessweeks", DimensionTime, 144000.0, "s")  // 40 hours = 144000 seconds
-	// A business month is approximately 4.33 business weeks (52.2 weeks / 12 months = 4.35)
+	// A business month is approximately 4.35 business weeks (52.2 weeks / 12 months)
 	// Using 21.67 business days per month (260 working days / 12 months)
 	s.addUnit("business month", DimensionTime, 624000.0, "s")  // 21.67 business days = 173.33 hours = 624000 seconds
 	s.addUnit("business months", DimensionTime, 624000.0, "s") // 21.67 business days = 173.33 hours = 624000 seconds

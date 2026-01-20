@@ -236,7 +236,7 @@ func TestBusinessTimeConversions(t *testing.T) {
 			expected:  16,
 			tolerance: 0.01,
 		},
-		
+
 		// Business week conversions
 		{
 			name:      "1 business week to hours",
@@ -310,7 +310,7 @@ func TestBusinessTimeConversions(t *testing.T) {
 			expected:  80,
 			tolerance: 0.01,
 		},
-		
+
 		// Business month conversions
 		{
 			name:      "1 business month to business days",
@@ -368,7 +368,7 @@ func TestBusinessTimeConversions(t *testing.T) {
 			expected:  346.67,
 			tolerance: 1,
 		},
-		
+
 		// Cross-conversions between calendar and business time
 		{
 			name:      "1 calendar day to business days",
@@ -386,7 +386,7 @@ func TestBusinessTimeConversions(t *testing.T) {
 			expected:  4.2,
 			tolerance: 0.01,
 		},
-		
+
 		// Real-world scenario: business year calculation
 		// A typical business year has 52.2 business weeks (260 working days / 5 days per week)
 		{
@@ -424,7 +424,7 @@ func TestBusinessTimeConversions(t *testing.T) {
 			}
 
 			if math.Abs(result-tt.expected) > tt.tolerance {
-				t.Errorf("%f %s in %s: expected %.2f, got %.2f (tolerance: %.2f)", 
+				t.Errorf("%f %s in %s: expected %.2f, got %.2f (tolerance: %.2f)",
 					tt.value, tt.from, tt.to, tt.expected, result, tt.tolerance)
 			}
 		})
