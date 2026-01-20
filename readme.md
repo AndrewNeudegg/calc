@@ -419,10 +419,69 @@ Middle Eastern schedule (Sunday-Thursday):
    = 14 Jan 2024  # One full work week (Sun-Thu)
 ```
 
+**Business Time Units:**
+
+In addition to counting business days between dates, you can also use business time units for time-based calculations. These units represent working time rather than calendar time:
+
+- **Business day**: 8 hours of work (standard working day)
+- **Business week**: 5 business days = 40 hours (Monday-Friday working week)
+- **Business month**: Approximately 21.67 business days = 173.33 hours (based on 260 working days per year)
+
+**Converting Between Business and Standard Time Units:**
+
+```
+1> 5 business days in hours
+   = 40.00 hours  # 5 days × 8 hours
+
+2> 1 business week in hours
+   = 40.00 hours
+
+3> 1 business month in business days
+   = 21.67 business days
+
+4> 260 business days in hours
+   = 2,080.00 hours  # A full business year
+```
+
+**Chaining Unit Conversions:**
+
+Business time units can be converted to any standard time unit and vice versa:
+
+```
+1> 03/04/2026 - today in business days in hours
+   = 424.00 hours  # Date difference → business days → hours
+
+2> t = 03/04/2026 - today in business days
+   = 53.00 business days
+
+3> t in hours
+   = 424.00 hours  # Business days → hours conversion
+
+4> 5 business days in hours in seconds
+   = 144,000.00 seconds  # Chained conversions work seamlessly
+```
+
+**Real-World Business Calculations:**
+
+```
+1> # How many business hours in a quarter?
+   65 business days in hours
+   = 520.00 hours
+
+2> # How many business weeks in a year?
+   260 business days in business weeks
+   = 52.00 business weeks
+
+3> # Convert project estimate from hours to business days
+   120 hours in business days
+   = 15.00 business days  # 3 work weeks
+```
+
 **Notes:**
-- Business days automatically skip weekends based on your locale
-- You can use both "business day" and "business days"
+- Business days automatically skip weekends based on your locale when used with date arithmetic
+- You can use both "business day" and "business days" (same for weeks and months)
 - Business days work with date literals (`01/01/2024`), keywords (`today`, `tomorrow`), and variables
+- Business time units (day/week/month) can be converted to and from standard time units (hours, minutes, seconds)
 - The default locale is `en_GB` (Monday-Friday schedule)
 
 ### Previous Result Keywords

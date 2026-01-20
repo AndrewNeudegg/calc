@@ -143,12 +143,15 @@ func (s *System) initStandardUnits() {
 	s.addUnit("hours", DimensionTime, 3600.0, "s")
 	s.addUnit("day", DimensionTime, 86400.0, "s")
 	s.addUnit("days", DimensionTime, 86400.0, "s")
+	s.addUnit("d", DimensionTime, 86400.0, "s") // short form for day
 	s.addUnit("week", DimensionTime, 604800.0, "s")
 	s.addUnit("weeks", DimensionTime, 604800.0, "s")
+	s.addUnit("w", DimensionTime, 604800.0, "s") // short form for week
 	s.addUnit("fortnight", DimensionTime, 1209600.0, "s") // 2 weeks = 14 days
 	s.addUnit("fortnights", DimensionTime, 1209600.0, "s")
 	s.addUnit("month", DimensionTime, 2629800.0, "s") // average month: 30.4375 days
 	s.addUnit("months", DimensionTime, 2629800.0, "s")
+	s.addUnit("mo", DimensionTime, 2629800.0, "s") // short form for month
 	s.addUnit("quarter", DimensionTime, 7889400.0, "s") // 3 months = 91.3125 days
 	s.addUnit("quarters", DimensionTime, 7889400.0, "s")
 	s.addUnit("semester", DimensionTime, 15778800.0, "s") // 6 months = 182.625 days
@@ -156,6 +159,23 @@ func (s *System) initStandardUnits() {
 	s.addUnit("year", DimensionTime, 31557600.0, "s") // 365.25 days
 	s.addUnit("years", DimensionTime, 31557600.0, "s")
 	s.addUnit("y", DimensionTime, 31557600.0, "s") // short form for year
+	// Business time units (base: second)
+	// A business day is 8 hours of work
+	s.addUnit("business day", DimensionTime, 28800.0, "s")   // 8 hours = 28800 seconds
+	s.addUnit("business days", DimensionTime, 28800.0, "s")  // 8 hours = 28800 seconds
+	s.addUnit("businessday", DimensionTime, 28800.0, "s")    // 8 hours = 28800 seconds
+	s.addUnit("businessdays", DimensionTime, 28800.0, "s")   // 8 hours = 28800 seconds
+	// A business week is 5 business days (Monday-Friday, 8 hours each)
+	s.addUnit("business week", DimensionTime, 144000.0, "s")  // 40 hours = 144000 seconds
+	s.addUnit("business weeks", DimensionTime, 144000.0, "s") // 40 hours = 144000 seconds
+	s.addUnit("businessweek", DimensionTime, 144000.0, "s")   // 40 hours = 144000 seconds
+	s.addUnit("businessweeks", DimensionTime, 144000.0, "s")  // 40 hours = 144000 seconds
+	// A business month is approximately 4.35 business weeks (52.2 weeks / 12 months)
+	// Using 21.67 business days per month (260 working days / 12 months)
+	s.addUnit("business month", DimensionTime, 624000.0, "s")  // 21.67 business days = 173.33 hours = 624000 seconds
+	s.addUnit("business months", DimensionTime, 624000.0, "s") // 21.67 business days = 173.33 hours = 624000 seconds
+	s.addUnit("businessmonth", DimensionTime, 624000.0, "s")   // 21.67 business days = 173.33 hours = 624000 seconds
+	s.addUnit("businessmonths", DimensionTime, 624000.0, "s")  // 21.67 business days = 173.33 hours = 624000 seconds
 	// Special time-of-day unit (stores decimal hours as HH:MM format)
 	s.addUnit("time", DimensionTime, 3600.0, "s") // time unit for HH:MM format
 

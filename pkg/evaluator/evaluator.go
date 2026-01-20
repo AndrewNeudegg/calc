@@ -699,13 +699,13 @@ func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {
 		result = businessdays.AddBusinessDays(base.Date, offsetVal, schedule)
 	} else {
 		switch unit {
-		case "day", "days":
+		case "day", "days", "d":
 			result = base.Date.AddDate(0, 0, offsetVal)
-		case "week", "weeks":
+		case "week", "weeks", "w":
 			result = base.Date.AddDate(0, 0, offsetVal*7)
-		case "month", "months":
+		case "month", "months", "mo":
 			result = base.Date.AddDate(0, offsetVal, 0)
-		case "year", "years":
+		case "year", "years", "y":
 			result = base.Date.AddDate(offsetVal, 0, 0)
 		case "hour", "hours", "h", "hr":
 			result = base.Date.Add(time.Duration(offsetVal) * time.Hour)
