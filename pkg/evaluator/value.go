@@ -74,14 +74,12 @@ func NewError(msg string) Value {
 // NewDateDifference creates a new unit value representing a date difference.
 // It stores the original start and end dates to enable conversion to business days.
 func NewDateDifference(days float64, start, end time.Time) Value {
-	startCopy := start
-	endCopy := end
 	return Value{
 		Type:      ValueUnit,
 		Number:    days,
 		Unit:      "days",
-		StartDate: &startCopy,
-		EndDate:   &endCopy,
+		StartDate: &start,
+		EndDate:   &end,
 	}
 }
 

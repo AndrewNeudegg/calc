@@ -103,6 +103,13 @@ func New(env *Environment) *Evaluator {
 	return &Evaluator{env: env}
 }
 
+// isBusinessDayUnit checks if the given unit string represents business days.
+// It handles both singular and plural forms, case-insensitively.
+func isBusinessDayUnit(unit string) bool {
+	lower := strings.ToLower(unit)
+	return lower == "business day" || lower == "business days"
+}
+
 // Eval evaluates an expression and returns a value.
 func (e *Evaluator) Eval(expr parser.Expr) Value {
 	if expr == nil {
@@ -357,8 +364,7 @@ func (e *Evaluator) evalConversion(node *parser.ConversionExpr) Value {
 	// Handle unit conversion
 	if val.Type == ValueUnit {
 		// Check if this is a date difference being converted to business days
-		lowerToUnit := strings.ToLower(node.ToUnit)
-		if (lowerToUnit == "business day" || lowerToUnit == "business days") && val.StartDate != nil && val.EndDate != nil {
+		if isBusinessDayUnit(node.ToUnit) && val.StartDate != nil && val.EndDate != nil {
 			// Use the stored date range to count business days
 			schedule := businessdays.GetScheduleForLocale(e.env.GetLocale())
 			businessDays := businessdays.CountBusinessDays(*val.StartDate, *val.EndDate, schedule)
