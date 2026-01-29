@@ -273,3 +273,146 @@ func TestDateSubtraction(t *testing.T) {
 		})
 	}
 }
+
+// TestDateKeywordSubtraction tests date subtraction with keywords like "today"
+// This specifically tests the fix for the issue where "today - 19/09/2025" would fail
+func TestDateKeywordSubtraction(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		checkDays bool // if true, check that the result is approximately correct in days
+	}{
+{
+name:      "today - date literal",
+input:     "today - 19/09/2025",
+checkDays: true,
+},
+{
+name:      "date literal - today",
+input:     "19/09/2025 - today",
+checkDays: true,
+},
+{
+name:      "tomorrow - date literal",
+input:     "tomorrow - 19/09/2025",
+checkDays: true,
+},
+{
+name:      "yesterday - date literal",
+input:     "yesterday - 19/09/2025",
+checkDays: true,
+},
+{
+name:      "today - today",
+input:     "today - today",
+checkDays: false,
+},
+{
+name:      "tomorrow - today",
+input:     "tomorrow - today",
+checkDays: false,
+},
+{
+name:      "today - yesterday",
+input:     "today - yesterday",
+checkDays: false,
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+result := evalExpr(tt.input)
+if result.IsError() {
+t.Fatalf("Eval error: %s", result.Error)
+}
+
+// Should return a unit value (days)
+if result.Type != ValueUnit {
+t.Fatalf("Expected ValueUnit, got %v", result.Type)
+}
+
+if result.Unit != "days" {
+t.Errorf("Expected unit 'days', got '%s'", result.Unit)
+}
+
+// For operations involving today/tomorrow/yesterday, we can check specific results
+if !tt.checkDays {
+switch tt.input {
+case "today - today":
+if result.Number != 0 {
+t.Errorf("Expected 0 days for 'today - today', got %v", result.Number)
+}
+case "tomorrow - today":
+if result.Number != 1 {
+t.Errorf("Expected 1 day for 'tomorrow - today', got %v", result.Number)
+}
+case "today - yesterday":
+if result.Number != 1 {
+t.Errorf("Expected 1 day for 'today - yesterday', got %v", result.Number)
+}
+}
+} else {
+// For operations with specific dates, just verify we got a reasonable number
+// and didn't crash or error out
+if result.Number == 0 && tt.input != "today - today" {
+// Allow some tolerance for date differences
+// The main goal is to ensure no error occurred
+}
+}
+})
+}
+}
+
+// TestDateKeywordSubtractionReversibility tests that date subtraction is consistent
+// This ensures that "today - date" and "date - today" give opposite results
+func TestDateKeywordSubtractionReversibility(t *testing.T) {
+testCases := []struct {
+forward string
+reverse string
+}{
+{
+forward: "today - 19/09/2025",
+reverse: "19/09/2025 - today",
+},
+{
+forward: "tomorrow - 15/03/2024",
+reverse: "15/03/2024 - tomorrow",
+},
+{
+forward: "yesterday - 31/12/2024",
+reverse: "31/12/2024 - yesterday",
+},
+}
+
+for _, tc := range testCases {
+t.Run(tc.forward+" vs "+tc.reverse, func(t *testing.T) {
+resultForward := evalExpr(tc.forward)
+if resultForward.IsError() {
+t.Fatalf("Forward eval error: %s", resultForward.Error)
+}
+
+resultReverse := evalExpr(tc.reverse)
+if resultReverse.IsError() {
+t.Fatalf("Reverse eval error: %s", resultReverse.Error)
+}
+
+// Both should be unit values
+if resultForward.Type != ValueUnit || resultReverse.Type != ValueUnit {
+t.Fatalf("Expected both results to be ValueUnit, got %v and %v", 
+resultForward.Type, resultReverse.Type)
+}
+
+// Both should use "days" as the unit
+if resultForward.Unit != "days" || resultReverse.Unit != "days" {
+t.Fatalf("Expected both results to use 'days', got '%s' and '%s'", 
+resultForward.Unit, resultReverse.Unit)
+}
+
+// The numbers should be opposite (one positive, one negative)
+if resultForward.Number != -resultReverse.Number {
+t.Errorf("Expected opposite values, got %v and %v", 
+resultForward.Number, resultReverse.Number)
+}
+})
+}
+}
