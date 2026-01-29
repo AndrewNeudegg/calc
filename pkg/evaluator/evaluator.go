@@ -687,10 +687,14 @@ func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {
 
 	// Handle date-date subtraction (e.g., "today - 19/09/2025")
 	// This occurs when no unit is specified and offset is a date
-	if base.Type == ValueDate && offset.Type == ValueDate && node.Operator == "-" && node.Unit == "" {
-		duration := base.Date.Sub(offset.Date)
-		days := duration.Hours() / 24.0
-		return NewDateDifference(days, offset.Date, base.Date)
+	if base.Type == ValueDate && offset.Type == ValueDate && node.Unit == "" {
+		if node.Operator == "-" {
+			duration := base.Date.Sub(offset.Date)
+			days := duration.Hours() / 24.0
+			return NewDateDifference(days, offset.Date, base.Date)
+		}
+		// Date + date is not supported
+		return NewError("cannot add two dates together")
 	}
 
 	offsetVal := int(offset.Number)
