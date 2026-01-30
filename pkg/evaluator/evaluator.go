@@ -252,7 +252,12 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 
 	// Handle date-date subtraction (returns days with unit and stores date range for business day conversion)
 	if left.Type == ValueDate && right.Type == ValueDate && node.Operator == "-" {
-		duration := left.Date.Sub(right.Date)
+		// Normalize both dates to UTC midnight to avoid DST-related fractional day counts
+		ly, lm, ld := left.Date.Date()
+		ry, rm, rd := right.Date.Date()
+		leftMidnight := time.Date(ly, lm, ld, 0, 0, 0, 0, time.UTC)
+		rightMidnight := time.Date(ry, rm, rd, 0, 0, 0, 0, time.UTC)
+		duration := leftMidnight.Sub(rightMidnight)
 		days := duration.Hours() / 24.0
 		return NewDateDifference(days, right.Date, left.Date)
 	}
