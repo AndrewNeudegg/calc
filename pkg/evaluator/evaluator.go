@@ -252,7 +252,12 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 
 	// Handle date-date subtraction (returns days with unit and stores date range for business day conversion)
 	if left.Type == ValueDate && right.Type == ValueDate && node.Operator == "-" {
-		duration := left.Date.Sub(right.Date)
+		// Normalize both dates to UTC midnight to avoid DST-related fractional day counts
+		ly, lm, ld := left.Date.Date()
+		ry, rm, rd := right.Date.Date()
+		leftMidnight := time.Date(ly, lm, ld, 0, 0, 0, 0, time.UTC)
+		rightMidnight := time.Date(ry, rm, rd, 0, 0, 0, 0, time.UTC)
+		duration := leftMidnight.Sub(rightMidnight)
 		days := duration.Hours() / 24.0
 		return NewDateDifference(days, right.Date, left.Date)
 	}
@@ -683,6 +688,19 @@ func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {
 	offset := e.Eval(node.Offset)
 	if offset.IsError() {
 		return offset
+	}
+
+	// Handle date-date subtraction (e.g., "today - 19/09/2025")
+	// This occurs when no unit is specified and offset is a date
+	if base.Type == ValueDate && offset.Type == ValueDate && node.Operator == "-" && node.Unit == "" {
+		// Normalize both dates to UTC midnight to avoid DST-related fractional day counts
+		by, bm, bd := base.Date.Date()
+		oy, om, od := offset.Date.Date()
+		baseMidnight := time.Date(by, bm, bd, 0, 0, 0, 0, time.UTC)
+		offsetMidnight := time.Date(oy, om, od, 0, 0, 0, 0, time.UTC)
+		duration := baseMidnight.Sub(offsetMidnight)
+		days := duration.Hours() / 24.0
+		return NewDateDifference(days, offset.Date, base.Date)
 	}
 
 	offsetVal := int(offset.Number)
