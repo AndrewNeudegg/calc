@@ -688,7 +688,12 @@ func (e *Evaluator) evalDateArithmetic(node *parser.DateArithmeticExpr) Value {
 	// Handle date-date subtraction (e.g., "today - 19/09/2025")
 	// This occurs when no unit is specified and offset is a date
 	if base.Type == ValueDate && offset.Type == ValueDate && node.Operator == "-" && node.Unit == "" {
-		duration := base.Date.Sub(offset.Date)
+		// Normalize both dates to UTC midnight to avoid DST-related fractional day counts
+		by, bm, bd := base.Date.Date()
+		oy, om, od := offset.Date.Date()
+		baseMidnight := time.Date(by, bm, bd, 0, 0, 0, 0, time.UTC)
+		offsetMidnight := time.Date(oy, om, od, 0, 0, 0, 0, time.UTC)
+		duration := baseMidnight.Sub(offsetMidnight)
 		days := duration.Hours() / 24.0
 		return NewDateDifference(days, offset.Date, base.Date)
 	}

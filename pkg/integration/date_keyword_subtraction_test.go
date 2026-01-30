@@ -95,25 +95,29 @@ func TestDateKeywordSubtractionIntegration(t *testing.T) {
 // TestDateKeywordSubtractionReversibilityIntegration tests that "today - date" and "date - today" give opposite results
 func TestDateKeywordSubtractionReversibilityIntegration(t *testing.T) {
 	testPairs := []struct {
+		name    string
 		forward string
 		reverse string
 	}{
 		{
+			name:    "today vs 19 Sep 2025",
 			forward: "today - 19/09/2025",
 			reverse: "19/09/2025 - today",
 		},
 		{
+			name:    "tomorrow vs 10 Oct 2024",
 			forward: "tomorrow - 10/10/2024",
 			reverse: "10/10/2024 - tomorrow",
 		},
 		{
+			name:    "yesterday vs 25 Dec 2025",
 			forward: "yesterday - 25/12/2025",
 			reverse: "25/12/2025 - yesterday",
 		},
 	}
 
 	for _, pair := range testPairs {
-		t.Run(pair.forward+" vs "+pair.reverse, func(t *testing.T) {
+		t.Run(pair.name, func(t *testing.T) {
 			resultForward := evalExpr(pair.forward)
 			resultReverse := evalExpr(pair.reverse)
 
@@ -144,6 +148,11 @@ func TestDateKeywordSubtractionReversibilityIntegration(t *testing.T) {
 			if resultForward.Number != -resultReverse.Number {
 				t.Errorf("Expected opposite values, got forward=%v and reverse=%v",
 					resultForward.Number, resultReverse.Number)
+			}
+
+			// Verify that the result is non-zero to catch bugs where both are 0
+			if resultForward.Number == 0 {
+				t.Errorf("Expected non-zero result for date difference, got 0")
 			}
 		})
 	}

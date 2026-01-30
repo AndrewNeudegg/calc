@@ -278,44 +278,40 @@ func TestDateSubtraction(t *testing.T) {
 // This specifically tests the fix for the issue where "today - 19/09/2025" would fail
 func TestDateKeywordSubtraction(t *testing.T) {
 	tests := []struct {
-		name      string
-		input     string
-		checkDays bool // if true, check that the result is approximately correct in days
+		name         string
+		input        string
+		expectedDays *float64 // if non-nil, assert the exact day count
 	}{
 		{
-			name:      "today - date literal",
-			input:     "today - 19/09/2025",
-			checkDays: true,
+			name:  "today minus date literal",
+			input: "today - 19/09/2025",
 		},
 		{
-			name:      "date literal - today",
-			input:     "19/09/2025 - today",
-			checkDays: true,
+			name:  "date literal minus today",
+			input: "19/09/2025 - today",
 		},
 		{
-			name:      "tomorrow - date literal",
-			input:     "tomorrow - 19/09/2025",
-			checkDays: true,
+			name:  "tomorrow minus date literal",
+			input: "tomorrow - 19/09/2025",
 		},
 		{
-			name:      "yesterday - date literal",
-			input:     "yesterday - 19/09/2025",
-			checkDays: true,
+			name:  "yesterday minus date literal",
+			input: "yesterday - 19/09/2025",
 		},
 		{
-			name:      "today - today",
-			input:     "today - today",
-			checkDays: false,
+			name:         "today minus today",
+			input:        "today - today",
+			expectedDays: ptr(0.0),
 		},
 		{
-			name:      "tomorrow - today",
-			input:     "tomorrow - today",
-			checkDays: false,
+			name:         "tomorrow minus today",
+			input:        "tomorrow - today",
+			expectedDays: ptr(1.0),
 		},
 		{
-			name:      "today - yesterday",
-			input:     "today - yesterday",
-			checkDays: false,
+			name:         "today minus yesterday",
+			input:        "today - yesterday",
+			expectedDays: ptr(1.0),
 		},
 	}
 
@@ -335,52 +331,48 @@ func TestDateKeywordSubtraction(t *testing.T) {
 				t.Errorf("Expected unit 'days', got '%s'", result.Unit)
 			}
 
-			// For operations involving today/tomorrow/yesterday, we can check specific results
-			if !tt.checkDays {
-				switch tt.input {
-				case "today - today":
-					if result.Number != 0 {
-						t.Errorf("Expected 0 days for 'today - today', got %v", result.Number)
-					}
-				case "tomorrow - today":
-					if result.Number != 1 {
-						t.Errorf("Expected 1 day for 'tomorrow - today', got %v", result.Number)
-					}
-				case "today - yesterday":
-					if result.Number != 1 {
-						t.Errorf("Expected 1 day for 'today - yesterday', got %v", result.Number)
-					}
+			// Check exact day count if specified
+			if tt.expectedDays != nil {
+				if result.Number != *tt.expectedDays {
+					t.Errorf("Expected %v days, got %v", *tt.expectedDays, result.Number)
 				}
 			}
-			// For operations with specific dates (checkDays=true),
-			// we just verify that no error occurred (checked above)
 		})
 	}
+}
+
+// ptr is a helper to create a pointer to a float64
+func ptr(f float64) *float64 {
+	return &f
 }
 
 // TestDateKeywordSubtractionReversibility tests that date subtraction is consistent
 // This ensures that "today - date" and "date - today" give opposite results
 func TestDateKeywordSubtractionReversibility(t *testing.T) {
 	testCases := []struct {
+		name    string
 		forward string
 		reverse string
 	}{
 		{
+			name:    "today vs 19 Sep 2025",
 			forward: "today - 19/09/2025",
 			reverse: "19/09/2025 - today",
 		},
 		{
+			name:    "tomorrow vs 15 Mar 2024",
 			forward: "tomorrow - 15/03/2024",
 			reverse: "15/03/2024 - tomorrow",
 		},
 		{
+			name:    "yesterday vs 31 Dec 2024",
 			forward: "yesterday - 31/12/2024",
 			reverse: "31/12/2024 - yesterday",
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.forward+" vs "+tc.reverse, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			resultForward := evalExpr(tc.forward)
 			if resultForward.IsError() {
 				t.Fatalf("Forward eval error: %s", resultForward.Error)
@@ -407,6 +399,11 @@ func TestDateKeywordSubtractionReversibility(t *testing.T) {
 			if resultForward.Number != -resultReverse.Number {
 				t.Errorf("Expected opposite values, got %v and %v",
 					resultForward.Number, resultReverse.Number)
+			}
+
+			// Verify that the result is non-zero to catch bugs where both are 0
+			if resultForward.Number == 0 {
+				t.Errorf("Expected non-zero result for date difference, got 0")
 			}
 		})
 	}
