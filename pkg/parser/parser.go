@@ -1039,6 +1039,11 @@ func (p *Parser) parsePostfix() (Expr, error) {
 						minutes = 0
 					}
 					
+					// Handle hour overflow (e.g., 23:60 -> 00:00 next day)
+					if hours >= 24 {
+						hours = hours % 24
+					}
+					
 					now := time.Now().UTC()
 					timeValue := time.Date(now.Year(), now.Month(), now.Day(), hours, minutes, 0, 0, time.UTC)
 					return &TimeConversionExpr{
