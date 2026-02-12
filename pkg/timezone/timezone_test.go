@@ -100,3 +100,66 @@ func TestParseTimeString(t *testing.T) {
 		}
 	}
 }
+
+func TestTimezoneAbbreviations(t *testing.T) {
+	s := NewSystem()
+	
+	tests := []struct {
+		abbr     string
+		wantErr  bool
+		wantOffset int
+	}{
+		{"UTC", false, 0},
+		{"GMT", false, 0},
+		{"EST", false, -5},
+		{"PST", false, -8},
+		{"CST", false, -6},
+		{"MST", false, -7},
+		{"CET", false, 1},
+		{"JST", false, 9},
+		{"AEST", false, 10},
+		{"NZST", false, 12},
+		{"INVALID", true, 0},
+	}
+	
+	for _, tt := range tests {
+		loc, err := s.GetLocation(tt.abbr)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("GetLocation(%q) error = %v, wantErr %v", tt.abbr, err, tt.wantErr)
+			continue
+		}
+		
+		if !tt.wantErr {
+			if loc.Offset != tt.wantOffset {
+				t.Errorf("GetLocation(%q) offset = %d, want %d", tt.abbr, loc.Offset, tt.wantOffset)
+			}
+		}
+	}
+}
+
+func TestTimezoneConversionWithAbbreviations(t *testing.T) {
+	s := NewSystem()
+	
+	tests := []struct {
+		from     string
+		to       string
+		expected int
+	}{
+		{"EST", "UTC", 5},
+		{"PST", "EST", 3},
+		{"UTC", "JST", 9},
+		{"CET", "PST", -9},
+	}
+	
+	for _, tt := range tests {
+		offset, err := s.GetOffset(tt.from, tt.to)
+		if err != nil {
+			t.Errorf("GetOffset(%q, %q) error = %v", tt.from, tt.to, err)
+			continue
+		}
+		
+		if offset != tt.expected {
+			t.Errorf("GetOffset(%q, %q) = %d, want %d", tt.from, tt.to, offset, tt.expected)
+		}
+	}
+}

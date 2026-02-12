@@ -91,6 +91,33 @@ func (p *Parser) isCurrencyCode(unit string) bool {
 	}
 }
 
+// isTimezone checks if a string is a known timezone by attempting to look it up.
+// This avoids duplicating the timezone list between parser and timezone system.
+func (p *Parser) isTimezone(tz string) bool {
+	// We can't directly access the timezone system during parsing,
+	// so we maintain a minimal list of common abbreviations.
+	// The actual validation happens during evaluation.
+	lower := strings.ToLower(tz)
+	// Common timezone abbreviations (must match initAbbreviations in timezone.System)
+	abbreviations := []string{
+		"utc", "gmt", "z",
+		"est", "edt", "cst", "cdt", "mst", "mdt", "pst", "pdt",
+		"akst", "akdt", "hst", "hast", "hadt",
+		"wet", "west", "cet", "cest", "eet", "eest", "bst",
+		"jst", "kst", "hkt", "sgt", "pkt", "irst", "irdt", "gst",
+		"aest", "aedt", "acst", "acdt", "awst", "awdt",
+		"nzst", "nzdt", "brt", "brst", "art", "clt", "clst",
+		"nst", "ndt", "adt", "cat", "eat", "wat", "sast", "msk",
+		"wib", "wita", "wit", "ict", "pht", "sst",
+	}
+	for _, abbr := range abbreviations {
+		if lower == abbr {
+			return true
+		}
+	}
+	return false
+}
+
 // parseBusinessDayUnit checks if the current unit is "business" followed by a time unit,
 // and combines them into a compound unit like "business days".
 // Currently supports "business days" only; may be extended for "business weeks" in the future.
@@ -944,6 +971,89 @@ func (p *Parser) parsePostfix() (Expr, error) {
 				// Store as a compound unit with "1" as numerator dimension (dimensionless rate)
 				// e.g., "730/month" becomes 730 with unit "1/month"
 				expr = &UnitExpr{Value: numExpr, Unit: "1/" + unit}
+			}
+		}
+	}
+
+	// Check for timezone patterns: "9 am EST in UTC" or "10:00 PST in EST"
+	// First check if we have something that looks like a time with am/pm followed by timezone
+	if numExpr, ok := expr.(*NumberExpr); ok {
+		// Check for "am" or "pm" followed by timezone - use lookahead to avoid consuming tokens
+		if p.current().Type == lexer.TokenIdent {
+			ampm := strings.ToLower(p.current().Literal)
+			if ampm == "am" || ampm == "pm" {
+				// Lookahead to check if this matches the full pattern before consuming tokens
+				if p.peek(1).Type == lexer.TokenIdent && p.isTimezone(p.peek(1).Literal) &&
+					p.peek(2).Type == lexer.TokenIn {
+					// Pattern matches, now consume tokens
+					p.advance() // consume am/pm
+					fromTz := p.current().Literal
+					p.advance() // consume timezone
+					p.advance() // consume "in"
+					toTz := p.parseLocationName()
+					
+					// Convert am/pm time to 24-hour format
+					hour := int(numExpr.Value)
+					if ampm == "pm" && hour != 12 {
+						hour += 12
+					} else if ampm == "am" && hour == 12 {
+						hour = 0
+					}
+					// Create a TimeExpr for the time using UTC
+					now := time.Now().UTC()
+					timeValue := time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, time.UTC)
+					return &TimeConversionExpr{
+						Time:     &TimeExpr{Time: timeValue},
+						From:     fromTz,
+						To:       toTz,
+						Offset:   nil,
+						Operator: "",
+					}, nil
+				}
+			}
+		}
+	}
+	
+	// Check for timezone after time value: "10:00 EST in UTC"
+	if unitExpr, ok := expr.(*UnitExpr); ok {
+		if unitExpr.Unit == "time" {
+			// Check for timezone identifier using lookahead
+			if p.current().Type == lexer.TokenIdent && p.isTimezone(p.current().Literal) &&
+				p.peek(1).Type == lexer.TokenIn {
+				// Pattern matches, consume tokens
+				fromTz := p.current().Literal
+				p.advance() // consume timezone
+				p.advance() // consume "in"
+				toTz := p.parseLocationName()
+				
+				// Extract the time value from the UnitExpr
+				if numExpr, ok := unitExpr.Value.(*NumberExpr); ok {
+					// Convert decimal hours back to time with proper rounding
+					hours := int(numExpr.Value)
+					minutesFloat := (numExpr.Value - float64(hours)) * 60.0
+					minutes := int(minutesFloat + 0.5) // Round to nearest minute
+					
+					// Handle minute overflow (e.g., 11:59.5 rounds to 11:60 -> 12:00)
+					if minutes >= 60 {
+						hours++
+						minutes = 0
+					}
+					
+					// Handle hour overflow (e.g., 23:60 -> 00:00 next day)
+					if hours >= 24 {
+						hours = hours % 24
+					}
+					
+					now := time.Now().UTC()
+					timeValue := time.Date(now.Year(), now.Month(), now.Day(), hours, minutes, 0, 0, time.UTC)
+					return &TimeConversionExpr{
+						Time:     &TimeExpr{Time: timeValue},
+						From:     fromTz,
+						To:       toTz,
+						Offset:   nil,
+						Operator: "",
+					}, nil
+				}
 			}
 		}
 	}
