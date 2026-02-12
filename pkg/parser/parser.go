@@ -677,7 +677,38 @@ func (p *Parser) parseConversion() (Expr, error) {
 		expr = &ConversionExpr{Value: expr, ToUnit: toUnit}
 	}
 
-	// After applying any conversions, allow additive tail (e.g., "(a in x) + b")
+	// After applying any conversions, handle multiplicative operations first (higher precedence)
+	for {
+		tok := p.current()
+		var op string
+
+		if tok.Type == lexer.TokenMultiply {
+			op = "*"
+		} else if tok.Type == lexer.TokenDivide {
+			op = "/"
+		} else if tok.Type == lexer.TokenIdent {
+			if tok.Literal == "times" || tok.Literal == "multiplied" {
+				op = "*"
+			} else if tok.Literal == "divided" {
+				op = "/"
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+
+		p.advance()
+
+		right, err := p.parseUnary()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &BinaryExpr{Left: expr, Operator: op, Right: right}
+	}
+
+	// Then handle additive operations (lower precedence)
 	for {
 		tok := p.current()
 		var op string
