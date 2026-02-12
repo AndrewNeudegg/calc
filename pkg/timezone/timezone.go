@@ -1056,6 +1056,93 @@ func (s *System) initLocations() {
 			Offset:   loc.Offset,
 		}
 	}
+	
+	// Add common timezone abbreviations
+	s.initAbbreviations()
+}
+
+// initAbbreviations adds common timezone abbreviations
+func (s *System) initAbbreviations() {
+	abbreviations := []Location{
+		// UTC and variants
+		{"UTC", "Etc/UTC", 0},
+		{"GMT", "Etc/GMT", 0},
+		{"Z", "Etc/UTC", 0},
+		
+		// North American Time Zones
+		{"EST", "America/New_York", -5},      // Eastern Standard Time
+		{"EDT", "America/New_York", -4},      // Eastern Daylight Time
+		{"CST", "America/Chicago", -6},       // Central Standard Time
+		{"CDT", "America/Chicago", -5},       // Central Daylight Time
+		{"MST", "America/Denver", -7},        // Mountain Standard Time
+		{"MDT", "America/Denver", -6},        // Mountain Daylight Time
+		{"PST", "America/Los_Angeles", -8},   // Pacific Standard Time
+		{"PDT", "America/Los_Angeles", -7},   // Pacific Daylight Time
+		{"AKST", "America/Anchorage", -9},    // Alaska Standard Time
+		{"AKDT", "America/Anchorage", -8},    // Alaska Daylight Time
+		{"HST", "Pacific/Honolulu", -10},     // Hawaii Standard Time
+		{"HAST", "Pacific/Honolulu", -10},    // Hawaii-Aleutian Standard Time
+		{"HADT", "Pacific/Honolulu", -9},     // Hawaii-Aleutian Daylight Time
+		
+		// European Time Zones
+		{"WET", "Europe/Lisbon", 0},          // Western European Time
+		{"WEST", "Europe/Lisbon", 1},         // Western European Summer Time
+		{"CET", "Europe/Paris", 1},           // Central European Time
+		{"CEST", "Europe/Paris", 2},          // Central European Summer Time
+		{"EET", "Europe/Athens", 2},          // Eastern European Time
+		{"EEST", "Europe/Athens", 3},         // Eastern European Summer Time
+		{"BST", "Europe/London", 1},          // British Summer Time
+		
+		// Asian Time Zones
+		{"JST", "Asia/Tokyo", 9},             // Japan Standard Time
+		{"KST", "Asia/Seoul", 9},             // Korea Standard Time
+		{"HKT", "Asia/Hong_Kong", 8},         // Hong Kong Time
+		{"SGT", "Asia/Singapore", 8},         // Singapore Time
+		{"PKT", "Asia/Karachi", 5},           // Pakistan Standard Time
+		{"IRST", "Asia/Tehran", 3},           // Iran Standard Time
+		{"IRDT", "Asia/Tehran", 4},           // Iran Daylight Time
+		{"GST", "Asia/Dubai", 4},             // Gulf Standard Time
+		
+		// Australian Time Zones
+		{"AEST", "Australia/Sydney", 10},     // Australian Eastern Standard Time
+		{"AEDT", "Australia/Sydney", 11},     // Australian Eastern Daylight Time
+		{"ACST", "Australia/Adelaide", 9},    // Australian Central Standard Time
+		{"ACDT", "Australia/Adelaide", 10},   // Australian Central Daylight Time
+		{"AWST", "Australia/Perth", 8},       // Australian Western Standard Time
+		{"AWDT", "Australia/Perth", 9},       // Australian Western Daylight Time
+		
+		// Other Time Zones
+		{"NZST", "Pacific/Auckland", 12},     // New Zealand Standard Time
+		{"NZDT", "Pacific/Auckland", 13},     // New Zealand Daylight Time
+		{"BRT", "America/Sao_Paulo", -3},     // Brasília Time
+		{"BRST", "America/Sao_Paulo", -2},    // Brasília Summer Time
+		{"ART", "America/Argentina/Buenos_Aires", -3}, // Argentina Time
+		{"CLT", "America/Santiago", -4},      // Chile Standard Time
+		{"CLST", "America/Santiago", -3},     // Chile Summer Time
+		{"NST", "America/St_Johns", -3},      // Newfoundland Standard Time
+		{"NDT", "America/St_Johns", -2},      // Newfoundland Daylight Time
+		{"ADT", "America/Halifax", -3},       // Atlantic Daylight Time
+		{"CAT", "Africa/Johannesburg", 2},    // Central Africa Time
+		{"EAT", "Africa/Nairobi", 3},         // East Africa Time
+		{"WAT", "Africa/Lagos", 1},           // West Africa Time
+		{"SAST", "Africa/Johannesburg", 2},   // South Africa Standard Time
+		{"MSK", "Europe/Moscow", 3},          // Moscow Standard Time
+		{"WIB", "Asia/Jakarta", 7},           // Western Indonesian Time
+		{"WITA", "Asia/Makassar", 8},         // Central Indonesian Time
+		{"WIT", "Asia/Jayapura", 9},          // Eastern Indonesian Time
+		{"ICT", "Asia/Bangkok", 7},           // Indochina Time
+		{"PHT", "Asia/Manila", 8},            // Philippine Time
+		{"SST", "Pacific/Pago_Pago", -11},    // Samoa Standard Time
+	}
+	
+	for _, loc := range abbreviations {
+		key := strings.ToLower(loc.Name)
+		s.locations[key] = &Location{
+			Name:     loc.Name,
+			IanaName: loc.IanaName,
+			Offset:   loc.Offset,
+		}
+	}
 }
 // GetLocation retrieves a location by name.
 func (s *System) GetLocation(name string) (*Location, error) {

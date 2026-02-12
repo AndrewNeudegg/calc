@@ -91,6 +91,29 @@ func (p *Parser) isCurrencyCode(unit string) bool {
 	}
 }
 
+// isTimezone checks if a string is a known timezone abbreviation or name
+func (p *Parser) isTimezone(tz string) bool {
+	lower := strings.ToLower(tz)
+	// Common timezone abbreviations
+	abbreviations := []string{
+		"utc", "gmt", "z",
+		"est", "edt", "cst", "cdt", "mst", "mdt", "pst", "pdt",
+		"akst", "akdt", "hst", "hast", "hadt",
+		"wet", "west", "cet", "cest", "eet", "eest", "bst",
+		"jst", "kst", "hkt", "sgt", "pkt", "irst", "irdt", "gst",
+		"aest", "aedt", "acst", "acdt", "awst", "awdt",
+		"nzst", "nzdt", "brt", "brst", "art", "clt", "clst",
+		"nst", "ndt", "adt", "cat", "eat", "wat", "sast", "msk",
+		"wib", "wita", "wit", "ict", "pht", "sst",
+	}
+	for _, abbr := range abbreviations {
+		if lower == abbr {
+			return true
+		}
+	}
+	return false
+}
+
 // parseBusinessDayUnit checks if the current unit is "business" followed by a time unit,
 // and combines them into a compound unit like "business days".
 // Currently supports "business days" only; may be extended for "business weeks" in the future.
@@ -944,6 +967,82 @@ func (p *Parser) parsePostfix() (Expr, error) {
 				// Store as a compound unit with "1" as numerator dimension (dimensionless rate)
 				// e.g., "730/month" becomes 730 with unit "1/month"
 				expr = &UnitExpr{Value: numExpr, Unit: "1/" + unit}
+			}
+		}
+	}
+
+	// Check for timezone patterns: "9 am EST in UTC" or "10:00 PST in EST"
+	// First check if we have something that looks like a time with am/pm followed by timezone
+	if numExpr, ok := expr.(*NumberExpr); ok {
+		// Check for "am" or "pm" followed by timezone
+		if p.current().Type == lexer.TokenIdent {
+			ampm := strings.ToLower(p.current().Literal)
+			if ampm == "am" || ampm == "pm" {
+				p.advance()
+				// Check for timezone identifier
+				if p.current().Type == lexer.TokenIdent {
+					fromTz := p.current().Literal
+					// Verify it's a valid timezone
+					if p.isTimezone(fromTz) {
+						p.advance()
+						// Check for "in"
+						if p.current().Type == lexer.TokenIn {
+							p.advance()
+							toTz := p.parseLocationName()
+							// Convert am/pm time to 24-hour format
+							hour := int(numExpr.Value)
+							if ampm == "pm" && hour != 12 {
+								hour += 12
+							} else if ampm == "am" && hour == 12 {
+								hour = 0
+							}
+							// Create a TimeExpr for the time
+							now := time.Now()
+							timeValue := time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, time.UTC)
+							return &TimeConversionExpr{
+								Time:     &TimeExpr{Time: timeValue},
+								From:     fromTz,
+								To:       toTz,
+								Offset:   nil,
+								Operator: "",
+							}, nil
+						}
+						// Not a conversion, backtrack (for now, treat as multiplication)
+					}
+				}
+			}
+		}
+	}
+	
+	// Check for timezone after time value: "10:00 EST in UTC"
+	if unitExpr, ok := expr.(*UnitExpr); ok {
+		if unitExpr.Unit == "time" {
+			// Check for timezone identifier
+			if p.current().Type == lexer.TokenIdent {
+				fromTz := p.current().Literal
+				if p.isTimezone(fromTz) {
+					p.advance()
+					// Check for "in"
+					if p.current().Type == lexer.TokenIn {
+						p.advance()
+						toTz := p.parseLocationName()
+						// Extract the time value from the UnitExpr
+						if numExpr, ok := unitExpr.Value.(*NumberExpr); ok {
+							// Convert decimal hours back to time
+							hours := int(numExpr.Value)
+							minutes := int((numExpr.Value - float64(hours)) * 60)
+							now := time.Now()
+							timeValue := time.Date(now.Year(), now.Month(), now.Day(), hours, minutes, 0, 0, time.UTC)
+							return &TimeConversionExpr{
+								Time:     &TimeExpr{Time: timeValue},
+								From:     fromTz,
+								To:       toTz,
+								Offset:   nil,
+								Operator: "",
+							}, nil
+						}
+					}
+				}
 			}
 		}
 	}
