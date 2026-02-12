@@ -1007,7 +1007,7 @@ func (p *Parser) parsePostfix() (Expr, error) {
 								Operator: "",
 							}, nil
 						}
-						// Not a conversion, backtrack (for now, treat as multiplication)
+						// Not a conversion pattern, continue with normal parsing
 					}
 				}
 			}
