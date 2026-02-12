@@ -115,6 +115,14 @@ Global stand-up example (screenshot):
 | `=` | Assignment | `x = 10` | `10.00` |
 | `in` | Unit conversion | `10 m in cm` | `1,000.00 cm` |
 
+**Operator Precedence:** Operations follow standard mathematical precedence:
+1. Parentheses: `()`
+2. Multiplication and Division: `*`, `/`
+3. Addition and Subtraction: `+`, `-`
+4. Unit Conversion: `in`
+
+**Compound Expressions:** You can chain operations after conversions: `100 cm in m / 2` equals `0.50 m`
+
 ### Currency Formats
 
 | Format | Example | Display |
@@ -445,6 +453,23 @@ You can calculate the number of business days between two dates by subtracting t
 ```
 
 This feature automatically counts only business days in the date range, skipping weekends according to your locale setting.
+
+**Compound Expressions:**
+
+You can perform further arithmetic operations on converted values, enabling complex calculations:
+
+```
+1> 03/04/2026 - today in business days / 7
+   = 5.14 business days  # Business weeks until deadline
+
+2> 10 business days in hours / 8
+   = 10.00  # Number of work days
+
+3> (deadline - today in business days) * 8 + 2
+   = 402.00  # Total work hours plus 2 extra hours
+```
+
+Compound expressions work with all types of conversions (units, currencies, dates, business days) and follow standard operator precedence rules.
 
 **Locale-Aware Schedules:**
 
