@@ -268,7 +268,7 @@ You can also use city names and country names for timezone conversions (see `:tz
 ```
 
 **Notes:**
-- Time zones automatically handle daylight saving time offsets
+- Time zones use fixed UTC offsets; daylight saving time transitions are not automatically applied
 - Both `am/pm` (12-hour) and `HH:MM` (24-hour) formats are supported
 - Use `:tz list` command to see all available timezone abbreviations and locations
 - Results are displayed in UTC format but represent the correct time in the target timezone

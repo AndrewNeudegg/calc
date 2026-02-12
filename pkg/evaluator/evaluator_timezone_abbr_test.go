@@ -52,9 +52,9 @@ func TestTimezoneAbbreviationConversion(t *testing.T) {
 				if v.Date.IsZero() {
 					t.Error("Expected non-zero date")
 				}
-				// 10 AM PST = 1 PM EST (PST is UTC-8, EST is UTC-5, diff is 3 hours)
-				// In UTC this is 18:00 (10 + 8) for PST, result shows as 13:00 "in EST timezone"
-				// but displayed as UTC, so we expect 18:00 UTC
+				// 10 AM PST (UTC-8) = 18:00 UTC
+				// Convert to EST (UTC-5): 18:00 - 5 = 13:00 EST
+				// Result is stored/displayed as UTC time with EST offset applied
 				hour := v.Date.Hour()
 				if hour != 13 {
 					t.Errorf("Expected hour 13, got %d", hour)
