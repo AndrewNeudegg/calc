@@ -9,6 +9,7 @@ Terminal calculator with units, currency conversion, and natural language expres
 - Unit conversions (length, mass, time, volume, temperature, etc.)
 - Currency conversion with postfix notation support
 - Date and time arithmetic
+- **Time zone conversions**: Natural syntax for converting times between timezones (e.g., `9 am EST in UTC`)
 - **Business days**: Locale-aware business day calculations (e.g., `today + 10 business days`)
 - Percentage calculations
 - Natural language phrases ("half of", "double", etc.)
@@ -209,6 +210,68 @@ Times in `HH:MM` format are recognized automatically:
 | `14:00 + 2` | `16:00` |
 | `11:00 - 09:00` | `02:00` |
 | `17:45 - 09:30` | `08:15` |
+
+### Time Zone Conversions
+
+Convert times between time zones using natural syntax with timezone abbreviations:
+
+**Basic Conversions:**
+```
+1> 9 am EST in UTC
+   = 12 Feb 2026 14:00:00 UTC
+
+2> 10:00 PST in EST
+   = 12 Feb 2026 13:00:00 UTC
+
+3> 3 pm CET in PST
+   = 12 Feb 2026 06:00:00 UTC
+```
+
+**Supported Timezone Abbreviations:**
+
+| Abbreviation | Name | Offset |
+|--------------|------|--------|
+| **UTC/GMT** | Universal Coordinated Time / Greenwich Mean Time | UTC+0 |
+| **EST/EDT** | Eastern Standard/Daylight Time | UTC-5/-4 |
+| **CST/CDT** | Central Standard/Daylight Time | UTC-6/-5 |
+| **MST/MDT** | Mountain Standard/Daylight Time | UTC-7/-6 |
+| **PST/PDT** | Pacific Standard/Daylight Time | UTC-8/-7 |
+| **CET/CEST** | Central European Time/Summer Time | UTC+1/+2 |
+| **JST** | Japan Standard Time | UTC+9 |
+| **AEST/AEDT** | Australian Eastern Standard/Daylight Time | UTC+10/+11 |
+| **NZST/NZDT** | New Zealand Standard/Daylight Time | UTC+12/+13 |
+
+**More Examples:**
+```
+1> 12 pm GMT in JST
+   = 12 Feb 2026 21:00:00 UTC
+
+2> 8 am AEST in GMT
+   = 12 Feb 2026 22:00:00 UTC
+
+3> 14:30 UTC in EST
+   = 12 Feb 2026 09:30:00 UTC
+```
+
+**Combining with City Names:**
+
+You can also use city names and country names for timezone conversions (see `:tz list` for available locations):
+```
+1> time in London
+   = 12 Feb 2026 11:00:00 UTC
+
+2> time difference New York London
+   = 5.00 hours
+
+3> 10am London in Sydney time
+   = 12 Feb 2026 21:00:00 UTC
+```
+
+**Notes:**
+- Time zones automatically handle daylight saving time offsets
+- Both `am/pm` (12-hour) and `HH:MM` (24-hour) formats are supported
+- Use `:tz list` command to see all available timezone abbreviations and locations
+- Results are displayed in UTC format but represent the correct time in the target timezone
 
 ### Natural Language
 
