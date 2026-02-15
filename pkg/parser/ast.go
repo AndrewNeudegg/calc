@@ -175,6 +175,12 @@ type ArgDirectiveExpr struct {
 	Prompt string // prompt text (optional)
 }
 
+// UnitDirectiveExpr represents a unit definition directive like ":unit spoon = 15 ml".
+type UnitDirectiveExpr struct {
+	Name  string // unit name
+	Value Expr   // value expression (e.g., "15 ml")
+}
+
 // Implement node() for all types
 func (*NumberExpr) node()         {}
 func (*BinaryExpr) node()         {}
@@ -203,6 +209,7 @@ func (*TimeConversionExpr) node() {}
 func (*MonthExpr) node()          {}
 func (*PrevExpr) node()           {}
 func (*ArgDirectiveExpr) node()   {}
+func (*UnitDirectiveExpr) node()  {}
 
 // Implement expr() for expression types
 func (*NumberExpr) expr()         {}
@@ -232,3 +239,4 @@ func (*TimeDifferenceExpr) expr() {}
 func (*TimeConversionExpr) expr() {}
 func (*PrevExpr) expr()           {}
 func (*ArgDirectiveExpr) expr()   {}
+func (*UnitDirectiveExpr) expr()  {}
