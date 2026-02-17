@@ -263,19 +263,11 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 		duration := targetTime.Sub(right.Date)
 		hours64 := duration.Hours()
 		
-		// If the result is negative and we're within 24 hours, assume next day
-		if hours64 < 0 && hours64 > -24 {
-			hours64 += 24
-		}
+		// Apply next-day wraparound if needed
+		hours64 = applyNextDayWrapAround(hours64)
 		
-		// Format as HH:MM
-		totalMinutes := int(hours64 * 60)
-		h := totalMinutes / 60
-		m := totalMinutes % 60
-		
-		// Return as a formatted time string
-		timeStr := fmt.Sprintf("%d:%02d", h, m)
-		return NewString(timeStr)
+		// Format and return as time string
+		return NewString(formatDurationAsTime(hours64))
 	}
 
 	// Handle date-date subtraction (returns days with unit and stores date range for business day conversion)
@@ -294,19 +286,11 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 			duration := left.Date.Sub(right.Date)
 			hours := duration.Hours()
 			
-			// If the result is negative and we're within 24 hours, assume next day
-			if hours < 0 && hours > -24 {
-				hours += 24
-			}
+			// Apply next-day wraparound if needed
+			hours = applyNextDayWrapAround(hours)
 			
-			// Format as HH:MM
-			totalMinutes := int(hours * 60)
-			h := totalMinutes / 60
-			m := totalMinutes % 60
-			
-			// Return as a formatted time string
-			timeStr := fmt.Sprintf("%d:%02d", h, m)
-			return NewString(timeStr)
+			// Format and return as time string
+			return NewString(formatDurationAsTime(hours))
 		}
 		
 		// Otherwise, normalize both dates to UTC midnight to avoid DST-related fractional day counts
@@ -1408,6 +1392,23 @@ func (e *Evaluator) evalRate(node *parser.RateExpr) Value {
 	compoundUnit := num.Unit + "/" + den.Unit
 
 	return NewUnit(rateValue, compoundUnit)
+}
+
+// applyNextDayWrapAround adjusts hours to account for next-day wraparound
+// when the target time is in the past
+func applyNextDayWrapAround(hours float64) float64 {
+	if hours < 0 && hours > -24 {
+		return hours + 24
+	}
+	return hours
+}
+
+// formatDurationAsTime formats a duration in hours as an HH:MM string
+func formatDurationAsTime(hours float64) string {
+	totalMinutes := int(hours * 60)
+	h := totalMinutes / 60
+	m := totalMinutes % 60
+	return fmt.Sprintf("%d:%02d", h, m)
 }
 
 func (e *Evaluator) evalPrev(node *parser.PrevExpr) Value {
