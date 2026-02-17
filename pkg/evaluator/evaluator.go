@@ -252,9 +252,32 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 
 	// Handle date-date subtraction (returns days with unit and stores date range for business day conversion)
 	if left.Type == ValueDate && right.Type == ValueDate && node.Operator == "-" {
-		// Normalize both dates to UTC midnight to avoid DST-related fractional day counts
+		// Check if both times are on the same day (time-only arithmetic)
 		ly, lm, ld := left.Date.Date()
 		ry, rm, rd := right.Date.Date()
+		
+		// If both dates are on the same day, treat as time-only arithmetic
+		if ly == ry && lm == rm && ld == rd {
+			// Calculate time difference in hours
+			duration := left.Date.Sub(right.Date)
+			hours := duration.Hours()
+			
+			// If the result is negative and we're within 24 hours, assume next day
+			if hours < 0 && hours > -24 {
+				hours += 24
+			}
+			
+			// Format as HH:MM
+			totalMinutes := int(hours * 60)
+			h := totalMinutes / 60
+			m := totalMinutes % 60
+			
+			// Return as a formatted time string
+			timeStr := fmt.Sprintf("%d:%02d", h, m)
+			return NewString(timeStr)
+		}
+		
+		// Otherwise, normalize both dates to UTC midnight to avoid DST-related fractional day counts
 		leftMidnight := time.Date(ly, lm, ld, 0, 0, 0, 0, time.UTC)
 		rightMidnight := time.Date(ry, rm, rd, 0, 0, 0, 0, time.UTC)
 		duration := leftMidnight.Sub(rightMidnight)

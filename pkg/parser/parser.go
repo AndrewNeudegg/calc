@@ -320,7 +320,7 @@ func (p *Parser) isKeywordToken(t lexer.TokenType) bool {
 		lexer.TokenSum, lexer.TokenAverage, lexer.TokenMean, lexer.TokenTotal,
 		lexer.TokenHalf, lexer.TokenDouble, lexer.TokenTwice, lexer.TokenQuarters,
 		lexer.TokenThree, lexer.TokenArg, lexer.TokenAfter, lexer.TokenBefore,
-		lexer.TokenFrom, lexer.TokenAgo, lexer.TokenNow, lexer.TokenToday,
+		lexer.TokenFrom, lexer.TokenAgo, lexer.TokenUntil, lexer.TokenNow, lexer.TokenToday,
 		lexer.TokenTomorrow, lexer.TokenYesterday, lexer.TokenNext, lexer.TokenLast,
 		lexer.TokenPrev, lexer.TokenTime, lexer.TokenMonday, lexer.TokenTuesday,
 		lexer.TokenWednesday, lexer.TokenThursday, lexer.TokenFriday, lexer.TokenSaturday,
@@ -597,6 +597,25 @@ func (p *Parser) tryParseTimezoneQuery() (Expr, bool) {
 		}
 
 		return &TimeDifferenceExpr{From: from, To: to, TargetUnit: targetUnit}, true
+	}
+
+	// "time until <time>"
+	if tok.Type == lexer.TokenTime && p.peek(1).Type == lexer.TokenUntil {
+		p.advance() // skip 'time'
+		p.advance() // skip 'until'
+		
+		// Parse the target time (should be a time value like 15:30)
+		targetTime, err := p.parsePrimary()
+		if err != nil {
+			return nil, false
+		}
+		
+		// Create a binary expression: targetTime - now
+		return &BinaryExpr{
+			Left:     targetTime,
+			Operator: "-",
+			Right:    &TimeExpr{Time: time.Now()},
+		}, true
 	}
 
 	return nil, false
@@ -1228,15 +1247,12 @@ func (p *Parser) parsePrimary() (Expr, error) {
 			}
 		}
 
-		// Convert to decimal hours and store as a time unit
-		decimalHours := float64(hours) + float64(minutes)/60.0 + float64(seconds)/3600.0
-
 		p.advance()
-		// Return as a unit expression with "time" unit to preserve time format
-		return &UnitExpr{
-			Value: &NumberExpr{Value: decimalHours},
-			Unit:  "time",
-		}, nil
+		
+		// Create a TimeExpr with today's date and the specified time
+		now := time.Now()
+		timeValue := time.Date(now.Year(), now.Month(), now.Day(), hours, minutes, seconds, 0, now.Location())
+		return &TimeExpr{Time: timeValue}, nil
 
 	case lexer.TokenDate:
 		// Parse date in DD/MM/YYYY format (British style)
