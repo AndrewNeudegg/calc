@@ -677,7 +677,67 @@ func (p *Parser) parseConversion() (Expr, error) {
 		expr = &ConversionExpr{Value: expr, ToUnit: toUnit}
 	}
 
-	// After applying any conversions, allow additive tail (e.g., "(a in x) + b")
+	// After applying any conversions, handle multiplicative operations first (higher precedence)
+	for {
+		tok := p.current()
+		var op string
+
+		if tok.Type == lexer.TokenMultiply {
+			op = "*"
+		} else if tok.Type == lexer.TokenDivide {
+			op = "/"
+		} else if tok.Type == lexer.TokenIdent {
+			if tok.Literal == "times" {
+				op = "*"
+			} else if tok.Literal == "multiplied" {
+				// Check if followed by "by" and handle the phrase
+				if p.peek(1).Type == lexer.TokenBy {
+					op = "*"
+					p.advance() // consume "multiplied"
+					p.advance() // consume "by"
+					right, err := p.parseUnary()
+					if err != nil {
+						return nil, err
+					}
+					expr = &BinaryExpr{Left: expr, Operator: op, Right: right}
+					continue
+				} else {
+					// "multiplied" alone is also valid multiplication
+					op = "*"
+				}
+			} else if tok.Literal == "divided" {
+				// Only treat "divided" as division if followed by "by", to match parseMultiplicative()
+				if p.peek(1).Type == lexer.TokenBy {
+					op = "/"
+					p.advance() // consume "divided"
+					p.advance() // consume "by"
+					right, err := p.parseUnary()
+					if err != nil {
+						return nil, err
+					}
+					expr = &BinaryExpr{Left: expr, Operator: op, Right: right}
+					continue
+				} else {
+					break
+				}
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+
+		p.advance()
+
+		right, err := p.parseUnary()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &BinaryExpr{Left: expr, Operator: op, Right: right}
+	}
+
+	// Then handle additive operations (lower precedence)
 	for {
 		tok := p.current()
 		var op string
