@@ -51,6 +51,7 @@ const (
 	TokenBefore
 	TokenFrom
 	TokenAgo
+	TokenUntil
 	TokenNow
 	TokenToday
 	TokenTomorrow
@@ -181,6 +182,8 @@ func (t TokenType) String() string {
 		return "from"
 	case TokenAgo:
 		return "ago"
+	case TokenUntil:
+		return "until"
 	case TokenNow:
 		return "now"
 	case TokenToday:

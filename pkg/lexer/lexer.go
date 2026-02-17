@@ -46,6 +46,7 @@ func New(input string) *Lexer {
 			"before":    TokenBefore,
 			"from":      TokenFrom,
 			"ago":       TokenAgo,
+			"until":     TokenUntil,
 			"now":       TokenNow,
 			"today":     TokenToday,
 			"tomorrow":  TokenTomorrow,

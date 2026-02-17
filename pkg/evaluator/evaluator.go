@@ -250,11 +250,50 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 		return NewDate(newDate)
 	}
 
+	// Handle time unit - date/now (for "time until" functionality)
+	// Convert time unit to a TimeExpr on today's date and then subtract
+	if left.Type == ValueUnit && left.Unit == "time" && right.Type == ValueDate && node.Operator == "-" {
+		// Convert time unit (decimal hours) to time on today
+		now := time.Now()
+		hours := int(left.Number)
+		minutes := int((left.Number - float64(hours)) * 60)
+		targetTime := time.Date(now.Year(), now.Month(), now.Day(), hours, minutes, 0, 0, now.Location())
+		
+		// Calculate time difference
+		duration := targetTime.Sub(right.Date)
+		hours64 := duration.Hours()
+		
+		// Apply next-day wraparound if needed
+		hours64 = applyNextDayWrapAround(hours64)
+		
+		// Format and return as time string
+		return NewString(formatDurationAsTime(hours64))
+	}
+
 	// Handle date-date subtraction (returns days with unit and stores date range for business day conversion)
 	if left.Type == ValueDate && right.Type == ValueDate && node.Operator == "-" {
-		// Normalize both dates to UTC midnight to avoid DST-related fractional day counts
+		// Check if both times are on the same day (time-only arithmetic)
 		ly, lm, ld := left.Date.Date()
 		ry, rm, rd := right.Date.Date()
+		
+		// Check if at least one has a non-midnight time component
+		leftHasTime := left.Date.Hour() != 0 || left.Date.Minute() != 0 || left.Date.Second() != 0
+		rightHasTime := right.Date.Hour() != 0 || right.Date.Minute() != 0 || right.Date.Second() != 0
+		
+		// If both dates are on the same day AND at least one has a time component, treat as time-only arithmetic
+		if ly == ry && lm == rm && ld == rd && (leftHasTime || rightHasTime) {
+			// Calculate time difference in hours
+			duration := left.Date.Sub(right.Date)
+			hours := duration.Hours()
+			
+			// Apply next-day wraparound if needed
+			hours = applyNextDayWrapAround(hours)
+			
+			// Format and return as time string
+			return NewString(formatDurationAsTime(hours))
+		}
+		
+		// Otherwise, normalize both dates to UTC midnight to avoid DST-related fractional day counts
 		leftMidnight := time.Date(ly, lm, ld, 0, 0, 0, 0, time.UTC)
 		rightMidnight := time.Date(ry, rm, rd, 0, 0, 0, 0, time.UTC)
 		duration := leftMidnight.Sub(rightMidnight)
@@ -1353,6 +1392,23 @@ func (e *Evaluator) evalRate(node *parser.RateExpr) Value {
 	compoundUnit := num.Unit + "/" + den.Unit
 
 	return NewUnit(rateValue, compoundUnit)
+}
+
+// applyNextDayWrapAround adjusts hours to account for next-day wraparound
+// when the target time is in the past
+func applyNextDayWrapAround(hours float64) float64 {
+	if hours < 0 && hours > -24 {
+		return hours + 24
+	}
+	return hours
+}
+
+// formatDurationAsTime formats a duration in hours as an HH:MM string
+func formatDurationAsTime(hours float64) string {
+	totalMinutes := int(hours * 60)
+	h := totalMinutes / 60
+	m := totalMinutes % 60
+	return fmt.Sprintf("%d:%02d", h, m)
 }
 
 func (e *Evaluator) evalPrev(node *parser.PrevExpr) Value {

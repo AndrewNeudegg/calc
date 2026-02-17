@@ -320,7 +320,7 @@ func (p *Parser) isKeywordToken(t lexer.TokenType) bool {
 		lexer.TokenSum, lexer.TokenAverage, lexer.TokenMean, lexer.TokenTotal,
 		lexer.TokenHalf, lexer.TokenDouble, lexer.TokenTwice, lexer.TokenQuarters,
 		lexer.TokenThree, lexer.TokenArg, lexer.TokenAfter, lexer.TokenBefore,
-		lexer.TokenFrom, lexer.TokenAgo, lexer.TokenNow, lexer.TokenToday,
+		lexer.TokenFrom, lexer.TokenAgo, lexer.TokenUntil, lexer.TokenNow, lexer.TokenToday,
 		lexer.TokenTomorrow, lexer.TokenYesterday, lexer.TokenNext, lexer.TokenLast,
 		lexer.TokenPrev, lexer.TokenTime, lexer.TokenMonday, lexer.TokenTuesday,
 		lexer.TokenWednesday, lexer.TokenThursday, lexer.TokenFriday, lexer.TokenSaturday,
@@ -597,6 +597,27 @@ func (p *Parser) tryParseTimezoneQuery() (Expr, bool) {
 		}
 
 		return &TimeDifferenceExpr{From: from, To: to, TargetUnit: targetUnit}, true
+	}
+
+	// "time until <time>" or "time until <date> <time>"
+	if tok.Type == lexer.TokenTime && p.peek(1).Type == lexer.TokenUntil {
+		p.advance() // skip 'time'
+		p.advance() // skip 'until'
+		
+		// Parse the target time/date expression (could be just time like 15:30, 
+		// or date like tomorrow, or date + time like "tomorrow + 15:30")
+		// Use parseAdditive to support expressions like "tomorrow + 3 hours"
+		targetTime, err := p.parseAdditive()
+		if err != nil {
+			return nil, false
+		}
+		
+		// Create a binary expression: targetTime - now
+		return &BinaryExpr{
+			Left:     targetTime,
+			Operator: "-",
+			Right:    &TimeExpr{Time: time.Now()},
+		}, true
 	}
 
 	return nil, false

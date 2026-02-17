@@ -516,3 +516,121 @@ func TestParserTimeDifferenceWithUnits(t *testing.T) {
 		})
 	}
 }
+
+// TestParserTimeUntil tests "time until HH:MM" expressions
+func TestParserTimeUntil(t *testing.T) {
+	tests := []string{
+		"time until 15:30",
+		"time until 09:00",
+		"time until 23:59",
+	}
+
+	for _, input := range tests {
+		t.Run(input, func(t *testing.T) {
+			expr, err := parseInput(input)
+			if err != nil {
+				t.Fatalf("parse error: %v", err)
+			}
+
+			// Should be a BinaryExpr (time - now)
+			binExpr, ok := expr.(*BinaryExpr)
+			if !ok {
+				t.Fatalf("expected BinaryExpr, got %T", expr)
+			}
+
+			if binExpr.Operator != "-" {
+				t.Errorf("Operator: got %q, want %q", binExpr.Operator, "-")
+			}
+
+			// Left should be a UnitExpr with unit="time" (the target time)
+			leftUnit, ok := binExpr.Left.(*UnitExpr)
+			if !ok {
+				t.Errorf("Left: expected UnitExpr, got %T", binExpr.Left)
+			} else if leftUnit.Unit != "time" {
+				t.Errorf("Left Unit: expected 'time', got %q", leftUnit.Unit)
+			}
+
+			// Right should be a TimeExpr (now)
+			_, ok = binExpr.Right.(*TimeExpr)
+			if !ok {
+				t.Errorf("Right: expected TimeExpr, got %T", binExpr.Right)
+			}
+		})
+	}
+}
+
+// TestParserTimeMinusNow tests "HH:MM - now" expressions
+func TestParserTimeMinusNow(t *testing.T) {
+	tests := []string{
+		"15:30 - now",
+		"09:00 - now",
+		"23:59 - now",
+	}
+
+	for _, input := range tests {
+		t.Run(input, func(t *testing.T) {
+			expr, err := parseInput(input)
+			if err != nil {
+				t.Fatalf("parse error: %v", err)
+			}
+
+			// Should be a BinaryExpr (time - now)
+			binExpr, ok := expr.(*BinaryExpr)
+			if !ok {
+				t.Fatalf("expected BinaryExpr, got %T", expr)
+			}
+
+			if binExpr.Operator != "-" {
+				t.Errorf("Operator: got %q, want %q", binExpr.Operator, "-")
+			}
+
+			// Left should be a UnitExpr with unit="time" (the target time)
+			leftUnit, ok := binExpr.Left.(*UnitExpr)
+			if !ok {
+				t.Errorf("Left: expected UnitExpr, got %T", binExpr.Left)
+			} else if leftUnit.Unit != "time" {
+				t.Errorf("Left Unit: expected 'time', got %q", leftUnit.Unit)
+			}
+
+			// Right should be a TimeExpr (now)
+			_, ok = binExpr.Right.(*TimeExpr)
+			if !ok {
+				t.Errorf("Right: expected TimeExpr, got %T", binExpr.Right)
+			}
+		})
+	}
+}
+
+// TestParserTimeUntilWithDate tests "time until <date>" and "time until <date> + <time>" expressions
+func TestParserTimeUntilWithDate(t *testing.T) {
+tests := []string{
+"time until tomorrow",
+"time until tomorrow + 3 hours",
+"time until 18/02/2026",
+}
+
+for _, input := range tests {
+t.Run(input, func(t *testing.T) {
+expr, err := parseInput(input)
+if err != nil {
+t.Fatalf("parse error: %v", err)
+}
+
+// Should be a BinaryExpr (date/time expression - now)
+binExpr, ok := expr.(*BinaryExpr)
+if !ok {
+t.Fatalf("expected BinaryExpr, got %T", expr)
+}
+
+if binExpr.Operator != "-" {
+t.Errorf("Operator: got %q, want %q", binExpr.Operator, "-")
+}
+
+// Right should be a TimeExpr (now)
+_, ok = binExpr.Right.(*TimeExpr)
+if !ok {
+t.Errorf("Right: expected TimeExpr, got %T", binExpr.Right)
+}
+})
+}
+}

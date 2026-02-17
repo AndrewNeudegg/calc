@@ -211,6 +211,36 @@ Times in `HH:MM` format are recognized automatically:
 | `11:00 - 09:00` | `02:00` |
 | `17:45 - 09:30` | `08:15` |
 
+**Time Until (Duration Calculations):**
+
+Calculate the time remaining until a specific time or date:
+
+| Expression | Description | Example Result |
+|------------|-------------|----------------|
+| `time until 15:30` | Time until 3:30 PM today | `5:30` (if current time is 10:00 AM) |
+| `15:30 - now` | Alternative syntax | `5:30` (same as above) |
+| `time until 09:00` | Time until 9:00 AM (next day if past) | `23:00` (if current time is 10:00 AM) |
+| `time until tomorrow` | Time until tomorrow (midnight) | `1.00 days` |
+| `time until tomorrow + 3 hours` | Time until tomorrow with offset | `1.00 days` (date differences round to days) |
+| `time until 18/02/2026` | Time until a specific date | `1.00 days` (if today is 17/02/2026) |
+| `tomorrow - now` | Alternative syntax with dates | `1.00 days` |
+
+Both forms calculate the duration from the current time to the target time/date. For same-day times, the result is in `HH:MM` format. For different dates, the result is in days.
+
+```
+1> time until 15:30
+   = 5:30
+
+2> 15:30 - now
+   = 5:30
+
+3> time until tomorrow
+   = 1.00 days
+
+4> time until tomorrow + 3 hours
+   = 1.00 days
+```
+
 ### Time Zone Conversions
 
 Convert times between time zones using natural syntax with timezone abbreviations:

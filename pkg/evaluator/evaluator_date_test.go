@@ -408,3 +408,79 @@ func TestDateKeywordSubtractionReversibility(t *testing.T) {
 		})
 	}
 }
+
+// TestTimeUntil tests "time until HH:MM" and "HH:MM - now" functionality
+func TestTimeUntil(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		validate func(t *testing.T, result Value)
+	}{
+		{
+			name:  "time until future time",
+			input: "time until 23:59",
+			validate: func(t *testing.T, result Value) {
+				if result.IsError() {
+					t.Fatalf("got error: %s", result.Error)
+				}
+				// Result should be a string in HH:MM format
+				if result.Type != ValueString {
+					t.Errorf("expected string result, got %v", result.Type)
+				}
+			},
+		},
+		{
+			name:  "HH:MM - now",
+			input: "23:59 - now",
+			validate: func(t *testing.T, result Value) {
+				if result.IsError() {
+					t.Fatalf("got error: %s", result.Error)
+				}
+				// Result should be a string in HH:MM format
+				if result.Type != ValueString {
+					t.Errorf("expected string result, got %v", result.Type)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := evalExpr(tt.input)
+			tt.validate(t, result)
+		})
+	}
+}
+
+// TestTimeArithmeticSameDay tests that time subtraction on the same day works correctly
+func TestTimeArithmeticSameDay(t *testing.T) {
+	// Create two times on the same day
+	now := time.Now()
+	time1 := time.Date(now.Year(), now.Month(), now.Day(), 15, 30, 0, 0, now.Location())
+	time2 := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, now.Location())
+	
+	env := NewEnvironment()
+	eval := New(env)
+	
+	// Create a binary expression: time1 - time2
+	expr := &parser.BinaryExpr{
+		Left:     &parser.TimeExpr{Time: time1},
+		Operator: "-",
+		Right:    &parser.TimeExpr{Time: time2},
+	}
+	
+	result := eval.Eval(expr)
+	if result.IsError() {
+		t.Fatalf("got error: %s", result.Error)
+	}
+	
+	// Should return a string in HH:MM format
+	if result.Type != ValueString {
+		t.Errorf("expected string result, got %v", result.Type)
+	}
+	
+	// The result should be "5:30" (5 hours 30 minutes)
+	if result.Text != "5:30" {
+		t.Errorf("expected '5:30', got '%s'", result.Text)
+	}
+}
