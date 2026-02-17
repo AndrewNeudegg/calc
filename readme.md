@@ -221,7 +221,7 @@ Calculate the time remaining until a specific time or date:
 | `15:30 - now` | Alternative syntax | `5:30` (same as above) |
 | `time until 09:00` | Time until 9:00 AM (next day if past) | `23:00` (if current time is 10:00 AM) |
 | `time until tomorrow` | Time until tomorrow (midnight) | `1.00 days` |
-| `time until tomorrow + 3 hours` | Time until tomorrow at 3:00 AM | `1.00 days` |
+| `time until tomorrow + 3 hours` | Time until tomorrow with offset | `1.00 days` (date differences round to days) |
 | `time until 18/02/2026` | Time until a specific date | `1.00 days` (if today is 17/02/2026) |
 | `tomorrow - now` | Alternative syntax with dates | `1.00 days` |
 
