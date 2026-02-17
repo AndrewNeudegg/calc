@@ -604,7 +604,7 @@ func (p *Parser) tryParseTimezoneQuery() (Expr, bool) {
 		p.advance() // skip 'time'
 		p.advance() // skip 'until'
 		
-		// Parse the target time (should be a time value like 15:30)
+		// Parse the target time (should be a time value like 15:30 or a UnitExpr)
 		targetTime, err := p.parsePrimary()
 		if err != nil {
 			return nil, false
@@ -1247,12 +1247,15 @@ func (p *Parser) parsePrimary() (Expr, error) {
 			}
 		}
 
+		// Convert to decimal hours and store as a time unit
+		decimalHours := float64(hours) + float64(minutes)/60.0 + float64(seconds)/3600.0
+
 		p.advance()
-		
-		// Create a TimeExpr with today's date and the specified time
-		now := time.Now()
-		timeValue := time.Date(now.Year(), now.Month(), now.Day(), hours, minutes, seconds, 0, now.Location())
-		return &TimeExpr{Time: timeValue}, nil
+		// Return as a unit expression with "time" unit to preserve time format
+		return &UnitExpr{
+			Value: &NumberExpr{Value: decimalHours},
+			Unit:  "time",
+		}, nil
 
 	case lexer.TokenDate:
 		// Parse date in DD/MM/YYYY format (British style)

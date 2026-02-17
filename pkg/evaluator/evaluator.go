@@ -250,14 +250,46 @@ func (e *Evaluator) evalBinary(node *parser.BinaryExpr) Value {
 		return NewDate(newDate)
 	}
 
+	// Handle time unit - date/now (for "time until" functionality)
+	// Convert time unit to a TimeExpr on today's date and then subtract
+	if left.Type == ValueUnit && left.Unit == "time" && right.Type == ValueDate && node.Operator == "-" {
+		// Convert time unit (decimal hours) to time on today
+		now := time.Now()
+		hours := int(left.Number)
+		minutes := int((left.Number - float64(hours)) * 60)
+		targetTime := time.Date(now.Year(), now.Month(), now.Day(), hours, minutes, 0, 0, now.Location())
+		
+		// Calculate time difference
+		duration := targetTime.Sub(right.Date)
+		hours64 := duration.Hours()
+		
+		// If the result is negative and we're within 24 hours, assume next day
+		if hours64 < 0 && hours64 > -24 {
+			hours64 += 24
+		}
+		
+		// Format as HH:MM
+		totalMinutes := int(hours64 * 60)
+		h := totalMinutes / 60
+		m := totalMinutes % 60
+		
+		// Return as a formatted time string
+		timeStr := fmt.Sprintf("%d:%02d", h, m)
+		return NewString(timeStr)
+	}
+
 	// Handle date-date subtraction (returns days with unit and stores date range for business day conversion)
 	if left.Type == ValueDate && right.Type == ValueDate && node.Operator == "-" {
 		// Check if both times are on the same day (time-only arithmetic)
 		ly, lm, ld := left.Date.Date()
 		ry, rm, rd := right.Date.Date()
 		
-		// If both dates are on the same day, treat as time-only arithmetic
-		if ly == ry && lm == rm && ld == rd {
+		// Check if at least one has a non-midnight time component
+		leftHasTime := left.Date.Hour() != 0 || left.Date.Minute() != 0 || left.Date.Second() != 0
+		rightHasTime := right.Date.Hour() != 0 || right.Date.Minute() != 0 || right.Date.Second() != 0
+		
+		// If both dates are on the same day AND at least one has a time component, treat as time-only arithmetic
+		if ly == ry && lm == rm && ld == rd && (leftHasTime || rightHasTime) {
 			// Calculate time difference in hours
 			duration := left.Date.Sub(right.Date)
 			hours := duration.Hours()
