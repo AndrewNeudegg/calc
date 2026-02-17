@@ -599,13 +599,15 @@ func (p *Parser) tryParseTimezoneQuery() (Expr, bool) {
 		return &TimeDifferenceExpr{From: from, To: to, TargetUnit: targetUnit}, true
 	}
 
-	// "time until <time>"
+	// "time until <time>" or "time until <date> <time>"
 	if tok.Type == lexer.TokenTime && p.peek(1).Type == lexer.TokenUntil {
 		p.advance() // skip 'time'
 		p.advance() // skip 'until'
 		
-		// Parse the target time (should be a time value like 15:30 or a UnitExpr)
-		targetTime, err := p.parsePrimary()
+		// Parse the target time/date expression (could be just time like 15:30, 
+		// or date like tomorrow, or date + time like "tomorrow + 15:30")
+		// Use parseAdditive to support expressions like "tomorrow + 3 hours"
+		targetTime, err := p.parseAdditive()
 		if err != nil {
 			return nil, false
 		}

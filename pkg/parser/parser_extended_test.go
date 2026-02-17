@@ -600,3 +600,37 @@ func TestParserTimeMinusNow(t *testing.T) {
 		})
 	}
 }
+
+// TestParserTimeUntilWithDate tests "time until <date>" and "time until <date> + <time>" expressions
+func TestParserTimeUntilWithDate(t *testing.T) {
+tests := []string{
+"time until tomorrow",
+"time until tomorrow + 3 hours",
+"time until 18/02/2026",
+}
+
+for _, input := range tests {
+t.Run(input, func(t *testing.T) {
+expr, err := parseInput(input)
+if err != nil {
+t.Fatalf("parse error: %v", err)
+}
+
+// Should be a BinaryExpr (date/time expression - now)
+binExpr, ok := expr.(*BinaryExpr)
+if !ok {
+t.Fatalf("expected BinaryExpr, got %T", expr)
+}
+
+if binExpr.Operator != "-" {
+t.Errorf("Operator: got %q, want %q", binExpr.Operator, "-")
+}
+
+// Right should be a TimeExpr (now)
+_, ok = binExpr.Right.(*TimeExpr)
+if !ok {
+t.Errorf("Right: expected TimeExpr, got %T", binExpr.Right)
+}
+})
+}
+}
