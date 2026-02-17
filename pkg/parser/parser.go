@@ -687,10 +687,39 @@ func (p *Parser) parseConversion() (Expr, error) {
 		} else if tok.Type == lexer.TokenDivide {
 			op = "/"
 		} else if tok.Type == lexer.TokenIdent {
-			if tok.Literal == "times" || tok.Literal == "multiplied" {
+			if tok.Literal == "times" {
 				op = "*"
+			} else if tok.Literal == "multiplied" {
+				// Check if followed by "by" and handle the phrase
+				if p.peek(1).Type == lexer.TokenBy {
+					op = "*"
+					p.advance() // consume "multiplied"
+					p.advance() // consume "by"
+					right, err := p.parseUnary()
+					if err != nil {
+						return nil, err
+					}
+					expr = &BinaryExpr{Left: expr, Operator: op, Right: right}
+					continue
+				} else {
+					// "multiplied" alone is also valid multiplication
+					op = "*"
+				}
 			} else if tok.Literal == "divided" {
-				op = "/"
+				// Only treat "divided" as division if followed by "by", to match parseMultiplicative()
+				if p.peek(1).Type == lexer.TokenBy {
+					op = "/"
+					p.advance() // consume "divided"
+					p.advance() // consume "by"
+					right, err := p.parseUnary()
+					if err != nil {
+						return nil, err
+					}
+					expr = &BinaryExpr{Left: expr, Operator: op, Right: right}
+					continue
+				} else {
+					break
+				}
 			} else {
 				break
 			}

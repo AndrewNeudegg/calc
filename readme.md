@@ -121,7 +121,7 @@ Global stand-up example (screenshot):
 3. Addition and Subtraction: `+`, `-`
 4. Unit Conversion: `in`
 
-**Compound Expressions:** You can chain operations after conversions: `100 cm in m / 2` equals `0.50 m`
+**Compound Expressions:** You can chain operations after conversions: `100 cm in m / 2` equals `0.50 m` and is parsed as `((100 cm) in m) / 2`. The `in` operator has the lowest precedence for its **left** operand (for example, `10 + 5 in kg` is parsed as `(10 + 5) in kg`), but once a value is converted, any following operations use normal precedence rules on the conversion result.
 
 ### Currency Formats
 
@@ -460,7 +460,7 @@ You can perform further arithmetic operations on converted values, enabling comp
 
 ```
 1> 03/04/2026 - today in business days / 7
-   = 5.14 business days  # Business weeks until deadline
+   = 5.14 business days  # Approx. business-week equivalent (in business days) until deadline
 
 2> 10 business days in hours / 8
    = 10.00  # Number of work days

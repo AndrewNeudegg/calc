@@ -92,6 +92,81 @@ func TestCompoundExpressionsWithConversions(t *testing.T) {
 	}
 }
 
+// TestCompoundExpressionsWithConversionsWordOperators tests compound expressions
+// that include conversions followed by word-based arithmetic operations
+func TestCompoundExpressionsWithConversionsWordOperators(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		checkResult func(evaluator.Value) bool
+	}{
+		{
+			description: "length conversion followed by times",
+			input:       "100 cm in m times 2",
+			checkResult: func(v evaluator.Value) bool {
+				// 100 cm = 1 m; 1 m * 2 = 2
+				return !v.IsError() && math.Abs(v.Number-2) < 1e-9
+			},
+		},
+		{
+			description: "length conversion followed by divided by",
+			input:       "100 cm in m divided by 2",
+			checkResult: func(v evaluator.Value) bool {
+				// 100 cm = 1 m; 1 m / 2 = 0.5
+				return !v.IsError() && math.Abs(v.Number-0.5) < 1e-9
+			},
+		},
+		{
+			description: "length conversion followed by plus",
+			input:       "100 cm in m plus 1",
+			checkResult: func(v evaluator.Value) bool {
+				// 100 cm = 1 m; 1 m + 1 = 2
+				return !v.IsError() && math.Abs(v.Number-2) < 1e-9
+			},
+		},
+		{
+			description: "length conversion followed by minus",
+			input:       "100 cm in m minus 0.5",
+			checkResult: func(v evaluator.Value) bool {
+				// 100 cm = 1 m; 1 m - 0.5 = 0.5
+				return !v.IsError() && math.Abs(v.Number-0.5) < 1e-9
+			},
+		},
+		{
+			description: "length conversion followed by multiplied by",
+			input:       "100 cm in m multiplied by 3",
+			checkResult: func(v evaluator.Value) bool {
+				// 100 cm = 1 m; 1 m * 3 = 3
+				return !v.IsError() && math.Abs(v.Number-3) < 1e-9
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			l := lexer.New(tt.input)
+			tokens := l.AllTokens()
+			p := parser.New(tokens)
+			expr, err := p.Parse()
+			if err != nil {
+				t.Fatalf("Parse error for %q: %v", tt.input, err)
+			}
+
+			env := evaluator.NewEnvironment()
+			e := evaluator.New(env)
+			result := e.Eval(expr)
+
+			if !tt.checkResult(result) {
+				if result.IsError() {
+					t.Errorf("Test failed for %q: %s", tt.input, result.Error)
+				} else {
+					t.Errorf("Test failed for %q: got value %v", tt.input, result.Number)
+				}
+			}
+		})
+	}
+}
+
 // TestCompoundExpressionsWithBusinessDays tests compound expressions involving
 // business days calculations with arithmetic operations
 func TestCompoundExpressionsWithBusinessDays(t *testing.T) {
